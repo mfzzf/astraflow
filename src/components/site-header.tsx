@@ -70,7 +70,7 @@ export function SiteHeader({
           >
             <SelectTrigger
               aria-label={t.selectProject}
-              className="w-44 max-w-[42vw] sm:w-60"
+              className="w-[13ch] max-w-[36vw]"
               title={projectError ?? undefined}
             >
               <SelectValue
@@ -84,10 +84,16 @@ export function SiteHeader({
                 {selectableProjects.map((project) => (
                   <SelectItem key={project.ProjectID} value={project.ProjectID}>
                     <span className="flex min-w-0 flex-col">
-                      <span className="truncate">
+                      <span
+                        className="truncate"
+                        title={formatProjectName(project, t.project)}
+                      >
                         {formatProjectName(project, t.project)}
                       </span>
-                      <span className="font-mono text-xs text-muted-foreground">
+                      <span
+                        className="truncate font-mono text-xs text-muted-foreground"
+                        title={project.ProjectID}
+                      >
                         {project.ProjectID}
                       </span>
                     </span>

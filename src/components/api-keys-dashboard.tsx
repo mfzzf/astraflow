@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
+  CheckIcon,
   CopyIcon,
   EllipsisVerticalIcon,
   LoaderCircleIcon,
@@ -140,6 +141,18 @@ function formatModels(
   }
 
   return models || fallback
+}
+
+function formatApiKeyPreview(apiKey: string | undefined) {
+  if (!apiKey) {
+    return "-"
+  }
+
+  if (apiKey.length <= 12) {
+    return `${apiKey.slice(0, 4)}...`
+  }
+
+  return `${apiKey.slice(0, 8)}...${apiKey.slice(-4)}`
 }
 
 function formFromKey(apiKey: APIKey): APIKeyFormState {
@@ -421,17 +434,30 @@ export function APIKeysDashboard({ projectId }: { projectId: string }) {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={!apiKey.Key}
-                        onClick={() => void copyApiKey(apiKey)}
-                      >
-                        <CopyIcon data-icon="inline-start" />
-                        {copiedKeyId === (apiKey.KeyId ?? apiKey.Name ?? apiKey.Key)
-                          ? t.copied
-                          : t.copy}
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <code className="min-w-28 font-mono text-xs text-muted-foreground">
+                          {formatApiKeyPreview(apiKey.Key)}
+                        </code>
+                        <Button
+                          variant="outline"
+                          size="icon-sm"
+                          disabled={!apiKey.Key}
+                          aria-label={
+                            copiedKeyId ===
+                            (apiKey.KeyId ?? apiKey.Name ?? apiKey.Key)
+                              ? t.copied
+                              : t.copyApiKey
+                          }
+                          onClick={() => void copyApiKey(apiKey)}
+                        >
+                          {copiedKeyId ===
+                          (apiKey.KeyId ?? apiKey.Name ?? apiKey.Key) ? (
+                            <CheckIcon />
+                          ) : (
+                            <CopyIcon />
+                          )}
+                        </Button>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge

@@ -10,12 +10,29 @@ type UCloudProject = {
   CreatedAt?: number
 }
 
+type UCloudProjectListInfo = {
+  ProjectId?: string
+  ProjectName?: string
+  CreateTime?: number
+  IsDefault?: boolean
+  ResourceCount?: number
+  MemberCount?: number
+}
+
 type ListProjectsResponse = {
   Action?: string
   RetCode?: number
   Message?: string
   Projects?: UCloudProject[]
   TotalCount?: number
+}
+
+type GetProjectListResponse = {
+  Action?: string
+  RetCode?: number
+  Message?: string
+  ProjectCount?: number
+  ProjectSet?: UCloudProjectListInfo[]
 }
 
 function toErrorResponse(error: unknown) {
@@ -39,6 +56,15 @@ function toErrorResponse(error: unknown) {
   )
 }
 
+function normalizeGetProjectList(projects: UCloudProjectListInfo[] = []) {
+  return projects.map((project) => ({
+    ProjectID: project.ProjectId,
+    ProjectName: project.ProjectName,
+    UserCount: project.MemberCount,
+    CreatedAt: project.CreateTime,
+  }))
+}
+
 export async function GET() {
   const session = await getCredentialSession()
 
@@ -53,19 +79,39 @@ export async function GET() {
   }
 
   try {
-    const data = await callUCloudAction<ListProjectsResponse>({
+    try {
+      const data = await callUCloudAction<ListProjectsResponse>({
+        credentials: session,
+        params: {
+          Action: "ListProjects",
+          Offset: 0,
+          Limit: 100,
+        },
+      })
+
+      return NextResponse.json({
+        ok: true,
+        data: data.Projects ?? [],
+        totalCount: data.TotalCount ?? data.Projects?.length ?? 0,
+      })
+    } catch (listProjectsError) {
+      if (!(listProjectsError instanceof UCloudApiError)) {
+        throw listProjectsError
+      }
+    }
+
+    const data = await callUCloudAction<GetProjectListResponse>({
       credentials: session,
       params: {
-        Action: "ListProjects",
-        Offset: 0,
-        Limit: 100,
+        Action: "GetProjectList",
       },
     })
+    const projects = normalizeGetProjectList(data.ProjectSet)
 
     return NextResponse.json({
       ok: true,
-      data: data.Projects ?? [],
-      totalCount: data.TotalCount ?? data.Projects?.length ?? 0,
+      data: projects,
+      totalCount: data.ProjectCount ?? projects.length,
     })
   } catch (error) {
     return toErrorResponse(error)
