@@ -29,12 +29,14 @@ function hasProjectId(
 }
 
 export function SiteHeader({
+  title,
   isLoadingProjects,
   projectError,
   projects,
   selectedProjectId,
   onProjectChange,
 }: {
+  title: string
   isLoadingProjects: boolean
   projectError: string | null
   projects: Project[]
@@ -56,7 +58,7 @@ export function SiteHeader({
           orientation="vertical"
           className="mx-2 h-4 data-vertical:self-auto"
         />
-        <h1 className="text-base font-medium">{t.apiKeys}</h1>
+        <h1 className="text-base font-medium">{title}</h1>
         <div className="ml-auto flex min-w-0 items-center gap-2">
           <Select
             disabled={isLoadingProjects}

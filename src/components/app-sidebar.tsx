@@ -3,6 +3,7 @@
 import Image from "next/image"
 import { useCallback, useEffect, useState } from "react"
 import {
+  ChartAreaIcon,
   KeyRoundIcon,
   LogOutIcon,
 } from "lucide-react"
@@ -34,6 +35,8 @@ type UserInfoResponse = {
   data?: UserInfo | null
 }
 
+export type DashboardView = "dashboard" | "api-keys"
+
 function displayNameForUser(user: UserInfo | null, locale: string) {
   if (locale === "zh") {
     return user?.CompanyName || user?.UserName || user?.UserEmail || ""
@@ -64,7 +67,14 @@ function initialsForUser(user: UserInfo | null, locale: string) {
   return compact.slice(0, 2).toUpperCase()
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({
+  activeView,
+  onViewChange,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & {
+  activeView: DashboardView
+  onViewChange: (view: DashboardView) => void
+}) {
   const { locale, t } = useI18n()
   const [user, setUser] = useState<UserInfo | null>(null)
 
@@ -127,7 +137,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton isActive tooltip={t.apiKeys}>
+            <SidebarMenuButton
+              isActive={activeView === "dashboard"}
+              tooltip={t.dashboard}
+              className="pl-4"
+              onClick={() => onViewChange("dashboard")}
+            >
+              <ChartAreaIcon />
+              <span>{t.dashboard}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              isActive={activeView === "api-keys"}
+              tooltip={t.apiKeys}
+              className="pl-4"
+              onClick={() => onViewChange("api-keys")}
+            >
               <KeyRoundIcon />
               <span>{t.apiKeys}</span>
             </SidebarMenuButton>

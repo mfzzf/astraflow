@@ -3,8 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { APIKeysDashboard } from "@/components/api-keys-dashboard"
-import { SiteHeader } from "@/components/site-header"
+import { AppSidebar, type DashboardView } from "@/components/app-sidebar"
+import { CostDashboard } from "@/components/cost-dashboard"
 import { useI18n } from "@/components/i18n-provider"
+import { SiteHeader } from "@/components/site-header"
+import {
+  SidebarInset,
+  SidebarProvider,
+} from "@/components/ui/sidebar"
 
 type Project = {
   ProjectID?: string
@@ -33,6 +39,7 @@ export function DashboardShell({
   initialProjectId: string
 }) {
   const { t } = useI18n()
+  const [activeView, setActiveView] = useState<DashboardView>("dashboard")
   const [selectedProjectId, setSelectedProjectId] = useState(initialProjectId)
   const [projects, setProjects] = useState<Project[]>([])
   const [isLoadingProjects, setIsLoadingProjects] = useState(true)
@@ -89,15 +96,34 @@ export function DashboardShell({
   }, [projects, selectedProjectId])
 
   return (
-    <>
-      <SiteHeader
-        isLoadingProjects={isLoadingProjects}
-        projectError={projectError}
-        projects={projectsForSelect}
-        selectedProjectId={selectedProjectId}
-        onProjectChange={setSelectedProjectId}
+    <SidebarProvider
+      style={
+        {
+          "--sidebar-width": "calc(var(--spacing) * 72)",
+          "--header-height": "calc(var(--spacing) * 12)",
+        } as React.CSSProperties
+      }
+    >
+      <AppSidebar
+        activeView={activeView}
+        onViewChange={setActiveView}
+        variant="inset"
       />
-      <APIKeysDashboard projectId={selectedProjectId} />
-    </>
+      <SidebarInset>
+        <SiteHeader
+          title={activeView === "dashboard" ? t.dashboard : t.apiKeys}
+          isLoadingProjects={isLoadingProjects}
+          projectError={projectError}
+          projects={projectsForSelect}
+          selectedProjectId={selectedProjectId}
+          onProjectChange={setSelectedProjectId}
+        />
+        {activeView === "dashboard" ? (
+          <CostDashboard projectId={selectedProjectId} />
+        ) : (
+          <APIKeysDashboard projectId={selectedProjectId} />
+        )}
+      </SidebarInset>
+    </SidebarProvider>
   )
 }
