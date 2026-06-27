@@ -711,7 +711,7 @@ export function CostDashboard({ projectId }: { projectId: string }) {
           <div ref={calendarMenuRef} className="relative">
             <Button
               variant="outline"
-              className="min-w-[260px] justify-start font-normal"
+              className="max-w-[300px] justify-start font-normal"
               onClick={() => setIsCalendarOpen((open) => !open)}
             >
               <CalendarRangeIcon data-icon="inline-start" />

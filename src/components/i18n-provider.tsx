@@ -9,6 +9,7 @@ const LOCALE_STORAGE_KEY = "astraflow_locale"
 const dictionaries = {
   en: {
     dashboard: "Dashboard",
+    overview: "Overview",
     apiKeys: "API Keys",
     keysSummary: (activeCount: number, totalCount: number) =>
       `${activeCount} active · ${totalCount} total`,
@@ -69,6 +70,7 @@ const dictionaries = {
     apiKey: "API Key",
     status: "Status",
     modelverse: "Modelverse",
+    agentSandbox: "Agent Sandbox",
     sandbox: "Sandbox",
     daily: "Daily",
     monthly: "Monthly",
@@ -77,6 +79,9 @@ const dictionaries = {
     actions: "Actions",
     loadingApiKeys: "Loading API keys...",
     noApiKeys: "No API keys found for this project.",
+    noApiKeyResults: "No API keys match the current search or filter.",
+    searchApiKeys: "Search API keys",
+    allStatuses: "All statuses",
     unnamedKey: "Unnamed key",
     active: "Active",
     inactive: "Inactive",
@@ -151,6 +156,7 @@ const dictionaries = {
   },
   zh: {
     dashboard: "概览",
+    overview: "总览",
     apiKeys: "API 密钥",
     keysSummary: (activeCount: number, totalCount: number) =>
       `${activeCount} 个启用 · 共 ${totalCount} 个`,
@@ -209,6 +215,7 @@ const dictionaries = {
     apiKey: "API 密钥",
     status: "状态",
     modelverse: "Modelverse",
+    agentSandbox: "Agent Sandbox",
     sandbox: "Sandbox",
     daily: "日额度",
     monthly: "月额度",
@@ -217,6 +224,9 @@ const dictionaries = {
     actions: "操作",
     loadingApiKeys: "正在加载 API 密钥...",
     noApiKeys: "当前项目没有 API 密钥。",
+    noApiKeyResults: "没有匹配当前搜索或筛选条件的 API 密钥。",
+    searchApiKeys: "搜索 API 密钥",
+    allStatuses: "全部状态",
     unnamedKey: "未命名密钥",
     active: "启用",
     inactive: "停用",

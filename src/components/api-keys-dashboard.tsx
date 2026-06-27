@@ -9,6 +9,7 @@ import {
   PencilIcon,
   PlusIcon,
   RefreshCwIcon,
+  SearchIcon,
   Trash2Icon,
 } from "lucide-react"
 
@@ -47,6 +48,14 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Sheet,
   SheetContent,
@@ -101,6 +110,8 @@ type APIKeyFormState = {
   grantedModels: string
   ipWhitelist: string
 }
+
+type APIKeyStatusFilter = "all" | "active" | "inactive"
 
 const emptyForm: APIKeyFormState = {
   name: "",
@@ -184,6 +195,9 @@ export function APIKeysDashboard({ projectId }: { projectId: string }) {
   const [pendingDelete, setPendingDelete] = useState<APIKey | null>(null)
   const [form, setForm] = useState<APIKeyFormState>(emptyForm)
   const [copiedKeyId, setCopiedKeyId] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] =
+    useState<APIKeyStatusFilter>("all")
 
   const isEditing = Boolean(form.keyId)
 
@@ -242,6 +256,40 @@ export function APIKeysDashboard({ projectId }: { projectId: string }) {
     () => apiKeys.filter((apiKey) => apiKey.Status === 1).length,
     [apiKeys]
   )
+  const statusFilterItems = useMemo(
+    () => [
+      { label: t.allStatuses, value: "all" },
+      { label: t.active, value: "active" },
+      { label: t.inactive, value: "inactive" },
+    ],
+    [t.active, t.allStatuses, t.inactive]
+  )
+  const filteredApiKeys = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase()
+
+    return apiKeys.filter((apiKey) => {
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "active"
+          ? apiKey.Status === 1
+          : apiKey.Status !== 1)
+
+      if (!matchesStatus) {
+        return false
+      }
+
+      if (!query) {
+        return true
+      }
+
+      return [
+        apiKey.Name,
+        apiKey.KeyId,
+        apiKey.Key,
+        formatModels(apiKey.GrantedModels, ""),
+      ].some((value) => String(value ?? "").toLowerCase().includes(query))
+    })
+  }, [apiKeys, searchQuery, statusFilter])
 
   function openCreateSheet() {
     setForm(emptyForm)
@@ -362,9 +410,40 @@ export function APIKeysDashboard({ projectId }: { projectId: string }) {
   return (
     <div className="flex flex-col gap-4 p-4 lg:p-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <p className="text-sm text-muted-foreground">
-          {t.keysSummary(activeCount, totalCount)}
-        </p>
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <div className="relative w-full sm:w-64">
+            <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="pl-8"
+              value={searchQuery}
+              placeholder={t.searchApiKeys}
+              onChange={(event) => setSearchQuery(event.target.value)}
+            />
+          </div>
+          <Select
+            value={statusFilter}
+            onValueChange={(value) =>
+              setStatusFilter(value as APIKeyStatusFilter)
+            }
+            items={statusFilterItems}
+          >
+            <SelectTrigger className="w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {statusFilterItems.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <p className="text-sm text-muted-foreground">
+            {t.keysSummary(activeCount, totalCount)}
+          </p>
+        </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => void loadApiKeys()}>
             <RefreshCwIcon
@@ -402,28 +481,28 @@ export function APIKeysDashboard({ projectId }: { projectId: string }) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t.name}</TableHead>
-                <TableHead>{t.keyId}</TableHead>
-                <TableHead>{t.apiKey}</TableHead>
-                <TableHead>{t.status}</TableHead>
-                <TableHead>{t.modelverse}</TableHead>
-                <TableHead>{t.sandbox}</TableHead>
-                <TableHead>{t.daily}</TableHead>
-                <TableHead>{t.monthly}</TableHead>
-                <TableHead>{t.models}</TableHead>
-                <TableHead>{t.created}</TableHead>
-                <TableHead>
+                <TableHead className="text-center">{t.name}</TableHead>
+                <TableHead className="text-center">{t.keyId}</TableHead>
+                <TableHead className="text-center">{t.apiKey}</TableHead>
+                <TableHead className="text-center">{t.status}</TableHead>
+                <TableHead className="text-center">{t.modelverse}</TableHead>
+                <TableHead className="text-center">{t.sandbox}</TableHead>
+                <TableHead className="text-center">{t.daily}</TableHead>
+                <TableHead className="text-center">{t.monthly}</TableHead>
+                <TableHead className="text-center">{t.models}</TableHead>
+                <TableHead className="text-center">{t.created}</TableHead>
+                <TableHead className="text-center">
                   <span className="sr-only">{t.actions}</span>
                 </TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
+            <TableBody className="[&_td]:text-center">
               {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={11}>{t.loadingApiKeys}</TableCell>
                 </TableRow>
-              ) : apiKeys.length ? (
-                apiKeys.map((apiKey) => (
+              ) : filteredApiKeys.length ? (
+                filteredApiKeys.map((apiKey) => (
                   <TableRow key={apiKey.KeyId ?? apiKey.Name}>
                     <TableCell className="font-medium">
                       {apiKey.Name || t.unnamedKey}
@@ -434,7 +513,7 @@ export function APIKeysDashboard({ projectId }: { projectId: string }) {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-center gap-2">
                         <code className="min-w-28 font-mono text-xs text-muted-foreground">
                           {formatApiKeyPreview(apiKey.Key)}
                         </code>
@@ -501,7 +580,7 @@ export function APIKeysDashboard({ projectId }: { projectId: string }) {
                       {apiKey.MonthlyLimitAmount || t.noCap}
                     </TableCell>
                     <TableCell>
-                      <span className="block max-w-56 truncate">
+                      <span className="mx-auto block max-w-56 truncate">
                         {apiKey.GrantAllModels
                           ? t.allModels
                           : formatModels(apiKey.GrantedModels, t.none)}
@@ -551,7 +630,9 @@ export function APIKeysDashboard({ projectId }: { projectId: string }) {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={11}>{t.noApiKeys}</TableCell>
+                  <TableCell colSpan={11}>
+                    {apiKeys.length ? t.noApiKeyResults : t.noApiKeys}
+                  </TableCell>
                 </TableRow>
               )}
             </TableBody>

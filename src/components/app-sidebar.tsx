@@ -27,6 +27,9 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -218,11 +221,11 @@ export function AppSidebar({
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
-      <SidebarHeader className="px-2 pt-2 pb-2">
+      <SidebarHeader className="px-2 pt-2 pb-0">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
-              className="h-12 justify-start overflow-hidden data-[slot=sidebar-menu-button]:p-1.5!"
+              className="h-10 justify-start overflow-hidden data-[slot=sidebar-menu-button]:p-1!"
               render={<a href="/dashboard" />}
             >
               <Image
@@ -231,37 +234,46 @@ export function AppSidebar({
                 width={210}
                 height={48}
                 unoptimized
-                className="h-9 w-[210px] max-w-full object-contain object-left"
+                className="h-8 w-[210px] max-w-full object-contain object-left"
               />
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              isActive={activeView === "dashboard"}
-              tooltip={t.dashboard}
-              className="pl-4"
-              onClick={() => onViewChange("dashboard")}
-            >
-              <ChartAreaIcon />
-              <span>{t.dashboard}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              isActive={activeView === "api-keys"}
-              tooltip={t.apiKeys}
-              className="pl-4"
-              onClick={() => onViewChange("api-keys")}
-            >
-              <KeyRoundIcon />
-              <span>{t.apiKeys}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <SidebarGroup className="pt-1">
+          <SidebarGroupLabel>{t.overview}</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={activeView === "dashboard"}
+                  tooltip={t.dashboard}
+                  onClick={() => onViewChange("dashboard")}
+                >
+                  <ChartAreaIcon />
+                  <span>{t.dashboard}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={activeView === "api-keys"}
+                  tooltip={t.apiKeys}
+                  onClick={() => onViewChange("api-keys")}
+                >
+                  <KeyRoundIcon />
+                  <span>{t.apiKeys}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>{t.modelverse}</SidebarGroupLabel>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>{t.agentSandbox}</SidebarGroupLabel>
+        </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
         {user ? (
