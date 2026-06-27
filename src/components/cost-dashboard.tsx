@@ -4,19 +4,22 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   Area,
   AreaChart,
+  Bar,
+  BarChart,
+  Cell,
   CartesianGrid,
+  LabelList,
+  Pie,
+  PieChart,
   XAxis,
   YAxis,
 } from "recharts"
 import type { DateRange as CalendarDateRange } from "react-day-picker"
 import { enUS, zhCN } from "react-day-picker/locale"
 import {
-  BoxIcon,
-  BrainCircuitIcon,
   CalendarRangeIcon,
   CircleAlertIcon,
   RefreshCwIcon,
-  TrendingUpIcon,
 } from "lucide-react"
 
 import {
@@ -43,14 +46,6 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart"
 import { Calendar } from "@/components/ui/calendar"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { useI18n } from "@/components/i18n-provider"
 
 type CostService = "modelverse" | "sandbox"
@@ -141,16 +136,34 @@ type CostTrendPoint = {
   sandbox: number
 }
 
+type AmountBarPoint = {
+  id: string
+  label: string
+  amount: number
+  valueLabel: string
+}
+
 const chartConfig = {
   modelverse: {
     label: "Modelverse",
-    color: "var(--chart-1)",
+    color: "oklch(0.58 0.22 263)",
   },
   sandbox: {
     label: "Sandbox",
-    color: "var(--chart-2)",
+    color: "oklch(0.62 0.17 154)",
   },
 } satisfies ChartConfig
+
+const modelverseChartColor = "oklch(0.58 0.22 263)"
+const sandboxChartColor = "oklch(0.62 0.17 154)"
+const peakChartColor = "oklch(0.72 0.18 70)"
+const regionChartColors = [
+  sandboxChartColor,
+  "oklch(0.64 0.2 35)",
+  "oklch(0.61 0.19 245)",
+  "oklch(0.66 0.18 315)",
+  peakChartColor,
+]
 
 function getDefaultDateRange(): CalendarDateRange {
   const end = new Date()
@@ -200,7 +213,17 @@ function formatAmountWithUnit(
   locale: string,
   unit: string
 ) {
-  return `${formatAmount(value, locale)} ${unit}`
+  const amount = formatAmount(value, locale)
+
+  return amount === "-" ? amount : `${amount} ${unit}`
+}
+
+function formatTooltipAmount(value: unknown, locale: string, unit: string) {
+  if (typeof value === "number" || typeof value === "string") {
+    return formatAmountWithUnit(value, locale, unit)
+  }
+
+  return "-"
 }
 
 function formatInteger(value: string | number | undefined, locale: string) {
@@ -220,7 +243,9 @@ function formatIntegerWithUnit(
   locale: string,
   unit: string
 ) {
-  return `${formatInteger(value, locale)} ${unit}`
+  const amount = formatInteger(value, locale)
+
+  return amount === "-" ? amount : `${amount} ${unit}`
 }
 
 function formatCompactAmount(value: string | number | undefined, locale: string) {
@@ -234,14 +259,6 @@ function formatCompactAmount(value: string | number | undefined, locale: string)
     notation: "compact",
     maximumFractionDigits: 1,
   }).format(number)
-}
-
-function formatPercent(value: string | undefined) {
-  if (!value) {
-    return "-"
-  }
-
-  return value.includes("%") ? value : `${value}%`
 }
 
 function formatDay(value: string | undefined, locale: string) {
@@ -271,6 +288,12 @@ function formatCalendarDate(value: Date | undefined, locale: string) {
 
 function datePickerLocale(locale: string) {
   return locale === "zh" ? zhCN : enUS
+}
+
+function compactLabel(value: string | number | undefined, fallback: string) {
+  const label = String(value ?? fallback)
+
+  return label.length > 24 ? `${label.slice(0, 21)}...` : label
 }
 
 function buildTrendData(
@@ -304,6 +327,23 @@ function buildTrendData(
   )
 }
 
+function toAmountBarPoint(
+  id: string | number | undefined,
+  label: string | number | undefined,
+  amount: string | number | undefined,
+  locale: string,
+  unit: string
+): AmountBarPoint {
+  const normalizedAmount = numberFromAmount(amount)
+
+  return {
+    id: String(id ?? label ?? "-"),
+    label: compactLabel(label, "-"),
+    amount: normalizedAmount,
+    valueLabel: formatAmountWithUnit(normalizedAmount, locale, unit),
+  }
+}
+
 function statusFor(results: CostAnalysisResult[], service: CostService) {
   return results.find((result) => result.service === service)
 }
@@ -326,6 +366,212 @@ function peakSummary(
   ]
 
   return candidates.sort((left, right) => right.amount - left.amount)[0]
+}
+
+function AmountBarCard({
+  title,
+  description,
+  data,
+  emptyText,
+  color = modelverseChartColor,
+}: {
+  title: string
+  description: string
+  data: AmountBarPoint[]
+  emptyText: string
+  color?: string
+}) {
+  const amountBarConfig = useMemo(
+    () =>
+      ({
+        amount: {
+          label: "Amount",
+          color,
+        },
+      }) satisfies ChartConfig,
+    [color]
+  )
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {data.length ? (
+          <ChartContainer
+            config={amountBarConfig}
+            className="h-[260px] w-full"
+            initialDimension={{ width: 520, height: 260 }}
+          >
+            <BarChart
+              accessibilityLayer
+              data={data}
+              layout="vertical"
+              margin={{
+                left: 8,
+                right: 112,
+              }}
+            >
+              <CartesianGrid horizontal={false} />
+              <YAxis
+                dataKey="label"
+                type="category"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                width={132}
+              />
+              <XAxis
+                dataKey="amount"
+                type="number"
+                domain={[0, "dataMax"]}
+                hide
+              />
+              <ChartTooltip
+                cursor={false}
+                content={<ChartTooltipContent indicator="line" />}
+              />
+              <Bar dataKey="amount" fill="var(--color-amount)" radius={4}>
+                <LabelList
+                  dataKey="valueLabel"
+                  position="right"
+                  offset={8}
+                  className="fill-foreground"
+                  fontSize={12}
+                />
+              </Bar>
+            </BarChart>
+          </ChartContainer>
+        ) : (
+          <div className="flex h-[260px] items-center text-sm text-muted-foreground">
+            {emptyText}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function RegionPieCard({
+  title,
+  description,
+  data,
+  emptyText,
+  locale,
+  unit,
+}: {
+  title: string
+  description: string
+  data: AmountBarPoint[]
+  emptyText: string
+  locale: string
+  unit: string
+}) {
+  const regionPieConfig = useMemo(
+    () =>
+      ({
+        amount: {
+          label: "Amount",
+          color: sandboxChartColor,
+        },
+      }) satisfies ChartConfig,
+    []
+  )
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {data.length ? (
+          <div className="grid min-h-[260px] gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
+            <ChartContainer
+              config={regionPieConfig}
+              className="h-[260px] w-full"
+              initialDimension={{ width: 320, height: 260 }}
+            >
+              <PieChart accessibilityLayer>
+                <ChartTooltip
+                  cursor={false}
+                  content={
+                    <ChartTooltipContent
+                      hideLabel
+                      nameKey="label"
+                      formatter={(value, name, item) => (
+                        <>
+                          <div
+                            className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
+                            style={{
+                              backgroundColor:
+                                item.payload?.fill ?? item.color,
+                            }}
+                          />
+                          <span className="text-muted-foreground">
+                            {String(name)}
+                          </span>
+                          <span className="ml-auto font-mono font-medium tabular-nums text-foreground">
+                            {item.payload?.valueLabel ??
+                              formatTooltipAmount(value, locale, unit)}
+                          </span>
+                        </>
+                      )}
+                    />
+                  }
+                />
+                <Pie
+                  data={data}
+                  dataKey="amount"
+                  nameKey="label"
+                  innerRadius={54}
+                  outerRadius={92}
+                  paddingAngle={2}
+                >
+                  {data.map((item, index) => (
+                    <Cell
+                      key={item.id}
+                      fill={regionChartColors[index % regionChartColors.length]}
+                    />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ChartContainer>
+            <div className="flex flex-col justify-center gap-2">
+              {data.map((item, index) => (
+                <div
+                  key={item.id}
+                  className="flex min-w-0 items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm"
+                >
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{
+                        backgroundColor:
+                          regionChartColors[index % regionChartColors.length],
+                      }}
+                    />
+                    <span className="truncate text-muted-foreground">
+                      {item.label}
+                    </span>
+                  </div>
+                  <span className="shrink-0 font-mono font-medium tabular-nums">
+                    {item.valueLabel}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="flex h-[260px] items-center text-sm text-muted-foreground">
+            {emptyText}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
 }
 
 export function CostDashboard({ projectId }: { projectId: string }) {
@@ -427,6 +673,36 @@ export function CostDashboard({ projectId }: { projectId: string }) {
   const keyRows = (modelverse?.data?.KeyTopN ?? []).slice(0, 6)
   const sandboxRegionRows = (sandbox?.data?.RegionDistribution ?? []).slice(0, 4)
   const sandboxInstanceRows = (sandbox?.data?.InstanceTopN ?? []).slice(0, 4)
+  const modelChartRows = modelRows.map((model) =>
+    toAmountBarPoint(
+      model.ModelID,
+      model.ModelName ?? model.ModelID,
+      model.Amount,
+      locale,
+      t.yuan
+    )
+  ).sort((left, right) => right.amount - left.amount)
+  const keyChartRows = keyRows.map((apiKey) =>
+    toAmountBarPoint(
+      apiKey.ResourceID,
+      apiKey.ResourceName ?? apiKey.ResourceID,
+      apiKey.Amount,
+      locale,
+      t.yuan
+    )
+  ).sort((left, right) => right.amount - left.amount)
+  const sandboxRegionChartRows = sandboxRegionRows.map((item) =>
+    toAmountBarPoint(item.Region, item.Region, item.Amount, locale, t.yuan)
+  ).sort((left, right) => right.amount - left.amount)
+  const sandboxInstanceChartRows = sandboxInstanceRows.map((item) =>
+    toAmountBarPoint(
+      item.OrganizationID,
+      item.OrganizationName ?? item.OrganizationID,
+      item.Amount,
+      locale,
+      t.yuan
+    )
+  ).sort((left, right) => right.amount - left.amount)
 
   return (
     <div className="flex flex-col gap-5 p-4 lg:p-6">
@@ -486,10 +762,7 @@ export function CostDashboard({ projectId }: { projectId: string }) {
       <div className="grid gap-4 lg:grid-cols-3">
           <Card>
             <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <BrainCircuitIcon className="text-muted-foreground" />
-                <CardTitle>{t.modelverse}</CardTitle>
-              </div>
+              <CardTitle>{t.modelverse}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-semibold tabular-nums">
@@ -528,10 +801,7 @@ export function CostDashboard({ projectId }: { projectId: string }) {
 
           <Card>
             <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <BoxIcon className="text-muted-foreground" />
-                <CardTitle>{t.sandbox}</CardTitle>
-              </div>
+              <CardTitle>{t.sandbox}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-semibold tabular-nums">
@@ -578,10 +848,7 @@ export function CostDashboard({ projectId }: { projectId: string }) {
 
           <Card>
             <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <TrendingUpIcon className="text-muted-foreground" />
-                <CardTitle>{t.peakSpend}</CardTitle>
-              </div>
+              <CardTitle>{t.peakSpend}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-semibold tabular-nums">
@@ -625,47 +892,48 @@ export function CostDashboard({ projectId }: { projectId: string }) {
                   <linearGradient
                     id="fillModelverse"
                     x1="0"
-                    y1="0"
                     x2="0"
+                    y1="0"
                     y2="1"
                   >
                     <stop
                       offset="5%"
                       stopColor="var(--color-modelverse)"
-                      stopOpacity={0.36}
+                      stopOpacity={0.35}
                     />
                     <stop
                       offset="95%"
                       stopColor="var(--color-modelverse)"
-                      stopOpacity={0.04}
+                      stopOpacity={0.05}
                     />
                   </linearGradient>
                   <linearGradient
                     id="fillSandbox"
                     x1="0"
-                    y1="0"
                     x2="0"
+                    y1="0"
                     y2="1"
                   >
                     <stop
                       offset="5%"
                       stopColor="var(--color-sandbox)"
-                      stopOpacity={0.28}
+                      stopOpacity={0.35}
                     />
                     <stop
                       offset="95%"
                       stopColor="var(--color-sandbox)"
-                      stopOpacity={0.03}
+                      stopOpacity={0.05}
                     />
                   </linearGradient>
                 </defs>
                 <CartesianGrid vertical={false} />
                 <XAxis
-                  dataKey="label"
+                  dataKey="day"
                   tickLine={false}
                   axisLine={false}
                   tickMargin={10}
                   interval="preserveStartEnd"
+                  tickFormatter={(value) => formatDay(String(value), locale)}
                 />
                 <YAxis
                   domain={[0, "dataMax"]}
@@ -677,23 +945,30 @@ export function CostDashboard({ projectId }: { projectId: string }) {
                 />
                 <ChartTooltip
                   cursor={false}
-                  content={<ChartTooltipContent indicator="line" />}
+                  content={
+                    <ChartTooltipContent
+                      indicator="dot"
+                      labelFormatter={(value) =>
+                        formatDay(String(value), locale)
+                      }
+                    />
+                  }
                 />
                 <Area
                   dataKey="sandbox"
-                  type="linear"
+                  type="monotone"
                   fill="url(#fillSandbox)"
                   fillOpacity={1}
                   stroke="var(--color-sandbox)"
-                  strokeWidth={2}
+                  stackId="cost"
                 />
                 <Area
                   dataKey="modelverse"
-                  type="linear"
+                  type="monotone"
                   fill="url(#fillModelverse)"
                   fillOpacity={1}
                   stroke="var(--color-modelverse)"
-                  strokeWidth={2}
+                  stackId="cost"
                 />
                 <ChartLegend content={<ChartLegendContent />} />
               </AreaChart>
@@ -710,177 +985,38 @@ export function CostDashboard({ projectId }: { projectId: string }) {
       ) : null}
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t.topModels}</CardTitle>
-            <CardDescription>{t.modelverse}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t.models}</TableHead>
-                    <TableHead>{t.amount}</TableHead>
-                    <TableHead>{t.calls}</TableHead>
-                    <TableHead>{t.percent}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {modelRows.length ? (
-                    modelRows.map((model) => (
-                      <TableRow key={model.ModelID ?? model.ModelName}>
-                        <TableCell className="max-w-[260px] truncate font-medium">
-                          {model.ModelName || model.ModelID || "-"}
-                        </TableCell>
-                        <TableCell className="tabular-nums">
-                          {formatAmountWithUnit(model.Amount, locale, t.yuan)}
-                        </TableCell>
-                        <TableCell className="tabular-nums">
-                          {formatInteger(model.CallCount, locale)}
-                        </TableCell>
-                        <TableCell className="tabular-nums">
-                          {formatPercent(model.Percent)}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={4}>{t.noCostData}</TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{t.topApiKeys}</CardTitle>
-            <CardDescription>{t.modelverse}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t.apiKey}</TableHead>
-                    <TableHead>{t.amount}</TableHead>
-                    <TableHead>{t.usage}</TableHead>
-                    <TableHead>{t.calls}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {keyRows.length ? (
-                    keyRows.map((apiKey) => (
-                      <TableRow key={apiKey.ResourceID ?? apiKey.ResourceName}>
-                        <TableCell className="max-w-[260px] truncate font-medium">
-                          {apiKey.ResourceName || apiKey.ResourceID || "-"}
-                        </TableCell>
-                        <TableCell className="tabular-nums">
-                          {formatAmountWithUnit(apiKey.Amount, locale, t.yuan)}
-                        </TableCell>
-                        <TableCell className="tabular-nums">
-                          {formatInteger(apiKey.Usage, locale)}
-                        </TableCell>
-                        <TableCell className="tabular-nums">
-                          {formatInteger(apiKey.CallCount, locale)}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={4}>{t.noCostData}</TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+        <AmountBarCard
+          title={t.topModels}
+          description={t.modelverse}
+          data={modelChartRows}
+          emptyText={t.noCostData}
+          color={modelverseChartColor}
+        />
+        <AmountBarCard
+          title={t.topApiKeys}
+          description={t.modelverse}
+          data={keyChartRows}
+          emptyText={t.noCostData}
+          color="oklch(0.61 0.19 245)"
+        />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t.sandboxBreakdown}</CardTitle>
-            <CardDescription>{t.regionShare}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t.region}</TableHead>
-                    <TableHead>{t.amount}</TableHead>
-                    <TableHead>{t.percent}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sandboxRegionRows.length ? (
-                    sandboxRegionRows.map((item) => (
-                      <TableRow key={item.Region}>
-                        <TableCell className="font-medium">
-                          {item.Region || "-"}
-                        </TableCell>
-                        <TableCell className="tabular-nums">
-                          {formatAmountWithUnit(item.Amount, locale, t.yuan)}
-                        </TableCell>
-                        <TableCell className="tabular-nums">
-                          {formatPercent(item.Percent)}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={3}>{t.noCostData}</TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{t.sandboxUsers}</CardTitle>
-            <CardDescription>{t.sandbox}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t.name}</TableHead>
-                    <TableHead>{t.amount}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sandboxInstanceRows.length ? (
-                    sandboxInstanceRows.map((item) => (
-                      <TableRow
-                        key={item.OrganizationID ?? item.OrganizationName}
-                      >
-                        <TableCell className="font-medium">
-                          {item.OrganizationName || item.OrganizationID || "-"}
-                        </TableCell>
-                        <TableCell className="tabular-nums">
-                          {formatAmountWithUnit(item.Amount, locale, t.yuan)}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={2}>{t.noCostData}</TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+        <RegionPieCard
+          title={t.sandboxBreakdown}
+          description={t.regionShare}
+          data={sandboxRegionChartRows}
+          emptyText={t.noCostData}
+          locale={locale}
+          unit={t.yuan}
+        />
+        <AmountBarCard
+          title={t.sandboxUsers}
+          description={t.sandbox}
+          data={sandboxInstanceChartRows}
+          emptyText={t.noCostData}
+          color={sandboxChartColor}
+        />
       </div>
     </div>
   )

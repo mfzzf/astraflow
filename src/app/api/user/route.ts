@@ -12,11 +12,13 @@ type OriginUser = {
 
 type UserInfo = {
   UserId?: number
+  CompanyId?: number
   UserEmail?: string
   UserPhone?: string
   PhonePrefix?: string
   UserType?: number
   UserName?: string
+  DisplayName?: string
   CompanyName?: string
   IndustryType?: number
   Province?: string
