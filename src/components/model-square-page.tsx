@@ -947,17 +947,19 @@ function ModelCard({
       <CardHeader className="gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
         <div className="flex min-w-0 gap-3">
           <ModelIcon model={model} />
-          <div className="min-w-0">
-            <CardTitle className="truncate text-base">
-              {getModelTitle(model)}
-            </CardTitle>
+          <div className="-mt-0.5 min-w-0">
+            <div className="-translate-y-0.5 flex min-w-0 items-center gap-1.5">
+              <CardTitle className="min-w-0 truncate text-lg font-bold leading-tight text-foreground group-data-[size=sm]/card:text-lg">
+                {getModelTitle(model)}
+              </CardTitle>
+              <ModelCopyButton value={model.Name} t={t} />
+            </div>
             <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
               <span className="truncate">{model.Manufacturer}</span>
             </div>
           </div>
         </div>
         <div className="flex flex-wrap gap-1 sm:justify-end">
-          <ModelCopyButton value={model.Name} t={t} />
           {isHot ? (
             <Badge variant="destructive">
               <FlameIcon data-icon="inline-start" />
