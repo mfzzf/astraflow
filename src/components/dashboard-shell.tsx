@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { APIKeysDashboard } from "@/components/api-keys-dashboard"
 import { AppSidebar, type DashboardView } from "@/components/app-sidebar"
+import { ChatHistoryProvider } from "@/components/chat-history-provider"
+import { ChatPage } from "@/components/chat-page"
 import { CostDashboard } from "@/components/cost-dashboard"
 import { useI18n } from "@/components/i18n-provider"
 import { ModelSquarePage } from "@/components/model-square-page"
@@ -41,6 +43,10 @@ function titleForView(view: DashboardView, t: ReturnType<typeof useI18n>["t"]) {
 
   if (view === "model-square") {
     return t.modelSquare
+  }
+
+  if (view === "chat") {
+    return t.chat
   }
 
   return t.dashboard
@@ -110,36 +116,48 @@ export function DashboardShell({
   }, [projects, selectedProjectId])
 
   return (
-    <SidebarProvider
-      className="h-svh min-h-0 overflow-hidden"
-      style={
-        {
-          "--sidebar-width": "calc(var(--spacing) * 72)",
-          "--header-height": "calc(var(--spacing) * 12)",
-        } as React.CSSProperties
-      }
-    >
-      <AppSidebar
-        activeView={activeView}
-        variant="inset"
-      />
-      <SidebarInset className="min-h-0 overflow-hidden">
-        <SiteHeader
-          title={titleForView(activeView, t)}
-          isLoadingProjects={isLoadingProjects}
-          projectError={projectError}
-          projects={projectsForSelect}
-          selectedProjectId={selectedProjectId}
-          onProjectChange={setSelectedProjectId}
+    <ChatHistoryProvider>
+      <SidebarProvider
+        className="h-svh min-h-0 overflow-hidden"
+        style={
+          {
+            "--sidebar-width": "calc(var(--spacing) * 72)",
+            "--header-height": "calc(var(--spacing) * 12)",
+          } as React.CSSProperties
+        }
+      >
+        <AppSidebar
+          activeView={activeView}
+          variant="inset"
         />
-        {activeView === "dashboard" ? (
-          <CostDashboard projectId={selectedProjectId} />
-        ) : activeView === "api-keys" ? (
-          <APIKeysDashboard projectId={selectedProjectId} />
-        ) : (
-          <ModelSquarePage projectId={selectedProjectId} />
-        )}
-      </SidebarInset>
-    </SidebarProvider>
+        <SidebarInset className="min-h-0 overflow-hidden">
+          <SiteHeader
+            title={titleForView(activeView, t)}
+            isLoadingProjects={isLoadingProjects}
+            projectError={projectError}
+            projects={projectsForSelect}
+            selectedProjectId={selectedProjectId}
+            onProjectChange={setSelectedProjectId}
+          />
+          <div
+            className={
+              activeView === "chat" || activeView === "model-square"
+                ? "flex min-h-0 flex-1 overflow-hidden"
+                : "min-h-0 flex-1 overflow-y-auto"
+            }
+          >
+            {activeView === "dashboard" ? (
+              <CostDashboard projectId={selectedProjectId} />
+            ) : activeView === "api-keys" ? (
+              <APIKeysDashboard projectId={selectedProjectId} />
+            ) : activeView === "model-square" ? (
+              <ModelSquarePage projectId={selectedProjectId} />
+            ) : (
+              <ChatPage projectId={selectedProjectId} />
+            )}
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    </ChatHistoryProvider>
   )
 }

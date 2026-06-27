@@ -9,8 +9,10 @@ import {
   ChevronDownIcon,
   KeyRoundIcon,
   LogOutIcon,
+  MessageSquareIcon,
 } from "lucide-react"
 
+import { ChatHistorySidebar } from "@/components/chat-history-sidebar"
 import { useI18n } from "@/components/i18n-provider"
 import {
   Avatar,
@@ -68,7 +70,7 @@ type UserInfoResponse = {
   data?: UserInfo | null
 }
 
-export type DashboardView = "dashboard" | "api-keys" | "model-square"
+export type DashboardView = "dashboard" | "api-keys" | "model-square" | "chat"
 
 function displayNameForUser(user: UserInfo | null, locale: string) {
   if (locale === "zh") {
@@ -240,54 +242,70 @@ export function AppSidebar({
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup className="pt-1">
-          <SidebarGroupLabel>{t.overview}</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={activeView === "dashboard"}
-                  tooltip={t.dashboard}
-                  render={<Link href="/overview" />}
-                >
-                  <ChartAreaIcon />
-                  <span>{t.dashboard}</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={activeView === "api-keys"}
-                  tooltip={t.apiKeys}
-                  render={<Link href="/api-keys" />}
-                >
-                  <KeyRoundIcon />
-                  <span>{t.apiKeys}</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-        <SidebarGroup>
-          <SidebarGroupLabel>{t.modelverse}</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={activeView === "model-square"}
-                  tooltip={t.modelSquare}
-                  render={<Link href="/model-square" />}
-                >
-                  <BoxesIcon />
-                  <span>{t.modelSquare}</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-        <SidebarGroup>
-          <SidebarGroupLabel>{t.agentSandbox}</SidebarGroupLabel>
-        </SidebarGroup>
+      <SidebarContent className={activeView === "chat" ? "min-h-0" : undefined}>
+        {activeView === "chat" ? (
+          <ChatHistorySidebar />
+        ) : (
+          <>
+            <SidebarGroup className="pt-1">
+              <SidebarGroupLabel>{t.overview}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={activeView === "dashboard"}
+                      tooltip={t.dashboard}
+                      render={<Link href="/overview" />}
+                    >
+                      <ChartAreaIcon />
+                      <span>{t.dashboard}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={activeView === "api-keys"}
+                      tooltip={t.apiKeys}
+                      render={<Link href="/api-keys" />}
+                    >
+                      <KeyRoundIcon />
+                      <span>{t.apiKeys}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+            <SidebarGroup>
+              <SidebarGroupLabel>{t.modelverse}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={activeView === "model-square"}
+                      tooltip={t.modelSquare}
+                      render={<Link href="/model-square" />}
+                    >
+                      <BoxesIcon />
+                      <span>{t.modelSquare}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={activeView === "chat"}
+                      tooltip={t.chat}
+                      render={<Link href="/chat" />}
+                    >
+                      <MessageSquareIcon />
+                      <span>{t.chat}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+            <SidebarGroup>
+              <SidebarGroupLabel>{t.agentSandbox}</SidebarGroupLabel>
+            </SidebarGroup>
+          </>
+        )}
       </SidebarContent>
       <SidebarFooter>
         {user ? (
