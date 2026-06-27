@@ -34,9 +34,7 @@ export function Source({ href, children }: SourceProps) {
 
   return (
     <SourceContext.Provider value={{ href, domain }}>
-      <HoverCard openDelay={150} closeDelay={0}>
-        {children}
-      </HoverCard>
+      <HoverCard>{children}</HoverCard>
     </SourceContext.Provider>
   )
 }
@@ -57,6 +55,8 @@ export function SourceTrigger({
 
   return (
     <HoverCardTrigger
+      delay={150}
+      closeDelay={0}
       render={
         <a
           href={href}

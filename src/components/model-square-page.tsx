@@ -700,9 +700,11 @@ function ModelCopyButton({
     return null
   }
 
+  const copyValue = value
+
   async function copyModelName() {
     try {
-      await window.navigator.clipboard.writeText(value)
+      await window.navigator.clipboard.writeText(copyValue)
       setIsCopied(true)
       window.setTimeout(() => {
         setIsCopied(false)

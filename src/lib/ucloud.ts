@@ -54,11 +54,17 @@ function stringifyParamValue(value: UCloudScalarParamValue) {
   return value
 }
 
+function isArrayParamValue(
+  value: UCloudParamValue
+): value is readonly UCloudScalarParamValue[] {
+  return Array.isArray(value)
+}
+
 function expandParamValues(params: Record<string, UCloudParamValue>) {
   const expandedParams: Record<string, UCloudScalarParamValue> = {}
 
   for (const [key, value] of Object.entries(params)) {
-    if (Array.isArray(value)) {
+    if (isArrayParamValue(value)) {
       value.forEach((item, index) => {
         expandedParams[`${key}.${index}`] = item
       })
@@ -108,7 +114,7 @@ export function createUCloudSignedParams({
   accessKey,
   secretKey,
   params,
-}: CreateSignedUrlInput) {
+}: CreateSignedUrlInput): Record<string, UCloudScalarParamValue> {
   const signedParams = expandParamValues({
     ...params,
     PublicKey: accessKey,

@@ -303,6 +303,10 @@ export function RequestLogsPage({ projectId }: { projectId: string }) {
   const calendarMenuRef = useRef<HTMLDivElement>(null)
 
   const regionItems = regions.length ? regions : [FALLBACK_REGION]
+  const regionSelectItems = regionItems.map((region) => ({
+    label: regionLabel(region),
+    value: region.Region || "",
+  }))
   const selectedApiKeyValue =
     selectedApiKeyId === "all" ? "" : selectedApiKeyId
   const pageStart = totalCount ? offset + 1 : 0
@@ -323,6 +327,16 @@ export function RequestLogsPage({ projectId }: { projectId: string }) {
   const apiKeyItems = useMemo(
     () => apiKeys.filter((apiKey) => apiKey.KeyId),
     [apiKeys]
+  )
+  const apiKeySelectItems = useMemo(
+    () => [
+      { label: t.allApiKeys, value: "all" },
+      ...apiKeyItems.map((apiKey) => ({
+        label: apiKeyLabel(apiKey),
+        value: apiKey.KeyId || "",
+      })),
+    ],
+    [apiKeyItems, t.allApiKeys]
   )
 
   const loadRegions = useCallback(async () => {
@@ -601,7 +615,7 @@ export function RequestLogsPage({ projectId }: { projectId: string }) {
           onChange={(event) => setModelName(event.target.value)}
         />
         <Select
-          items={regionItems}
+          items={regionSelectItems}
           value={selectedRegion}
           onValueChange={(value) => setSelectedRegion(String(value))}
         >
@@ -626,7 +640,7 @@ export function RequestLogsPage({ projectId }: { projectId: string }) {
           </SelectContent>
         </Select>
         <Select
-          items={apiKeyItems}
+          items={apiKeySelectItems}
           value={selectedApiKeyId}
           onValueChange={(value) => setSelectedApiKeyId(String(value))}
         >
