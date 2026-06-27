@@ -174,6 +174,7 @@ const FALLBACK_REGIONS = [
   { Name: "乌兰察布", Value: DEFAULT_REGION },
   { Name: "洛杉矶", Value: "us-ca" },
 ]
+const EMPTY_BILLING_OPTIONS: BillingOption[] = []
 
 function getDefaultDateRange(): CalendarDateRange {
   const end = new Date()
@@ -266,6 +267,24 @@ function optionLabel(option: BillingOption) {
   }
 
   return option.Name || value || "-"
+}
+
+function dimensionLabel(option: BillingOption, t: ReturnType<typeof useI18n>["t"]) {
+  const value = optionValue(option)
+
+  if (value === "project") {
+    return t.project
+  }
+
+  if (value === "sku") {
+    return t.pricingSku
+  }
+
+  if (value === "region") {
+    return t.region
+  }
+
+  return optionLabel(option)
 }
 
 function getValue(item: PaidOrderItem, keys: string[]) {
@@ -414,14 +433,60 @@ export function UsagePage({ projectId }: { projectId: string }) {
   const productOptions = filterOptions?.ProductCodes?.length
     ? filterOptions.ProductCodes
     : FALLBACK_PRODUCTS
-  const orderTypeOptions = filterOptions?.OrderTypes ?? []
+  const orderTypeOptions = filterOptions?.OrderTypes ?? EMPTY_BILLING_OPTIONS
   const regionOptions = filterOptions?.Regions?.length
     ? filterOptions.Regions
     : FALLBACK_REGIONS
-  const pricingSkuOptions = filterOptions?.PricingSKUs ?? []
+  const pricingSkuOptions = filterOptions?.PricingSKUs ?? EMPTY_BILLING_OPTIONS
   const dimensionOptions = filterOptions?.Dimensions?.length
     ? filterOptions.Dimensions
     : FALLBACK_DIMENSIONS
+  const productSelectItems = useMemo(
+    () =>
+      productOptions.map((option) => ({
+        value: optionValue(option),
+        label: optionLabel(option),
+      })),
+    [productOptions]
+  )
+  const orderTypeSelectItems = useMemo(
+    () => [
+      { value: "all", label: t.allOrderTypes },
+      ...orderTypeOptions.map((option) => ({
+        value: optionValue(option),
+        label: optionLabel(option),
+      })),
+    ],
+    [orderTypeOptions, t.allOrderTypes]
+  )
+  const regionSelectItems = useMemo(
+    () => [
+      { value: "all", label: t.allRegions },
+      ...regionOptions.map((option) => ({
+        value: optionValue(option),
+        label: optionLabel(option),
+      })),
+    ],
+    [regionOptions, t.allRegions]
+  )
+  const pricingSkuSelectItems = useMemo(
+    () => [
+      { value: "all", label: t.allPricingSkus },
+      ...pricingSkuOptions.map((option) => ({
+        value: optionValue(option),
+        label: optionLabel(option),
+      })),
+    ],
+    [pricingSkuOptions, t.allPricingSkus]
+  )
+  const dimensionSelectItems = useMemo(
+    () =>
+      dimensionOptions.map((option) => ({
+        value: optionValue(option),
+        label: dimensionLabel(option, t),
+      })),
+    [dimensionOptions, t]
+  )
   const monthlyBills = monthlyData?.paidBill?.Bills
   const bills = useMemo(
     () =>
@@ -683,6 +748,7 @@ export function UsagePage({ projectId }: { projectId: string }) {
           ) : null}
         </div>
         <Select
+          items={productSelectItems}
           value={productCode}
           onValueChange={(value) => setProductCode(String(value))}
         >
@@ -695,15 +761,16 @@ export function UsagePage({ projectId }: { projectId: string }) {
           </SelectTrigger>
           <SelectContent align="start" className="min-w-56">
             <SelectGroup>
-              {productOptions.map((option) => (
-                <SelectItem key={optionValue(option)} value={optionValue(option)}>
-                  {optionLabel(option)}
+              {productSelectItems.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
                 </SelectItem>
               ))}
             </SelectGroup>
           </SelectContent>
         </Select>
         <Select
+          items={orderTypeSelectItems}
           value={orderType}
           onValueChange={(value) => setOrderType(String(value))}
         >
@@ -716,16 +783,16 @@ export function UsagePage({ projectId }: { projectId: string }) {
           </SelectTrigger>
           <SelectContent align="start" className="min-w-48">
             <SelectGroup>
-              <SelectItem value="all">{t.allOrderTypes}</SelectItem>
-              {orderTypeOptions.map((option) => (
-                <SelectItem key={optionValue(option)} value={optionValue(option)}>
-                  {optionLabel(option)}
+              {orderTypeSelectItems.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
                 </SelectItem>
               ))}
             </SelectGroup>
           </SelectContent>
         </Select>
         <Select
+          items={regionSelectItems}
           value={region}
           onValueChange={(value) => setRegion(String(value))}
         >
@@ -738,16 +805,16 @@ export function UsagePage({ projectId }: { projectId: string }) {
           </SelectTrigger>
           <SelectContent align="start" className="min-w-48">
             <SelectGroup>
-              <SelectItem value="all">{t.allRegions}</SelectItem>
-              {regionOptions.map((option) => (
-                <SelectItem key={optionValue(option)} value={optionValue(option)}>
-                  {optionLabel(option)}
+              {regionSelectItems.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
                 </SelectItem>
               ))}
             </SelectGroup>
           </SelectContent>
         </Select>
         <Select
+          items={pricingSkuSelectItems}
           value={pricingSku}
           onValueChange={(value) => setPricingSku(String(value))}
         >
@@ -760,16 +827,16 @@ export function UsagePage({ projectId }: { projectId: string }) {
           </SelectTrigger>
           <SelectContent align="start" className="min-w-64">
             <SelectGroup>
-              <SelectItem value="all">{t.allPricingSkus}</SelectItem>
-              {pricingSkuOptions.map((option) => (
-                <SelectItem key={optionValue(option)} value={optionValue(option)}>
-                  {optionLabel(option)}
+              {pricingSkuSelectItems.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
                 </SelectItem>
               ))}
             </SelectGroup>
           </SelectContent>
         </Select>
         <Select
+          items={dimensionSelectItems}
           value={dimension}
           onValueChange={(value) => setDimension(String(value))}
         >
@@ -778,9 +845,9 @@ export function UsagePage({ projectId }: { projectId: string }) {
           </SelectTrigger>
           <SelectContent align="start">
             <SelectGroup>
-              {dimensionOptions.map((option) => (
-                <SelectItem key={optionValue(option)} value={optionValue(option)}>
-                  {optionLabel(option)}
+              {dimensionSelectItems.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
                 </SelectItem>
               ))}
             </SelectGroup>
