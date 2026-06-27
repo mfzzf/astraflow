@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server"
 
 import { getCredentialSession } from "@/lib/session"
-import { callUCloudAction, UCloudApiError } from "@/lib/ucloud"
+import {
+  callUCloudAction,
+  UCloudApiError,
+  type UCloudParamValue,
+} from "@/lib/ucloud"
 
 type RequestLogSummary = {
   TotalRequests?: number
@@ -141,7 +145,7 @@ export async function GET(request: Request) {
       throw new Error("EndTime must be greater than StartTime.")
     }
 
-    const params: Record<string, string | number | boolean> = {
+    const params: Record<string, UCloudParamValue> = {
       Action: "ListUMInferRequestLogs",
       ProjectId: projectId,
       Region: region,
@@ -156,11 +160,11 @@ export async function GET(request: Request) {
     }
 
     if (modelName) {
-      params.ModelNames = JSON.stringify([modelName])
+      params.ModelNames = [modelName]
     }
 
     if (apiKeyId) {
-      params.ApiKeyIds = JSON.stringify([apiKeyId])
+      params.ApiKeyIds = [apiKeyId]
     }
 
     const response = await callUCloudAction<ListUMInferRequestLogsResponse>({

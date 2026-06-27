@@ -4,16 +4,20 @@ import Image from "next/image"
 import Link from "next/link"
 import { useCallback, useEffect, useState } from "react"
 import {
+  BoxIcon,
+  LayersIcon,
   ChartAreaIcon,
   ChevronDownIcon,
   KeyRoundIcon,
   LogOutIcon,
   MessageSquareIcon,
+  ReceiptTextIcon,
   ScrollTextIcon,
   WaypointsIcon,
 } from "lucide-react"
 
 import { ChatHistorySidebar } from "@/components/chat-history-sidebar"
+import { GsapViewTransition } from "@/components/gsap-view-transition"
 import { useI18n } from "@/components/i18n-provider"
 import {
   Avatar,
@@ -73,10 +77,13 @@ type UserInfoResponse = {
 
 export type DashboardView =
   | "dashboard"
+  | "usage"
   | "api-keys"
   | "model-square"
   | "chat"
   | "request-logs"
+  | "sandbox-list"
+  | "sandbox-templates"
 
 function displayNameForUser(user: UserInfo | null, locale: string) {
   if (locale === "zh") {
@@ -145,6 +152,7 @@ export function AppSidebar({
   activeView: DashboardView
 }) {
   const { locale, t } = useI18n()
+  const isChatView = activeView === "chat"
   const [user, setUser] = useState<UserInfo | null>(null)
   const [isUserDetailsOpen, setIsUserDetailsOpen] = useState(false)
 
@@ -248,80 +256,122 @@ export function AppSidebar({
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent className={activeView === "chat" ? "min-h-0" : undefined}>
-        {activeView === "chat" ? (
-          <ChatHistorySidebar />
-        ) : (
-          <>
-            <SidebarGroup className="pt-1">
-              <SidebarGroupLabel>{t.overview}</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      isActive={activeView === "dashboard"}
-                      tooltip={t.dashboard}
-                      render={<Link href="/overview" />}
-                    >
-                      <ChartAreaIcon />
-                      <span>{t.dashboard}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      isActive={activeView === "api-keys"}
-                      tooltip={t.apiKeys}
-                      render={<Link href="/api-keys" />}
-                    >
-                      <KeyRoundIcon />
-                      <span>{t.apiKeys}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-            <SidebarGroup>
-              <SidebarGroupLabel>{t.modelverse}</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      isActive={activeView === "model-square"}
-                      tooltip={t.modelSquare}
-                      render={<Link href="/model-square" />}
-                    >
-                      <WaypointsIcon />
-                      <span>{t.modelSquare}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      isActive={activeView === "chat"}
-                      tooltip={t.chat}
-                      render={<Link href="/chat" />}
-                    >
-                      <MessageSquareIcon />
-                      <span>{t.chat}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      isActive={activeView === "request-logs"}
-                      tooltip={t.requestLogs}
-                      render={<Link href="/request-logs" />}
-                    >
-                      <ScrollTextIcon />
-                      <span>{t.requestLogs}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-            <SidebarGroup>
-              <SidebarGroupLabel>{t.agentSandbox}</SidebarGroupLabel>
-            </SidebarGroup>
-          </>
-        )}
+      <SidebarContent className={isChatView ? "min-h-0" : undefined}>
+        <GsapViewTransition
+          animateOnInitial={false}
+          view={isChatView ? "chat-history" : "primary-nav"}
+          variant="sidebar"
+          className="flex min-h-0 flex-1 flex-col"
+          surfaceClassName="flex min-h-0 flex-1 flex-col"
+        >
+          {isChatView ? (
+            <ChatHistorySidebar />
+          ) : (
+            <>
+              <SidebarGroup className="pt-1">
+                <SidebarGroupLabel>{t.overview}</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        isActive={activeView === "dashboard"}
+                        tooltip={t.dashboard}
+                        render={<Link href="/overview" />}
+                      >
+                        <ChartAreaIcon />
+                        <span>{t.dashboard}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        isActive={activeView === "usage"}
+                        tooltip={t.usage}
+                        render={<Link href="/usage" />}
+                      >
+                        <ReceiptTextIcon />
+                        <span>{t.usage}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        isActive={activeView === "api-keys"}
+                        tooltip={t.apiKeys}
+                        render={<Link href="/api-keys" />}
+                      >
+                        <KeyRoundIcon />
+                        <span>{t.apiKeys}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+              <SidebarGroup>
+                <SidebarGroupLabel>{t.modelverse}</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        isActive={activeView === "model-square"}
+                        tooltip={t.modelSquare}
+                        render={<Link href="/model-square" />}
+                      >
+                        <WaypointsIcon />
+                        <span>{t.modelSquare}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        isActive={isChatView}
+                        tooltip={t.chat}
+                        render={<Link href="/chat" />}
+                      >
+                        <MessageSquareIcon />
+                        <span>{t.chat}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        isActive={activeView === "request-logs"}
+                        tooltip={t.requestLogs}
+                        render={<Link href="/request-logs" />}
+                      >
+                        <ScrollTextIcon />
+                        <span>{t.requestLogs}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+              <SidebarGroup>
+                <SidebarGroupLabel>{t.agentSandbox}</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        isActive={activeView === "sandbox-list"}
+                        tooltip={t.sandboxList}
+                        render={<Link href="/sandbox" />}
+                      >
+                        <BoxIcon />
+                        <span>{t.sandboxList}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        isActive={activeView === "sandbox-templates"}
+                        tooltip={t.sandboxTemplates}
+                        render={<Link href="/sandbox-templates" />}
+                      >
+                        <LayersIcon />
+                        <span>{t.sandboxTemplates}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            </>
+          )}
+        </GsapViewTransition>
       </SidebarContent>
       <SidebarFooter>
         {user ? (

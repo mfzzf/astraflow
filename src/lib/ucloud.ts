@@ -2,7 +2,10 @@ import { createHash } from "node:crypto"
 
 const UCLOUD_ENDPOINT = "https://api.ucloud.cn/"
 
-type UCloudParamValue = string | number | boolean
+export type UCloudScalarParamValue = string | number | boolean
+export type UCloudParamValue =
+  | UCloudScalarParamValue
+  | readonly UCloudScalarParamValue[]
 
 export type UCloudCredentials = {
   accessKey: string
@@ -19,6 +22,7 @@ type CreateSignedUrlInput = {
 type CallUCloudActionInput = {
   credentials: UCloudCredentials
   params: Record<string, UCloudParamValue>
+  method?: "GET" | "POST"
 }
 
 type UCloudErrorPayload = {
@@ -38,7 +42,7 @@ export class UCloudApiError extends Error {
   }
 }
 
-function stringifyParamValue(value: UCloudParamValue) {
+function stringifyParamValue(value: UCloudScalarParamValue) {
   if (typeof value === "boolean") {
     return value ? "true" : "false"
   }
@@ -50,8 +54,25 @@ function stringifyParamValue(value: UCloudParamValue) {
   return value
 }
 
+function expandParamValues(params: Record<string, UCloudParamValue>) {
+  const expandedParams: Record<string, UCloudScalarParamValue> = {}
+
+  for (const [key, value] of Object.entries(params)) {
+    if (Array.isArray(value)) {
+      value.forEach((item, index) => {
+        expandedParams[`${key}.${index}`] = item
+      })
+      continue
+    }
+
+    expandedParams[key] = value
+  }
+
+  return expandedParams
+}
+
 export function createUCloudSignature(
-  params: Record<string, UCloudParamValue>,
+  params: Record<string, UCloudScalarParamValue>,
   secretKey: string
 ) {
   const canonicalString = Object.keys(params)
@@ -69,37 +90,68 @@ export function createUCloudSignedUrl({
   secretKey,
   params,
 }: CreateSignedUrlInput) {
-  const signedParams: Record<string, UCloudParamValue> = {
-    ...params,
-    PublicKey: accessKey,
-  }
-  const signature = createUCloudSignature(signedParams, secretKey)
+  const signedParams = createUCloudSignedParams({
+    accessKey,
+    secretKey,
+    params,
+  })
   const searchParams = new URLSearchParams()
 
   for (const key of Object.keys(signedParams).sort()) {
     searchParams.set(key, stringifyParamValue(signedParams[key]))
   }
 
-  searchParams.set("Signature", signature)
-
   return `${UCLOUD_ENDPOINT}?${searchParams.toString()}`
+}
+
+export function createUCloudSignedParams({
+  accessKey,
+  secretKey,
+  params,
+}: CreateSignedUrlInput) {
+  const signedParams = expandParamValues({
+    ...params,
+    PublicKey: accessKey,
+  })
+  const signature = createUCloudSignature(signedParams, secretKey)
+
+  return {
+    ...signedParams,
+    Signature: signature,
+  }
 }
 
 export async function callUCloudAction<T>({
   credentials,
   params,
+  method = "POST",
 }: CallUCloudActionInput) {
-  const url = createUCloudSignedUrl({
+  const signedParams = createUCloudSignedParams({
     accessKey: credentials.accessKey,
     secretKey: credentials.secretKey,
     params,
   })
+  const url =
+    method === "GET"
+      ? createUCloudSignedUrl({
+          accessKey: credentials.accessKey,
+          secretKey: credentials.secretKey,
+          params,
+        })
+      : UCLOUD_ENDPOINT
 
   let response: Response
 
   try {
     response = await fetch(url, {
-      method: "GET",
+      method,
+      headers:
+        method === "POST"
+          ? {
+              "Content-Type": "application/json",
+            }
+          : undefined,
+      body: method === "POST" ? JSON.stringify(signedParams) : undefined,
       cache: "no-store",
       signal: AbortSignal.timeout(15_000),
     })

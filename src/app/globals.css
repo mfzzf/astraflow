@@ -251,6 +251,14 @@
     animation-delay: 70ms;
   }
 
+  [data-view-transitioning="true"] .chat-message-row,
+  [data-view-transitioning="true"] .chat-response-text,
+  [data-view-transitioning="true"] .chat-empty-title,
+  [data-view-transitioning="true"] .chat-empty-composer,
+  [data-view-transitioning="true"] .chat-suggestion {
+    animation: none;
+  }
+
   .chat-send-loading {
     animation: chat-generate-pulse 1.2s ease-in-out infinite;
   }

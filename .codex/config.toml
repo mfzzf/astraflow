@@ -1,0 +1,10 @@
+[mcp_servers.prompt-kit]
+command = "npx"
+args = [
+    "-y",
+    "shadcn@canary",
+    "mcp",
+]
+
+[mcp_servers.prompt-kit.env]
+REGISTRY_URL = "https://www.prompt-kit.com/c/registry.json"
