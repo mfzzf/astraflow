@@ -8,6 +8,7 @@ import type { UCloudCredentials } from "@/lib/ucloud"
 
 const SESSION_COOKIE_NAME = "astraflow_session"
 const IS_DESKTOP_APP = process.env.ASTRAFLOW_DESKTOP === "1"
+const ALLOW_INSECURE_COOKIES = process.env.ASTRAFLOW_INSECURE_COOKIES === "1"
 const SESSION_MAX_AGE = IS_DESKTOP_APP ? 60 * 60 * 24 * 365 : 60 * 60 * 8
 const DESKTOP_CREDENTIALS_PATH = process.env.ASTRAFLOW_DESKTOP_CREDENTIALS_PATH
 
@@ -115,7 +116,10 @@ export async function setCredentialSession(credentials: UCloudCredentials) {
     maxAge: SESSION_MAX_AGE,
     path: "/",
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production" && !IS_DESKTOP_APP,
+    secure:
+      process.env.NODE_ENV === "production" &&
+      !IS_DESKTOP_APP &&
+      !ALLOW_INSECURE_COOKIES,
   })
 
   await writeDesktopCredentials(credentials)
