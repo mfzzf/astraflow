@@ -1,12 +1,15 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto"
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
+import { dirname } from "node:path"
 
 import { cookies } from "next/headers"
 
 import type { UCloudCredentials } from "@/lib/ucloud"
 
 const SESSION_COOKIE_NAME = "astraflow_session"
-const SESSION_MAX_AGE = 60 * 60 * 8
 const IS_DESKTOP_APP = process.env.ASTRAFLOW_DESKTOP === "1"
+const SESSION_MAX_AGE = IS_DESKTOP_APP ? 60 * 60 * 24 * 365 : 60 * 60 * 8
+const DESKTOP_CREDENTIALS_PATH = process.env.ASTRAFLOW_DESKTOP_CREDENTIALS_PATH
 
 function getSessionKey() {
   const secret =
@@ -56,11 +59,52 @@ function unsealSession(value: string): UCloudCredentials | null {
   }
 }
 
+async function readDesktopCredentials() {
+  if (!IS_DESKTOP_APP || !DESKTOP_CREDENTIALS_PATH) {
+    return null
+  }
+
+  try {
+    const stored = await readFile(DESKTOP_CREDENTIALS_PATH, "utf8")
+
+    return unsealSession(stored.trim())
+  } catch {
+    return null
+  }
+}
+
+async function writeDesktopCredentials(credentials: UCloudCredentials) {
+  if (!IS_DESKTOP_APP || !DESKTOP_CREDENTIALS_PATH) {
+    return
+  }
+
+  await mkdir(dirname(DESKTOP_CREDENTIALS_PATH), { recursive: true })
+  await writeFile(DESKTOP_CREDENTIALS_PATH, sealSession(credentials), {
+    mode: 0o600,
+  })
+}
+
+async function clearDesktopCredentials() {
+  if (!IS_DESKTOP_APP || !DESKTOP_CREDENTIALS_PATH) {
+    return
+  }
+
+  await rm(DESKTOP_CREDENTIALS_PATH, { force: true })
+}
+
 export async function getCredentialSession() {
   const cookieStore = await cookies()
   const session = cookieStore.get(SESSION_COOKIE_NAME)?.value
 
-  return session ? unsealSession(session) : null
+  if (session) {
+    const credentials = unsealSession(session)
+
+    if (credentials) {
+      return credentials
+    }
+  }
+
+  return readDesktopCredentials()
 }
 
 export async function setCredentialSession(credentials: UCloudCredentials) {
@@ -73,10 +117,13 @@ export async function setCredentialSession(credentials: UCloudCredentials) {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production" && !IS_DESKTOP_APP,
   })
+
+  await writeDesktopCredentials(credentials)
 }
 
 export async function clearCredentialSession() {
   const cookieStore = await cookies()
 
   cookieStore.delete(SESSION_COOKIE_NAME)
+  await clearDesktopCredentials()
 }

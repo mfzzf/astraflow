@@ -1,5 +1,4 @@
-const { app, BrowserWindow, dialog, shell } = require("electron");
-const { spawn } = require("node:child_process");
+const { app, BrowserWindow, dialog, shell, utilityProcess } = require("electron");
 const fs = require("node:fs");
 const http = require("node:http");
 const net = require("node:net");
@@ -8,6 +7,7 @@ const path = require("node:path");
 let mainWindow = null;
 let nextServer = null;
 let nextServerUrl = null;
+let nextServerLog = null;
 let isQuitting = false;
 
 function getAppIconPath() {
@@ -71,6 +71,30 @@ function waitForUrl(url, timeoutMs = 45000) {
   });
 }
 
+function appendServerOutput(tail, chunk) {
+  const nextTail = `${tail}${chunk.toString()}`;
+
+  return nextTail.length > 4000 ? nextTail.slice(-4000) : nextTail;
+}
+
+function createServerLogStream() {
+  if (!app.isPackaged) {
+    return null;
+  }
+
+  const logPath = path.join(app.getPath("userData"), "server.log");
+
+  return fs.createWriteStream(logPath, { flags: "a" });
+}
+
+function getDesktopCredentialsPath() {
+  if (!app.isPackaged) {
+    return undefined;
+  }
+
+  return path.join(app.getPath("userData"), "credentials.bin");
+}
+
 async function startNextServer() {
   if (process.env.ELECTRON_START_URL) {
     return process.env.ELECTRON_START_URL;
@@ -91,30 +115,65 @@ async function startNextServer() {
 
   const port = await getFreePort();
   const url = `http://127.0.0.1:${port}`;
+  let serverOutputTail = "";
+  const desktopCredentialsPath = getDesktopCredentialsPath();
 
-  nextServer = spawn(process.execPath, [serverPath], {
+  nextServerLog = createServerLogStream();
+
+  nextServer = utilityProcess.fork(serverPath, [], {
     cwd: serverDir,
     env: {
       ...process.env,
       ASTRAFLOW_DESKTOP: "1",
-      ELECTRON_RUN_AS_NODE: "1",
+      ...(desktopCredentialsPath
+        ? { ASTRAFLOW_DESKTOP_CREDENTIALS_PATH: desktopCredentialsPath }
+        : {}),
       HOSTNAME: "127.0.0.1",
       NODE_ENV: "production",
       PORT: String(port),
     },
-    stdio: app.isPackaged ? "ignore" : "inherit",
+    stdio: app.isPackaged ? ["ignore", "pipe", "pipe"] : "inherit",
   });
 
-  nextServer.once("exit", (code, signal) => {
+  if (nextServer.stdout) {
+    nextServer.stdout.on("data", (chunk) => {
+      serverOutputTail = appendServerOutput(serverOutputTail, chunk);
+      nextServerLog?.write(chunk);
+    });
+  }
+
+  if (nextServer.stderr) {
+    nextServer.stderr.on("data", (chunk) => {
+      serverOutputTail = appendServerOutput(serverOutputTail, chunk);
+      nextServerLog?.write(chunk);
+    });
+  }
+
+  const serverExitPromise = new Promise((_, reject) => {
+    nextServer.once("exit", (code) => {
+      nextServer = null;
+      nextServerUrl = null;
+      nextServerLog?.end();
+      nextServerLog = null;
+
+      const exitMessage = `Next server exited with code ${code ?? "null"}.${serverOutputTail ? `\n\n${serverOutputTail}` : ""}`;
+
+      if (!isQuitting) {
+        console.error(exitMessage);
+        reject(new Error(exitMessage));
+      }
+    });
+  });
+
+  nextServer.once("error", (error) => {
     nextServer = null;
     nextServerUrl = null;
-
-    if (!isQuitting) {
-      console.error(`Next server exited with code ${code ?? "null"} and signal ${signal ?? "null"}.`);
-    }
+    nextServerLog?.end();
+    nextServerLog = null;
+    console.error(error);
   });
 
-  await waitForUrl(url);
+  await Promise.race([waitForUrl(url), serverExitPromise]);
   nextServerUrl = url;
 
   return url;
@@ -199,6 +258,9 @@ function stopNextServer() {
 
   nextServer.kill();
   nextServer = null;
+  nextServerUrl = null;
+  nextServerLog?.end();
+  nextServerLog = null;
 }
 
 app.setName("Better AstraFlow");

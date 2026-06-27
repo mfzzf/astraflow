@@ -14,6 +14,7 @@ import { ModelSquarePage } from "@/components/model-square-page"
 import { RequestLogsPage } from "@/components/request-logs-page"
 import { SandboxResourcesPage } from "@/components/sandbox-resources-page"
 import { SiteHeader } from "@/components/site-header"
+import { SkillLabPage } from "@/components/skill-lab-page"
 import { UsagePage } from "@/components/usage-page"
 import {
   SidebarInset,
@@ -54,6 +55,10 @@ function titleForView(view: DashboardView, t: ReturnType<typeof useI18n>["t"]) {
     return t.modelSquare
   }
 
+  if (view === "skill-lab") {
+    return t.skillLab
+  }
+
   if (view === "chat") {
     return t.chat
   }
@@ -86,6 +91,10 @@ function viewForPathname(pathname: string): DashboardView {
     return "model-square"
   }
 
+  if (pathname === "/skill-lab") {
+    return "skill-lab"
+  }
+
   if (pathname === "/chat") {
     return "chat"
   }
@@ -113,6 +122,10 @@ export function DashboardShell({
   const { t } = useI18n()
   const pathname = usePathname()
   const activeView = viewForPathname(pathname)
+  const viewOwnsScroll =
+    activeView === "chat" ||
+    activeView === "model-square" ||
+    activeView === "skill-lab"
   const [selectedProjectId, setSelectedProjectId] = useState(initialProjectId)
   const [projects, setProjects] = useState<Project[]>([])
   const [isLoadingProjects, setIsLoadingProjects] = useState(true)
@@ -172,6 +185,7 @@ export function DashboardShell({
     <ChatHistoryProvider>
       <SidebarProvider
         className="h-svh min-h-0 overflow-hidden"
+        data-electron-titlebar-safe-area="true"
         style={
           {
             "--sidebar-width": "calc(var(--spacing) * 72)",
@@ -196,12 +210,10 @@ export function DashboardShell({
             animateOnInitial={false}
             view={activeView}
             surfaceClassName={
-              activeView === "chat" || activeView === "model-square"
-                ? "flex min-h-0 flex-1"
-                : "min-h-full"
+              viewOwnsScroll ? "flex min-h-0 flex-1" : "min-h-full"
             }
             className={
-              activeView === "chat" || activeView === "model-square"
+              viewOwnsScroll
                 ? "flex min-h-0 flex-1 overflow-hidden"
                 : "min-h-0 flex-1 overflow-y-auto"
             }
@@ -214,6 +226,8 @@ export function DashboardShell({
               <APIKeysDashboard projectId={selectedProjectId} />
             ) : activeView === "model-square" ? (
               <ModelSquarePage projectId={selectedProjectId} />
+            ) : activeView === "skill-lab" ? (
+              <SkillLabPage projectId={selectedProjectId} />
             ) : activeView === "request-logs" ? (
               <RequestLogsPage projectId={selectedProjectId} />
             ) : activeView === "sandbox-list" ? (

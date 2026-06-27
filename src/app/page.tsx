@@ -1,5 +1,9 @@
 import { redirect } from "next/navigation"
 
-export default function Home() {
-  redirect("/login")
+import { getCredentialSession } from "@/lib/session"
+
+export default async function Home() {
+  const session = await getCredentialSession()
+
+  redirect(session ? "/overview" : "/login")
 }

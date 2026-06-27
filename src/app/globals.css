@@ -51,6 +51,7 @@
 :root {
   --app-font-sans: Arial, Helvetica, sans-serif;
   --app-font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --electron-titlebar-height: 0px;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -83,6 +84,39 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+}
+
+html[data-electron-platform="darwin"] {
+  --electron-titlebar-height: 34px;
+}
+
+html[data-electron-platform="darwin"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 50;
+  height: var(--electron-titlebar-height);
+  background: var(--background);
+  -webkit-app-region: drag;
+}
+
+html[data-electron-platform="darwin"]
+  [data-electron-titlebar-safe-area="true"] {
+  height: calc(100svh - var(--electron-titlebar-height));
+  min-height: 0;
+  margin-top: var(--electron-titlebar-height);
+}
+
+html[data-electron-platform="darwin"]
+  [data-electron-titlebar-safe-area="true"]
+  [data-slot="sidebar-container"] {
+  top: var(--electron-titlebar-height);
+  height: calc(100svh - var(--electron-titlebar-height));
+}
+
+html[data-electron-platform="darwin"] body > main {
+  min-height: calc(100svh - var(--electron-titlebar-height));
+  margin-top: var(--electron-titlebar-height);
 }
 
 .dark {

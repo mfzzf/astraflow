@@ -13,6 +13,7 @@ import {
   MessageSquareIcon,
   ReceiptTextIcon,
   ScrollTextIcon,
+  SparklesIcon,
   WaypointsIcon,
 } from "lucide-react"
 
@@ -80,6 +81,7 @@ export type DashboardView =
   | "usage"
   | "api-keys"
   | "model-square"
+  | "skill-lab"
   | "chat"
   | "request-logs"
   | "sandbox-list"
@@ -346,6 +348,16 @@ export function AppSidebar({
                 <SidebarGroupLabel>{t.agentSandbox}</SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        isActive={activeView === "skill-lab"}
+                        tooltip={t.skillLab}
+                        render={<Link href="/skill-lab" />}
+                      >
+                        <SparklesIcon />
+                        <span>{t.skillLab}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         isActive={activeView === "sandbox-list"}
