@@ -323,6 +323,16 @@ export function AppSidebar({
                     </SidebarMenuItem>
                     <SidebarMenuItem>
                       <SidebarMenuButton
+                        isActive={activeView === "skill-lab"}
+                        tooltip={t.skillLab}
+                        render={<Link href="/skill-lab" />}
+                      >
+                        <SparklesIcon />
+                        <span>{t.skillLab}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
                         isActive={isChatView}
                         tooltip={t.chat}
                         render={<Link href="/chat" />}
@@ -348,16 +358,6 @@ export function AppSidebar({
                 <SidebarGroupLabel>{t.agentSandbox}</SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        isActive={activeView === "skill-lab"}
-                        tooltip={t.skillLab}
-                        render={<Link href="/skill-lab" />}
-                      >
-                        <SparklesIcon />
-                        <span>{t.skillLab}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         isActive={activeView === "sandbox-list"}

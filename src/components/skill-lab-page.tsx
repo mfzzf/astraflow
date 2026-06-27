@@ -307,7 +307,7 @@ function SkillCard({
   onShowDetails: (skill: SkillMarketSkill) => void
 }) {
   return (
-    <Card size="sm" className="shrink-0 rounded-lg">
+    <Card size="sm" className="h-full shrink-0 rounded-lg">
       <CardHeader className="gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
         <div className="flex min-w-0 gap-3">
           <SkillIcon skill={skill} />
@@ -330,7 +330,7 @@ function SkillCard({
           ) : null}
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex flex-1 flex-col">
         <p className="line-clamp-3 text-sm leading-6 text-muted-foreground">
           {getSkillDescription(skill, locale, t.noSkillDescription)}
         </p>
@@ -356,7 +356,7 @@ function SkillCard({
             value={formatTimestamp(skill.UpStreamUpdatedAt, locale, t.none)}
           />
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="mt-auto flex flex-wrap items-center gap-2 pt-4">
           {skill.UpStream ? (
             <Badge variant="outline" className="h-7">
               {skill.UpStream}

@@ -246,6 +246,7 @@ const dictionaries = {
     searchModels: "Search models",
     sortModels: "Sort models",
     newest: "Newest",
+    latest: "Latest",
     nameAsc: "Name A-Z",
     nameDesc: "Name Z-A",
     modelsSummary: (visibleCount: number, totalCount: number) =>
@@ -589,6 +590,7 @@ const dictionaries = {
     searchModels: "搜索模型",
     sortModels: "排序模型",
     newest: "最新",
+    latest: "最新",
     nameAsc: "名称 A-Z",
     nameDesc: "名称 Z-A",
     modelsSummary: (visibleCount: number, totalCount: number) =>
