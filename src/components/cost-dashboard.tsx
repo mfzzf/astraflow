@@ -745,10 +745,6 @@ export function CostDashboard({ projectId }: { projectId: string }) {
               </Card>
             ) : null}
           </div>
-          <div className="min-w-0 text-sm text-muted-foreground">
-            {t.project}{" "}
-            <span className="font-mono text-foreground">{projectId}</span>
-          </div>
         </div>
         <Button onClick={() => void loadCostAnalysis()} disabled={isLoading}>
           <RefreshCwIcon

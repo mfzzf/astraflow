@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation"
 
+import { DashboardShell } from "@/components/dashboard-shell"
 import { getCredentialSession } from "@/lib/session"
 
 export default async function Page() {
@@ -9,5 +10,10 @@ export default async function Page() {
     redirect("/login")
   }
 
-  redirect("/overview")
+  return (
+    <DashboardShell
+      initialProjectId={session.projectId}
+      activeView="dashboard"
+    />
+  )
 }

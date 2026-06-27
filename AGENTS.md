@@ -21,3 +21,10 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - For table cells containing nested flex layouts, center the nested content too so it aligns with centered headers.
 - Choose chart types by data semantics: area charts for time trends, bar charts for ranked comparisons, and pie/donut charts for small part-to-whole breakdowns.
 - Do not add decorative color strips or accents to KPI cards unless they encode data. Keep color primarily in charts and status indicators.
+- Do not render Project labels or Project ID blocks in page bodies. Project selection belongs in the global header only, except login/auth forms where Project ID is an input.
+- For lightweight details such as pricing breakdowns, show as much useful information inline as fits, then use a small Popover or simple secondary floating panel from an `i`/info control for overflow details. Avoid right-side Sheets for small read-only details; reserve Sheets for larger forms and workflows.
+- For multi-tier pricing summaries, show one or two representative tiers inline with their condition labels and price. Avoid context-free summaries like `x 起` when the price depends on tier conditions.
+- Use top-level product routes such as `/overview`, `/api-keys`, and `/model-square`. Do not nest app pages under a `/dashboard` route prefix.
+- For fixed-height dashboard pages, lock the shell height at the app frame and let only the intended content pane scroll. Do not leave body/page scrolling active when headers and filters should stay fixed.
+- Do not use CSS grid auto rows as the direct scrolling container for long card lists in fixed-height panes; auto rows can compress card height and clip content. Use an outer `overflow-y-auto` pane with an inner natural-height flex column, and mark cards `shrink-0`.
+- For the Base UI shadcn Slider with a single thumb, pass a scalar number value/defaultValue, not `[number]`. If labels should be clickable, render them as separate buttons below the slider without covering the thumb/track hit area.

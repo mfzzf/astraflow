@@ -6,6 +6,7 @@ import { APIKeysDashboard } from "@/components/api-keys-dashboard"
 import { AppSidebar, type DashboardView } from "@/components/app-sidebar"
 import { CostDashboard } from "@/components/cost-dashboard"
 import { useI18n } from "@/components/i18n-provider"
+import { ModelSquarePage } from "@/components/model-square-page"
 import { SiteHeader } from "@/components/site-header"
 import {
   SidebarInset,
@@ -33,13 +34,26 @@ function normalizeProject(projectId: string): Project {
   }
 }
 
+function titleForView(view: DashboardView, t: ReturnType<typeof useI18n>["t"]) {
+  if (view === "api-keys") {
+    return t.apiKeys
+  }
+
+  if (view === "model-square") {
+    return t.modelSquare
+  }
+
+  return t.dashboard
+}
+
 export function DashboardShell({
   initialProjectId,
+  activeView,
 }: {
   initialProjectId: string
+  activeView: DashboardView
 }) {
   const { t } = useI18n()
-  const [activeView, setActiveView] = useState<DashboardView>("dashboard")
   const [selectedProjectId, setSelectedProjectId] = useState(initialProjectId)
   const [projects, setProjects] = useState<Project[]>([])
   const [isLoadingProjects, setIsLoadingProjects] = useState(true)
@@ -97,6 +111,7 @@ export function DashboardShell({
 
   return (
     <SidebarProvider
+      className="h-svh min-h-0 overflow-hidden"
       style={
         {
           "--sidebar-width": "calc(var(--spacing) * 72)",
@@ -106,12 +121,11 @@ export function DashboardShell({
     >
       <AppSidebar
         activeView={activeView}
-        onViewChange={setActiveView}
         variant="inset"
       />
-      <SidebarInset>
+      <SidebarInset className="min-h-0 overflow-hidden">
         <SiteHeader
-          title={activeView === "dashboard" ? t.dashboard : t.apiKeys}
+          title={titleForView(activeView, t)}
           isLoadingProjects={isLoadingProjects}
           projectError={projectError}
           projects={projectsForSelect}
@@ -120,8 +134,10 @@ export function DashboardShell({
         />
         {activeView === "dashboard" ? (
           <CostDashboard projectId={selectedProjectId} />
-        ) : (
+        ) : activeView === "api-keys" ? (
           <APIKeysDashboard projectId={selectedProjectId} />
+        ) : (
+          <ModelSquarePage projectId={selectedProjectId} />
         )}
       </SidebarInset>
     </SidebarProvider>

@@ -76,7 +76,7 @@ export function LoginForm({
           ? result.message
           : t.regionsAvailable(result.message, result.regionCount)
       )
-      router.push("/dashboard")
+      router.push("/overview")
     } catch {
       setError(t.loginCheckUnavailable)
     } finally {

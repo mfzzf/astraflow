@@ -1,8 +1,10 @@
 "use client"
 
 import Image from "next/image"
+import Link from "next/link"
 import { useCallback, useEffect, useState } from "react"
 import {
+  BoxesIcon,
   ChartAreaIcon,
   ChevronDownIcon,
   KeyRoundIcon,
@@ -66,7 +68,7 @@ type UserInfoResponse = {
   data?: UserInfo | null
 }
 
-export type DashboardView = "dashboard" | "api-keys"
+export type DashboardView = "dashboard" | "api-keys" | "model-square"
 
 function displayNameForUser(user: UserInfo | null, locale: string) {
   if (locale === "zh") {
@@ -130,11 +132,9 @@ function formatLocationForUser(user: UserInfo) {
 
 export function AppSidebar({
   activeView,
-  onViewChange,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   activeView: DashboardView
-  onViewChange: (view: DashboardView) => void
 }) {
   const { locale, t } = useI18n()
   const [user, setUser] = useState<UserInfo | null>(null)
@@ -226,7 +226,7 @@ export function AppSidebar({
           <SidebarMenuItem>
             <SidebarMenuButton
               className="h-10 justify-start overflow-hidden data-[slot=sidebar-menu-button]:p-1!"
-              render={<a href="/dashboard" />}
+              render={<Link href="/overview" />}
             >
               <Image
                 src="https://astraflow.ucloud.cn/static/logo-lg-zh.png"
@@ -249,7 +249,7 @@ export function AppSidebar({
                 <SidebarMenuButton
                   isActive={activeView === "dashboard"}
                   tooltip={t.dashboard}
-                  onClick={() => onViewChange("dashboard")}
+                  render={<Link href="/overview" />}
                 >
                   <ChartAreaIcon />
                   <span>{t.dashboard}</span>
@@ -259,7 +259,7 @@ export function AppSidebar({
                 <SidebarMenuButton
                   isActive={activeView === "api-keys"}
                   tooltip={t.apiKeys}
-                  onClick={() => onViewChange("api-keys")}
+                  render={<Link href="/api-keys" />}
                 >
                   <KeyRoundIcon />
                   <span>{t.apiKeys}</span>
@@ -270,6 +270,20 @@ export function AppSidebar({
         </SidebarGroup>
         <SidebarGroup>
           <SidebarGroupLabel>{t.modelverse}</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={activeView === "model-square"}
+                  tooltip={t.modelSquare}
+                  render={<Link href="/model-square" />}
+                >
+                  <BoxesIcon />
+                  <span>{t.modelSquare}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
           <SidebarGroupLabel>{t.agentSandbox}</SidebarGroupLabel>
