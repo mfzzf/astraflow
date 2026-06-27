@@ -9,6 +9,7 @@ import { ChatPage } from "@/components/chat-page"
 import { CostDashboard } from "@/components/cost-dashboard"
 import { useI18n } from "@/components/i18n-provider"
 import { ModelSquarePage } from "@/components/model-square-page"
+import { RequestLogsPage } from "@/components/request-logs-page"
 import { SiteHeader } from "@/components/site-header"
 import {
   SidebarInset,
@@ -47,6 +48,10 @@ function titleForView(view: DashboardView, t: ReturnType<typeof useI18n>["t"]) {
 
   if (view === "chat") {
     return t.chat
+  }
+
+  if (view === "request-logs") {
+    return t.requestLogs
   }
 
   return t.dashboard
@@ -152,6 +157,8 @@ export function DashboardShell({
               <APIKeysDashboard projectId={selectedProjectId} />
             ) : activeView === "model-square" ? (
               <ModelSquarePage projectId={selectedProjectId} />
+            ) : activeView === "request-logs" ? (
+              <RequestLogsPage projectId={selectedProjectId} />
             ) : (
               <ChatPage projectId={selectedProjectId} />
             )}

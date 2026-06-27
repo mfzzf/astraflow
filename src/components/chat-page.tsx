@@ -175,8 +175,11 @@ function renderTextPart(text: string, id: string, isUser: boolean) {
   const previewJsx = extractPreviewJsx(text)
 
   return (
-    <div className="space-y-3">
-      <Markdown id={id} className="text-sm leading-6 text-foreground">
+    <div className="flex flex-col gap-3">
+      <Markdown
+        id={id}
+        className="chat-response-text text-sm leading-6 text-foreground"
+      >
         {text}
       </Markdown>
       {previewJsx ? (
@@ -240,9 +243,14 @@ function renderImagePart(part: MessagePartRecord, key: string) {
   )
 }
 
-function AssistantAvatar() {
+function AssistantAvatar({ active = false }: { active?: boolean }) {
   return (
-    <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border bg-background text-muted-foreground [&_svg]:size-4">
+    <div
+      className={cn(
+        "chat-assistant-avatar flex size-8 shrink-0 items-center justify-center rounded-full border bg-background text-muted-foreground [&_svg]:size-4",
+        active && "chat-assistant-avatar-active"
+      )}
+    >
       <BotIcon />
     </div>
   )
@@ -539,14 +547,18 @@ export function ChatPage({ projectId }: { projectId: string }) {
         onValueChange={setInput}
         onSubmit={() => void handleSubmit()}
         isLoading={isLoading}
-        className="w-full rounded-[28px] border-input bg-background p-3 shadow-sm"
+        data-loading={isLoading ? "true" : undefined}
+        data-has-input={
+          input.trim().length > 0 || files.length > 0 ? "true" : undefined
+        }
+        className="chat-composer w-full rounded-[28px] border-input bg-background p-3 shadow-sm transition-[border-color,box-shadow,transform] duration-300 focus-within:-translate-y-0.5 focus-within:shadow-md"
       >
         {files.length > 0 ? (
           <div className="flex flex-wrap gap-2 pb-2">
             {files.map((file, index) => (
               <div
                 key={`${file.name}-${index}`}
-                className="flex items-center gap-2 rounded-lg bg-secondary px-3 py-2 text-sm"
+                className="chat-file-chip flex items-center gap-2 rounded-lg bg-secondary px-3 py-2 text-sm"
                 onClick={(event) => event.stopPropagation()}
               >
                 <PaperclipIcon />
@@ -574,7 +586,7 @@ export function ChatPage({ projectId }: { projectId: string }) {
           >
             <PromptInputAction tooltip={t.attachFiles}>
               <FileUploadTrigger
-                className="flex size-8 cursor-pointer items-center justify-center rounded-full hover:bg-muted"
+                className="flex size-8 cursor-pointer items-center justify-center rounded-full transition-transform hover:bg-muted active:scale-95"
                 aria-label={t.attachFiles}
               >
                 <PlusIcon className="text-primary" />
@@ -647,7 +659,10 @@ export function ChatPage({ projectId }: { projectId: string }) {
               type="button"
               variant="default"
               size="icon"
-              className="rounded-full"
+              className={cn(
+                "rounded-full transition-transform active:scale-95",
+                isLoading && "chat-send-loading"
+              )}
               disabled={!isLoading && !canSubmit}
               onClick={() => {
                 if (isLoading) {
@@ -707,8 +722,10 @@ export function ChatPage({ projectId }: { projectId: string }) {
                       <Message
                         key={message.id}
                         className={cn(
-                          "group w-full",
-                          isUser ? "justify-end" : "justify-start"
+                          "chat-message-row group w-full",
+                          isUser
+                            ? "chat-user-message-row justify-end"
+                            : "justify-start"
                         )}
                       >
                         {!isUser ? <AssistantAvatar /> : null}
@@ -722,10 +739,10 @@ export function ChatPage({ projectId }: { projectId: string }) {
                         >
                           <MessageContent
                             className={cn(
-                              "space-y-3 break-words text-sm leading-6 shadow-none",
+                              "flex flex-col gap-3 break-words text-sm leading-6 shadow-none",
                               isUser
-                                ? "rounded-2xl bg-muted px-4 py-2.5"
-                                : "bg-transparent p-0"
+                                ? "chat-user-bubble rounded-2xl bg-muted px-4 py-2.5"
+                                : "bg-transparent px-0 pt-1 pb-0"
                             )}
                           >
                             {renderMessageParts(message, isUser)}
@@ -735,12 +752,19 @@ export function ChatPage({ projectId }: { projectId: string }) {
                     )
                   })}
                   {showThinking ? (
-                    <Message className="w-full">
-                      <AssistantAvatar />
-                      <MessageContent className="w-full bg-transparent p-0">
-                        <TextShimmer duration={2} className="pt-1 text-sm">
-                          {t.thinking}
-                        </TextShimmer>
+                    <Message className="chat-message-row w-full">
+                      <AssistantAvatar active />
+                      <MessageContent className="w-full bg-transparent px-0 pt-1 pb-0">
+                        <div className="flex items-center gap-2">
+                          <TextShimmer duration={2} className="text-sm">
+                            {t.thinking}
+                          </TextShimmer>
+                          <span aria-hidden className="chat-thinking-dots">
+                            <span />
+                            <span />
+                            <span />
+                          </span>
+                        </div>
                       </MessageContent>
                     </Message>
                   ) : null}
@@ -757,19 +781,24 @@ export function ChatPage({ projectId }: { projectId: string }) {
               </div>
             </>
           ) : (
-            <div className="flex min-h-0 flex-1 items-center justify-center px-4 pb-[10vh]">
+            <div className="chat-empty-stage flex min-h-0 flex-1 items-center justify-center px-4 pb-[10vh]">
               <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-5">
-                <h2 className="text-center text-xl font-semibold text-foreground">
+                <h2 className="chat-empty-title text-center text-xl font-semibold text-foreground">
                   {t.readyToStart}
                 </h2>
-                <div className="w-full">{renderComposer()}</div>
+                <div className="chat-empty-composer w-full">
+                  {renderComposer()}
+                </div>
                 <div className="flex flex-wrap justify-center gap-2">
-                  {suggestions.map((suggestion) => (
+                  {suggestions.map((suggestion, index) => (
                     <PromptSuggestion
                       key={suggestion}
                       type="button"
                       size="sm"
-                      className="h-8 rounded-full px-3 text-muted-foreground"
+                      className="chat-suggestion h-8 rounded-full px-3 text-muted-foreground transition-[border-color,transform,color] duration-200 hover:-translate-y-0.5 hover:text-foreground active:scale-95"
+                      style={{
+                        animationDelay: `${120 + index * 55}ms`,
+                      }}
                       onClick={() => setInput(suggestion)}
                     >
                       {suggestion}

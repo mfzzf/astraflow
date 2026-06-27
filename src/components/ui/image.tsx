@@ -67,6 +67,7 @@ export const Image = ({
   }
 
   return (
+    // eslint-disable-next-line @next/next/no-img-element -- Generated images use data/blob URLs with unknown intrinsic dimensions.
     <img
       src={src}
       alt={alt}

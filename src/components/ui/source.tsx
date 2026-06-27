@@ -56,21 +56,36 @@ export function SourceTrigger({
   const labelToShow = label ?? domain.replace("www.", "")
 
   return (
-    <HoverCardTrigger render={<a href={href} target="_blank" rel="noopener noreferrer" className={cn(
-                "bg-muted text-muted-foreground hover:bg-muted-foreground/30 hover:text-primary inline-flex h-5 max-w-32 items-center gap-1 overflow-hidden rounded-full py-0 text-xs no-underline transition-colors duration-150",
-                showFavicon ? "pr-2 pl-1" : "px-1",
-                className
-              )} />}>{showFavicon && (
-                <img
-                  src={`https://www.google.com/s2/favicons?sz=64&domain_url=${encodeURIComponent(
-                    href
-                  )}`}
-                  alt="favicon"
-                  width={14}
-                  height={14}
-                  className="size-3.5 rounded-full"
-                />
-              )}<span className="truncate tabular-nums text-center font-normal">{labelToShow}</span></HoverCardTrigger>
+    <HoverCardTrigger
+      render={
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cn(
+            "bg-muted text-muted-foreground hover:bg-muted-foreground/30 hover:text-primary inline-flex h-5 max-w-32 items-center gap-1 overflow-hidden rounded-full py-0 text-xs no-underline transition-colors duration-150",
+            showFavicon ? "pr-2 pl-1" : "px-1",
+            className
+          )}
+        />
+      }
+    >
+      {showFavicon && (
+        // eslint-disable-next-line @next/next/no-img-element -- Favicons are dynamic Google s2 URLs and should not expand Next image remote patterns.
+        <img
+          src={`https://www.google.com/s2/favicons?sz=64&domain_url=${encodeURIComponent(
+            href
+          )}`}
+          alt="favicon"
+          width={14}
+          height={14}
+          className="size-3.5 rounded-full"
+        />
+      )}
+      <span className="truncate tabular-nums text-center font-normal">
+        {labelToShow}
+      </span>
+    </HoverCardTrigger>
   )
 }
 
@@ -96,6 +111,7 @@ export function SourceContent({
         className="flex flex-col gap-2 p-3"
       >
         <div className="flex items-center gap-1.5">
+          {/* eslint-disable-next-line @next/next/no-img-element -- Favicons are dynamic Google s2 URLs and should not expand Next image remote patterns. */}
           <img
             src={`https://www.google.com/s2/favicons?sz=64&domain_url=${encodeURIComponent(
               href

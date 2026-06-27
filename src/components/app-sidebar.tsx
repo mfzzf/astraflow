@@ -4,12 +4,13 @@ import Image from "next/image"
 import Link from "next/link"
 import { useCallback, useEffect, useState } from "react"
 import {
-  BoxesIcon,
   ChartAreaIcon,
   ChevronDownIcon,
   KeyRoundIcon,
   LogOutIcon,
   MessageSquareIcon,
+  ScrollTextIcon,
+  WaypointsIcon,
 } from "lucide-react"
 
 import { ChatHistorySidebar } from "@/components/chat-history-sidebar"
@@ -70,7 +71,12 @@ type UserInfoResponse = {
   data?: UserInfo | null
 }
 
-export type DashboardView = "dashboard" | "api-keys" | "model-square" | "chat"
+export type DashboardView =
+  | "dashboard"
+  | "api-keys"
+  | "model-square"
+  | "chat"
+  | "request-logs"
 
 function displayNameForUser(user: UserInfo | null, locale: string) {
   if (locale === "zh") {
@@ -284,7 +290,7 @@ export function AppSidebar({
                       tooltip={t.modelSquare}
                       render={<Link href="/model-square" />}
                     >
-                      <BoxesIcon />
+                      <WaypointsIcon />
                       <span>{t.modelSquare}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -296,6 +302,16 @@ export function AppSidebar({
                     >
                       <MessageSquareIcon />
                       <span>{t.chat}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={activeView === "request-logs"}
+                      tooltip={t.requestLogs}
+                      render={<Link href="/request-logs" />}
+                    >
+                      <ScrollTextIcon />
+                      <span>{t.requestLogs}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </SidebarMenu>
