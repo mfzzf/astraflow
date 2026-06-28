@@ -1,0 +1,393 @@
+openapi: 3.1.0
+x-language: en-US
+info:
+  title: ModelVerse Kling/v2.6-T2V Video Task API
+  version: "1.0.0"
+  description: |
+    Self-contained OpenAPI 3.1 schema for the ModelVerse Kling/v2.6-T2V
+    text-to-video asynchronous task API.
+
+servers:
+  - url: https://api.modelverse.cn
+    description: ModelVerse API endpoint documented for this model.
+
+tags:
+  - name: Kling/v2.6-T2V
+    description: Text-to-video asynchronous task operations for Kling/v2.6-T2V.
+
+paths:
+  /v1/tasks/submit:
+    post:
+      tags:
+        - Kling/v2.6-T2V
+      operationId: submitKlingV26T2VTask
+      summary: Submit a Kling/v2.6-T2V text-to-video task
+      description: |
+        Submit an asynchronous text-to-video generation task for the
+        `kling-v2-6` model. Kling v2.6 does not support audio-video generation
+        parameters such as `voice_list` or `sound`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KlingV26T2VSubmitRequest"
+            examples:
+              documented:
+                summary: Source text-to-video request
+                value:
+                  model: kling-v2-6
+                  input:
+                    prompt: A beautiful girl is dancing in a garden
+                  parameters:
+                    mode: pro
+                    aspect_ratio: "16:9"
+                    duration: 5
+              withNegativePrompt:
+                summary: Text-to-video request with optional negative prompt
+                value:
+                  model: kling-v2-6
+                  input:
+                    prompt: A cinematic garden dance at golden hour with flowing camera motion
+                    negative_prompt: blurry, distorted, low quality
+                  parameters:
+                    mode: pro
+                    aspect_ratio: "9:16"
+                    duration: 10
+      responses:
+        "200":
+          description: Task submitted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KlingV26T2VSubmitResponse"
+              examples:
+                submitted:
+                  summary: Submitted task
+                  value:
+                    output:
+                      task_id: task_id
+                    request_id: request_id
+        "400":
+          description: Invalid request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KlingV26T2VErrorResponse"
+              examples:
+                paramError:
+                  $ref: "#/components/examples/KlingV26T2VParamError"
+        "401":
+          description: Invalid or missing bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KlingV26T2VErrorResponse"
+              examples:
+                authError:
+                  $ref: "#/components/examples/KlingV26T2VAuthError"
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KlingV26T2VErrorResponse"
+              examples:
+                error:
+                  $ref: "#/components/examples/KlingV26T2VParamError"
+
+  /v1/tasks/status:
+    get:
+      tags:
+        - Kling/v2.6-T2V
+      operationId: getKlingV26T2VTaskStatus
+      summary: Query a Kling/v2.6-T2V task status
+      description: Query the status and result URLs for an asynchronous text-to-video task.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: task_id
+          in: query
+          required: true
+          description: Asynchronous task identifier returned by `/v1/tasks/submit`.
+          schema:
+            type: string
+          examples:
+            documented:
+              summary: Source documentation placeholder
+              value: task_id
+      responses:
+        "200":
+          description: Task status response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KlingV26T2VStatusResponse"
+              examples:
+                success:
+                  summary: Successful task
+                  value:
+                    output:
+                      task_id: task_id
+                      task_status: Success
+                      urls:
+                        - https://xxxxx/xxxx.mp4
+                      submit_time: 1756959000
+                      finish_time: 1756959050
+                    usage:
+                      duration: 5
+                    request_id: ""
+                failure:
+                  summary: Failed task
+                  value:
+                    output:
+                      task_id: task_id
+                      task_status: Failure
+                      submit_time: 1756959000
+                      finish_time: 1756959019
+                      error_message: error_message
+                    usage:
+                      duration: 5
+                    request_id: ""
+        "400":
+          description: Invalid task identifier or request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KlingV26T2VErrorResponse"
+              examples:
+                paramError:
+                  $ref: "#/components/examples/KlingV26T2VParamError"
+        "401":
+          description: Invalid or missing bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KlingV26T2VErrorResponse"
+              examples:
+                authError:
+                  $ref: "#/components/examples/KlingV26T2VAuthError"
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KlingV26T2VErrorResponse"
+              examples:
+                error:
+                  $ref: "#/components/examples/KlingV26T2VParamError"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: "ModelVerse API key sent as `Authorization: Bearer <YOUR_API_KEY>`."
+
+  schemas:
+    KlingV26T2VSubmitRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - model
+        - input
+      properties:
+        model:
+          type: string
+          const: kling-v2-6
+          description: Model name. This schema is pinned to `kling-v2-6`.
+        input:
+          $ref: "#/components/schemas/KlingV26T2VInput"
+        parameters:
+          $ref: "#/components/schemas/KlingV26T2VParameters"
+
+    KlingV26T2VInput:
+      type: object
+      additionalProperties: false
+      required:
+        - prompt
+      properties:
+        prompt:
+          type: string
+          minLength: 1
+          description: Prompt used to guide video generation.
+          examples:
+            - A beautiful girl is dancing in a garden
+        negative_prompt:
+          type: string
+          description: Negative prompt used to limit undesired content.
+          examples:
+            - blurry, distorted, low quality
+
+    KlingV26T2VParameters:
+      type: object
+      additionalProperties: false
+      properties:
+        mode:
+          type: string
+          enum:
+            - pro
+          default: pro
+          description: |
+            Generation mode. The source parameter table mentions `std` and
+            `pro`, but notes that Kling v2.6 currently supports only `pro`.
+        aspect_ratio:
+          type: string
+          description: Generated video aspect ratio.
+          enum:
+            - "16:9"
+            - "9:16"
+            - "1:1"
+        duration:
+          type: integer
+          description: Generated video duration in seconds.
+          enum:
+            - 5
+            - 10
+          default: 5
+
+    KlingV26T2VSubmitResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - output
+        - request_id
+      properties:
+        output:
+          type: object
+          additionalProperties: false
+          required:
+            - task_id
+          properties:
+            task_id:
+              type: string
+              description: Unique identifier of the asynchronous task.
+        request_id:
+          type: string
+          description: Unique request identifier.
+
+    KlingV26T2VStatusResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - output
+        - request_id
+      properties:
+        output:
+          $ref: "#/components/schemas/KlingV26T2VStatusOutput"
+        usage:
+          $ref: "#/components/schemas/KlingV26T2VUsage"
+        request_id:
+          type: string
+          description: Unique request identifier.
+
+    KlingV26T2VStatusOutput:
+      type: object
+      additionalProperties: false
+      required:
+        - task_id
+        - task_status
+      properties:
+        task_id:
+          type: string
+          description: Unique identifier of the asynchronous task.
+        task_status:
+          $ref: "#/components/schemas/KlingV26T2VTaskStatus"
+        urls:
+          type: array
+          description: Video result URL list.
+          items:
+            type: string
+            format: uri
+        submit_time:
+          type: integer
+          format: int64
+          description: Task submission timestamp.
+        finish_time:
+          type: integer
+          format: int64
+          description: Task completion timestamp.
+        error_message:
+          type: string
+          description: Error message returned when the task fails.
+
+    KlingV26T2VTaskStatus:
+      type: string
+      description: Asynchronous task status.
+      enum:
+        - Pending
+        - Running
+        - Success
+        - Failure
+
+    KlingV26T2VUsage:
+      type: object
+      additionalProperties: false
+      properties:
+        duration:
+          type: integer
+          description: Generated video duration in seconds.
+
+    KlingV26T2VErrorResponse:
+      type: object
+      additionalProperties: true
+      required:
+        - error
+      properties:
+        error:
+          $ref: "#/components/schemas/KlingV26T2VErrorObject"
+        request_id:
+          type: string
+          description: Unique request identifier, if available.
+
+    KlingV26T2VErrorObject:
+      type: object
+      additionalProperties: true
+      required:
+        - message
+        - type
+      properties:
+        message:
+          type: string
+          description: Error message.
+        type:
+          type: string
+          description: Error type.
+          examples:
+            - invalid_request_error
+        code:
+          type:
+            - string
+            - "null"
+          description: Error code.
+          examples:
+            - param_error
+            - auth_error
+        param:
+          type:
+            - string
+            - "null"
+          description: Related request parameter, if any.
+
+  examples:
+    KlingV26T2VParamError:
+      summary: Invalid parameter error
+      value:
+        error:
+          message: Invalid param
+          type: invalid_request_error
+          code: param_error
+          param: parameters.duration
+        request_id: request_id
+    KlingV26T2VAuthError:
+      summary: Bearer authentication error
+      value:
+        error:
+          message: Validate Certification failed
+          type: invalid_request_error
+          code: auth_error
+          param: null
+        request_id: request_id

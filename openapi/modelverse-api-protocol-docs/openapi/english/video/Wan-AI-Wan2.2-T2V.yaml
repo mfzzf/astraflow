@@ -1,0 +1,335 @@
+openapi: 3.1.0
+x-language: en-US
+info:
+  title: ModelVerse Wan-AI/Wan2.2-T2V API
+  version: "1.0.0"
+  description: |
+    OpenAPI description for the ModelVerse Wan-AI/Wan2.2-T2V text-to-video async task API.
+
+servers:
+  - url: https://api.modelverse.cn
+    description: ModelVerse API endpoint.
+
+tags:
+  - name: Wan-AI/Wan2.2-T2V
+    description: Text-to-video async task operations for Wan-AI/Wan2.2-T2V.
+
+paths:
+  /v1/tasks/submit:
+    post:
+      tags:
+        - Wan-AI/Wan2.2-T2V
+      operationId: submitWanAIWan22T2VTask
+      summary: Submit a Wan-AI/Wan2.2-T2V task
+      description: Submit an asynchronous text-to-video generation task.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WanAIWan22T2VSubmitRequest"
+            examples:
+              basic:
+                summary: Generate a video from text
+                value:
+                  model: Wan-AI/Wan2.2-T2V
+                  input:
+                    prompt: a beautiful flower
+                    negative_prompt: low quality
+                  parameters:
+                    resolution: 720P
+                    seed: 12345
+      responses:
+        "200":
+          description: Task submission response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskSubmitResponse"
+              examples:
+                submitted:
+                  summary: Submitted task
+                  value:
+                    output:
+                      task_id: task_id
+                    request_id: request_id
+        "400":
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                invalidRequest:
+                  $ref: "#/components/examples/ErrorResponse"
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                error:
+                  $ref: "#/components/examples/ErrorResponse"
+
+  /v1/tasks/status:
+    get:
+      tags:
+        - Wan-AI/Wan2.2-T2V
+      operationId: getWanAIWan22T2VTaskStatus
+      summary: Query a Wan-AI/Wan2.2-T2V task
+      description: Query the status and result URLs for an asynchronous video generation task.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: task_id
+          in: query
+          required: true
+          description: Unique asynchronous task identifier.
+          schema:
+            type: string
+          example: task_id
+      responses:
+        "200":
+          description: Task status response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskStatusResponse"
+              examples:
+                success:
+                  summary: Successful task
+                  value:
+                    output:
+                      task_id: task_id
+                      task_status: Success
+                      urls:
+                        - https://xxxxx/xxxx.mp4
+                      submit_time: 1756958375
+                      finish_time: 1756958428
+                    usage:
+                      duration: 5
+                    request_id: request_id
+                failure:
+                  summary: Failed task
+                  value:
+                    output:
+                      task_id: task_id
+                      task_status: Failure
+                      submit_time: 1756958375
+                      finish_time: 1756958380
+                      error_message: error_message
+                    usage:
+                      duration: 5
+                    request_id: ""
+        "400":
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                invalidRequest:
+                  $ref: "#/components/examples/ErrorResponse"
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                error:
+                  $ref: "#/components/examples/ErrorResponse"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+
+  schemas:
+    WanAIWan22T2VSubmitRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - model
+        - input
+      properties:
+        model:
+          type: string
+          const: Wan-AI/Wan2.2-T2V
+          description: Model name. This schema only accepts Wan-AI/Wan2.2-T2V.
+        input:
+          $ref: "#/components/schemas/WanAIWan22T2VInput"
+        parameters:
+          $ref: "#/components/schemas/WanAIWan22T2VParameters"
+
+    WanAIWan22T2VInput:
+      type: object
+      additionalProperties: false
+      required:
+        - prompt
+      properties:
+        prompt:
+          type: string
+          description: Text prompt describing the video content to generate.
+        negative_prompt:
+          type: string
+          description: Negative prompt describing content to avoid.
+
+    WanAIWan22T2VParameters:
+      type: object
+      additionalProperties: false
+      properties:
+        size:
+          type: string
+          enum:
+            - 832x480
+            - 480x832
+            - 1280x720
+            - 720x1280
+          description: |
+            Output size. For 480P, supported values are 832x480 and 480x832.
+            For 720P, supported values are 1280x720 and 720x1280.
+        resolution:
+          type: string
+          enum:
+            - 720P
+            - 480P
+          description: Video resolution tier.
+        duration:
+          type: integer
+          enum:
+            - 5
+            - 8
+          description: Video duration in seconds.
+        seed:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+          description: Random seed.
+
+    TaskSubmitResponse:
+      type: object
+      additionalProperties: true
+      required:
+        - output
+        - request_id
+      properties:
+        output:
+          type: object
+          additionalProperties: true
+          required:
+            - task_id
+          properties:
+            task_id:
+              type: string
+              description: Unique asynchronous task identifier.
+        request_id:
+          type: string
+          description: Unique request identifier.
+
+    TaskStatusResponse:
+      type: object
+      additionalProperties: true
+      required:
+        - output
+        - request_id
+      properties:
+        output:
+          type: object
+          additionalProperties: true
+          required:
+            - task_id
+            - task_status
+          properties:
+            task_id:
+              type: string
+              description: Unique asynchronous task identifier.
+            task_status:
+              $ref: "#/components/schemas/TaskStatus"
+            urls:
+              type: array
+              description: Video result URL list.
+              items:
+                type: string
+                format: uri
+            submit_time:
+              type: integer
+              format: int64
+              description: Task submission timestamp.
+            finish_time:
+              type: integer
+              format: int64
+              description: Task completion timestamp.
+            error_message:
+              type: string
+              description: Error message returned when the task fails.
+        usage:
+          type: object
+          additionalProperties: true
+          properties:
+            duration:
+              type: integer
+              description: Task execution duration in seconds.
+        request_id:
+          type: string
+          description: Unique request identifier.
+
+    TaskStatus:
+      type: string
+      enum:
+        - Pending
+        - Running
+        - Success
+        - Failure
+      description: Current asynchronous task status.
+
+    ErrorResponse:
+      type: object
+      additionalProperties: true
+      required:
+        - error
+      properties:
+        error:
+          $ref: "#/components/schemas/ErrorObject"
+        request_id:
+          type: string
+          description: Unique request identifier, if available.
+
+    ErrorObject:
+      type: object
+      additionalProperties: true
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: Error message.
+        type:
+          type: string
+          description: Error type.
+        param:
+          type:
+            - string
+            - "null"
+          description: Request parameter related to the error.
+        code:
+          type:
+            - string
+            - "null"
+          description: Error code.
+
+  examples:
+    ErrorResponse:
+      summary: Error response
+      value:
+        error:
+          message: Invalid request.
+          type: invalid_request_error
+          param: input.prompt
+          code: invalid_parameter
+        request_id: request_id

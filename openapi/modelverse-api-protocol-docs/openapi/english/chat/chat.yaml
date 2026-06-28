@@ -1,0 +1,2489 @@
+openapi: 3.1.0
+info:
+  # Original title: Modelverse OpenAI Chat Completions API
+  title: Chat Completions API Reference
+  version: "1.0.0"
+  # Original description: |
+  #   Modelverse OpenAI Chat Completions API
+  description: |
+    OpenAI-compatible Chat Completions API for ModelVerse.
+
+servers:
+  # ModelVerse OpenAI-compatible API endpoints. Choose based on geography and data residency requirements.
+  - url: https://api.modelverse.cn
+    description: Mainland China endpoint, recommended for users in China for lower latency.
+  - url: https://api-sg.umodelverse.ai
+    description: Singapore endpoint, recommended for users in Southeast Asia.
+  - url: https://api-us-ca.umodelverse.ai
+    description: Los Angeles endpoint, recommended for international users. Data is not routed back to China.
+  - url: https://api-ge-fra.umodelverse.ai
+    description: Frankfurt endpoint, recommended for users in Europe.
+
+tags:
+  - name: Chat Completions
+    # Original description: OpenAI-compatible chat completion request.
+    description: Compatible chat completion request.
+
+paths:
+  /v1/chat/completions:
+    post:
+      tags:
+        - Chat Completions
+      operationId: createChatCompletion
+      summary: Create a chat completion
+      description: |
+        Creates an OpenAI-compatible Chat Completions request.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatCompletionRequest"
+            examples:
+              minimal:
+                summary: Minimal text request
+                value:
+                  model: model-name
+                  messages:
+                    - role: user
+                      content: 你好
+              multimodal:
+                summary: Multimodal user message
+                value:
+                  model: model-name
+                  messages:
+                    - role: user
+                      content:
+                        - type: text
+                          text: Describe this image.
+                        - type: image_url
+                          image_url:
+                            url: https://example.com/image.png
+                            detail: auto
+      responses:
+        "200":
+          description: Chat completion response. Response details can be described by responses_body.jsonc.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatCompletionResponse"
+        "400":
+          description: Bad request. Usually caused by unsupported fields, invalid message shape, or model-specific limits.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+
+  schemas:
+    ChatCompletionRequest:
+      type: object
+      additionalProperties: true
+      required:
+        - model
+        - messages
+      properties:
+        # messages: Conversation context in order. Supported roles and content parts vary by model.
+        messages:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/ChatCompletionMessage"
+          description: |
+            Conversation messages in chronological order.
+            role can be developer, system, user, assistant, tool, or function.
+            function messages are legacy compatibility messages; tool messages require tool_call_id.
+
+        # model: Every provider requires a model name or model ID.
+        model:
+          type: string
+          description: Model name or model ID, such as gpt-5.5, glm-5.2, or claude-sonnet-4-6.
+
+        # function_call: Legacy function-calling control. Prefer tool_choice for new requests.
+        function_call:
+          $ref: "#/components/schemas/FunctionCallOption"
+          description: Deprecated. Use tool_choice instead. Controls whether a legacy function is called.
+          deprecated: true
+
+        # modalities: Request text output, audio output, or both.
+        modalities:
+          type: array
+          items:
+            type: string
+            enum: [text, audio]
+          description: Output modality list. The default is usually ["text"]; audio output usually also requires the audio parameter.
+
+        # audio: Request-level audio output configuration, used when modalities includes audio.
+        # audio:
+        #   $ref: "#/components/schemas/ChatCompletionAudioParam"
+
+        # frequency_penalty: Penalize repeated tokens based on prior frequency.
+        frequency_penalty:
+          type:
+            - number
+            - "null"
+          minimum: -2
+          maximum: 2
+          description: Positive values reduce the likelihood of tokens that have already appeared frequently, reducing repetition.
+
+        # logit_bias: Adjust pre-sampling logits by token ID.
+        logit_bias:
+          type: object
+          additionalProperties:
+            type: number
+            minimum: -100
+            maximum: 100
+          description: |
+            JSON object whose keys are tokenizer token IDs (represented as strings in JSON) and whose values are biases from -100 to 100.
+            -100 usually approximates banning a token, while 100 strongly favors selecting a token.
+
+        # logprobs: Whether to return log probabilities for output tokens.
+        logprobs:
+          type: boolean
+          description: Whether to return the log probability for each output token.
+
+        # max_completion_tokens: New field that limits total generated tokens, including visible output and reasoning tokens.
+        max_completion_tokens:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          description: Maximum number of tokens the model can generate, including visible output tokens and reasoning tokens.
+
+        # max_tokens: Legacy field. OpenAI o-series models are incompatible; prefer max_completion_tokens.
+        max_tokens:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          deprecated: true
+          description: Gradually replaced by max_completion_tokens. Limits the number of text generation tokens.
+
+        # metadata: Additional structured metadata.
+        # metadata:
+        #   type: object
+        #   maxProperties: 16
+        #   additionalProperties:
+        #     type: string
+        #     maxLength: 512
+        #   propertyNames:
+        #     maxLength: 64
+        #   description: Up to 16 key-value pairs. Keys can be up to 64 characters and values up to 512 characters.
+
+        # moderation: OpenAI request-level moderation configuration.
+        # moderation:
+        #   type: object
+        #   additionalProperties: true
+        #   properties:
+        #     model:
+        #       type: string
+        #       description: Moderation model, such as omni-moderation-latest.
+        #   description: Configures moderation for request input and generated output.
+        #   x-provider-support: [OpenAI]
+
+        # n: Number of candidates to generate for the same input. Larger n consumes more billable tokens.
+        n:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 128
+          default: 1
+          description: Number of completion choices to generate for each input. Keep this at 1 to control costs.
+        #   x-provider-support: [OpenAI, Alibaba Cloud, Kimi, Kingsoft Cloud, PPIO, Tencent TokenHub]
+
+        # parallel_tool_calls: Whether to allow multiple tool calls in parallel.
+        parallel_tool_calls:
+          type: boolean
+          description: Whether to enable parallel tool calls.
+          # x-provider-support: [OpenAI, OpenRouter, Alibaba Cloud, Baidu, Kingsoft Cloud, Tencent TokenHub, Volcano Engine]
+
+        # prediction: Static predicted output, useful for scenarios such as rewriting part of an existing file.
+        prediction:
+          $ref: "#/components/schemas/PredictionContent"
+          # x-provider-support: [OpenAI]
+
+        # presence_penalty: Penalize tokens based on whether they have appeared, encouraging new topics.
+        presence_penalty:
+          type:
+            - number
+            - "null"
+          minimum: -2
+          maximum: 2
+          description: Positive values penalize tokens that have already appeared, making the model more likely to introduce new content.
+          # x-provider-support: [OpenAI, OpenRouter, Alibaba Cloud, Baidu, Kimi, Kingsoft Cloud, PPIO, Tencent TokenHub, Volcano Engine]
+
+        # prompt_cache_key: New OpenAI cache key that replaces user for cache optimization.
+        prompt_cache_key:
+          type: string
+          # Used to improve cache hits for similar requests; replaces user in OpenAI standard fields.
+          description: Used to improve cache hits for similar requests.
+          # x-provider-support: [OpenAI, Kimi]
+
+        # prompt_cache_retention: Prompt cache retention policy. Removed because Azure does not support it.
+        # prompt_cache_retention:
+        #   type: string
+        #   enum: [in_memory, 24h]
+        #   description: Prompt cache retention policy. Some newer models only support 24h.
+        #   x-provider-support: [OpenAI]
+
+        # reasoning_effort: Reasoning intensity. Supported values vary by provider.
+        reasoning_effort:
+          type: string
+          enum: [none, minimal, low, medium, high, xhigh, max]
+          description: |
+            Controls the reasoning intensity for reasoning models.
+            Common GPT model values are none/minimal/low/medium/high/xhigh.
+            glm-5.2 supports max.
+
+        # response_format: Constrains the model output format.
+        response_format:
+          $ref: "#/components/schemas/ResponseFormat"
+
+        # safety_identifier: Stable safety identifier. Pass a hashed value when possible.
+        # safety_identifier:
+        #   type: string
+        #   description: Stable user safety identifier. Avoid passing plaintext sensitive information.
+        #   x-provider-support: [OpenAI, Kimi]
+
+        # seed: Helps reproduce experimental output. Different models do not guarantee full determinism.
+        seed:
+          type:
+            - integer
+            - "null"
+          description: Random seed that improves reproducibility but does not guarantee exact consistency across models or versions.
+
+        # service_tier: Service tier or latency/throughput preference.
+        # service_tier:
+        #   type:
+        #     - string
+        #     - "null"
+        #   description: Service tier. Volcano Engine supports fast/auto/default; OpenAI/OpenRouter/MiniMax have similar fields.
+        #   x-provider-support: [OpenAI, OpenRouter, MiniMax, Volcano Engine]
+
+        # stop: Stop sequences. Zhipu currently supports only a single stop-sequence array.
+        stop:
+          anyOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+            - type: "null"
+          # Stops generation when a stop sequence is matched. Limits vary by provider and model.
+          description: Stops generation when a stop sequence is matched. Limits vary by model.
+          # x-provider-support: [OpenAI, OpenRouter, Alibaba Cloud, Baidu, Kimi, Kingsoft Cloud, PPIO, Tencent TokenHub, Volcano Engine, Zhipu]
+
+        # store: Whether to allow the platform to store output. Mentioned in OpenAI and Kingsoft Cloud docs.
+        store:
+          type:
+            - boolean
+            - "null"
+          description: Whether to allow the platform to store requests or outputs for later product features.
+
+        # stream: Whether to enable SSE streaming responses.
+        stream:
+          type:
+            - boolean
+            - "null"
+          default: false
+          description: Whether to return the response as a stream.
+
+        # stream_options: Set only when stream=true.
+        # stream_options:
+        #   $ref: "#/components/schemas/StreamOptions"
+
+        # temperature: Sampling temperature.
+        temperature:
+          type:
+            - number
+            - "null"
+          description: Sampling temperature. Higher values are more random; avoid changing this and top_p substantially at the same time.
+
+        # tool_choice: Controls whether to call tools and which tool to call.
+        tool_choice:
+          $ref: "#/components/schemas/ToolChoice"
+          # x-provider-support: [OpenAI, OpenRouter, Alibaba Cloud, Baidu, Kingsoft Cloud, Tencent TokenHub, Volcano Engine, Zhipu]
+
+        # tools: List of tools the model can call.
+        tools:
+          type: array
+          items:
+            $ref: "#/components/schemas/ToolDefinition"
+          description: List of tool definitions.
+
+        # top_logprobs: Returns the top tokens by probability at each position. Usually requires logprobs=true.
+        top_logprobs:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+          maximum: 20
+          description: Returns the top N token log probabilities for each output position. Usually requires logprobs=true.
+
+        # top_p: Nucleus sampling probability threshold.
+        top_p:
+          type:
+            - number
+            - "null"
+          minimum: 0
+          maximum: 1
+          # Nucleus sampling parameter. Zhipu requires [0.01,1] with at most two decimal places.
+          description: Nucleus sampling parameter. Some models may restrict the value range and decimal precision.
+
+        # user:
+        #   type: string
+        #   description: End-user identifier. Prefer a hashed value and avoid plaintext sensitive information.
+        #   x-provider-support: [OpenAI, OpenRouter, Baidu, Tencent TokenHub]
+
+        # verbosity: Output verbosity.
+        # verbosity:
+        #   type:
+        #     - string
+        #     - "null"
+        #   enum: [low, medium, high, null]
+        #   description: Controls whether output is concise or detailed. The default is usually medium.
+        #   x-provider-support: [OpenAI, Kingsoft Cloud]
+
+        # truncation: Kingsoft Cloud tokenizer truncation policy.
+        # truncation:
+        #   type:
+        #     - string
+        #     - "null"
+        #   description: Configures the tokenizer truncation policy. Kingsoft Cloud defaults to disabled.
+        #   x-provider-support: [Kingsoft Cloud]
+
+        # chat_template_kwargs: Kingsoft Cloud chat template extension parameters.
+        # chat_template_kwargs:
+        #   type: object
+        #   additionalProperties: true
+        #   description: Kingsoft Cloud extension object for controlling chat behavior and model thinking behavior.
+        #   x-provider-support: [Kingsoft Cloud]
+
+        # web_search_options: OpenAI web search context configuration.
+        # web_search_options:
+        #   $ref: "#/components/schemas/WebSearchOptions"
+        #   x-provider-support: [OpenAI]
+
+        # cache_control: OpenRouter request-level prompt cache control.
+        cache_control:
+          $ref: "#/components/schemas/CacheControl"
+          description: Only Anthropic Claude models are supported.
+          # x-provider-support: [OpenRouter]
+
+        # debug: OpenRouter debug extension.
+        # debug:
+        #   type: object
+        #   additionalProperties: true
+        #   properties:
+        #     echo_upstream_body:
+        #       type: boolean
+        #       description: Only takes effect when stream=true. Echoes the upstream request body.
+        #   description: OpenRouter debug parameters.
+        #   x-provider-support: [OpenRouter]
+
+        # image_config: OpenRouter image generation and multimodal extension.
+        # image_config:
+        #   $ref: "#/components/schemas/AnyJson"
+        #   description: OpenRouter image_config. The exact structure depends on the model/provider.
+        #   x-provider-support: [OpenRouter]
+
+        # models: OpenRouter multi-model fallback list.
+        # models:
+        #   type: array
+        #   items:
+        #     type: string
+        #   description: OpenRouter multi-model list for fallback or alternate models.
+          # x-provider-support: [OpenRouter]
+
+        # min_p: Minimum probability sampling threshold.
+        # min_p:
+        #   type:
+        #     - number
+        #     - "null"
+        #   minimum: 0
+        #   maximum: 1
+        #   description: min-p sampling parameter. PPIO range is 0 <= x <= 1.
+        #   x-provider-support: [OpenRouter, PPIO]
+
+        # plugins: OpenRouter plugin configuration.
+        # plugins:
+        #   type: array
+        #   items:
+        #     $ref: "#/components/schemas/OpenRouterPlugin"
+        #   description: Enables OpenRouter plugins such as web, file-parser, moderation, and context-compression.
+        #   x-provider-support: [OpenRouter]
+
+        # provider: OpenRouter multi-provider routing preferences.
+        # provider:
+        #   $ref: "#/components/schemas/OpenRouterProviderPreferences"
+        #   x-provider-support: [OpenRouter]
+
+        # route: OpenRouter routing strategy.
+        # route:
+        #   $ref: "#/components/schemas/AnyJson"
+        #   description: OpenRouter routing strategy or routing-related configuration. Schema is not expanded.
+        #   x-provider-support: [OpenRouter]
+
+        # # session_id: OpenRouter session ID, up to 256 characters.
+        # session_id:
+        #   type: string
+        #   maxLength: 256
+        #   description: OpenRouter session ID, useful for cache or session routing.
+        #   x-provider-support: [OpenRouter]
+
+        # # stop_server_tools_when: OpenRouter server-tool agent loop stop conditions.
+        # stop_server_tools_when:
+        #   type: array
+        #   items:
+        #     $ref: "#/components/schemas/StopServerToolCondition"
+        #   description: Stops the OpenRouter server-tool loop when any condition is met.
+        #   x-provider-support: [OpenRouter]
+
+        # # top_a: OpenRouter sampling extension. Not all providers support it.
+        # top_a:
+        #   type:
+        #     - number
+        #     - "null"
+        #   description: OpenRouter top-a sampling parameter.
+        #   x-provider-support: [OpenRouter]
+
+        # trace: OpenRouter observability/tracing configuration.
+        # trace:
+        #   type: object
+        #   additionalProperties:
+        #     type: string
+        #   description: OpenRouter trace configuration, such as trace_id, trace_name, span_name, and generation_name.
+        #   x-provider-support: [OpenRouter]
+
+        # top_k: Number of candidate tokens. Smaller values are more deterministic.
+        # top_k:
+        #   type:
+        #     - integer
+        #     - "null"
+        #   description: top-k sampling parameter. PPIO range is 1 < x < 128; some Alibaba Cloud models do not support it.
+        #   x-provider-support: [Alibaba Cloud, OpenRouter, PPIO]
+
+        # repetition_penalty: Repetition penalty. 1.0 usually means no penalty.
+        # repetition_penalty:
+        #   type:
+        #     - number
+        #     - "null"
+        #   description: Repetition penalty. PPIO range is 0 < x < 2.
+        #   x-provider-support: [Alibaba Cloud, Baidu, OpenRouter, PPIO]
+
+        # thinking: Unified thinking-mode configuration. Use {"type":"enabled"} to enable it.
+        thinking:
+          $ref: "#/components/schemas/ThinkingConfig"
+
+        # reasoning_split: MiniMax output splitting switch. Does not enable or disable thinking.
+        # reasoning_split:
+        #   type: boolean
+        #   description: MiniMax reasoning output splitting. Only controls output shape.
+        #   x-provider-support: [MiniMax]
+
+        # preserve_thinking: Alibaba Cloud preserves thinking history; Zhipu uses thinking.clear_thinking=false.
+        # preserve_thinking:
+        #   type: boolean
+        #   description: Whether Alibaba Cloud preserves thinking content.
+        #   x-provider-support: [Alibaba Cloud]
+
+        # thinking_budget: Thinking token budget.
+        # thinking_budget:
+        #   type: integer
+        #   minimum: 1
+        #   description: Thinking token budget. Mentioned in Alibaba Cloud and Baidu docs.
+        #   x-provider-support: [Alibaba Cloud, Baidu]
+
+        # tool_stream: Incremental streaming output for tool calls.
+        # tool_stream:
+        #   type: boolean
+        #   description: Whether tool calls use streaming output. Zhipu supports this only for some GLM series models.
+        #   x-provider-support: [Alibaba Cloud, Zhipu]
+
+        # enable_code_interpreter: Alibaba Cloud code interpreter switch.
+        # enable_code_interpreter:
+        #   type: boolean
+        #   description: Alibaba Cloud code interpreter feature switch.
+        #   x-provider-support: [Alibaba Cloud]
+
+        # enable_search: Alibaba Cloud web search switch.
+        # enable_search:
+        #   type: boolean
+        #   description: Whether Alibaba Cloud enables web search.
+        #   x-provider-support: [Alibaba Cloud]
+
+        # search_options: Alibaba Cloud web search policy.
+        # search_options:
+        #   type: object
+        #   additionalProperties: true
+        #   properties:
+        #     forced_search:
+        #       type: boolean
+        #       description: Whether to force web search.
+        #   description: Alibaba Cloud search options. OpenAI/Baidu/Zhipu use other fields for search.
+        #   x-provider-support: [Alibaba Cloud]
+
+        # skill: Alibaba Cloud qwen-doc-turbo generation skill.
+        # skill:
+        #   type: array
+        #   items:
+        #     $ref: "#/components/schemas/AliyunSkill"
+        #   description: Alibaba Cloud skill extension. stream must be true when using skill.
+        #   x-provider-support: [Alibaba Cloud]
+
+        # penalty_score: Baidu repetition penalty field.
+        # penalty_score:
+        #   type: number
+        #   description: Baidu Qianfan penalty_score, controlling repetition penalty.
+        #   x-provider-support: [Baidu]
+
+        # web_search: Baidu real-time search configuration.
+        # web_search:
+        #   $ref: "#/components/schemas/BaiduWebSearch"
+        #   x-provider-support: [Baidu]
+
+    ChatCompletionMessage:
+      oneOf:
+        - $ref: "#/components/schemas/DeveloperMessage"
+        - $ref: "#/components/schemas/SystemMessage"
+        - $ref: "#/components/schemas/UserMessage"
+        - $ref: "#/components/schemas/AssistantMessage"
+        - $ref: "#/components/schemas/ToolMessage"
+        - $ref: "#/components/schemas/FunctionMessage"
+      discriminator:
+        propertyName: role
+
+    DeveloperMessage:
+      type: object
+      additionalProperties: true
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          const: developer
+          description: Developer instruction. o1 and newer models prefer developer over system.
+        name:
+          type: string
+          description: Optional participant name, used to distinguish participants with the same role.
+        content:
+          $ref: "#/components/schemas/TextOnlyMessageContent"
+
+    SystemMessage:
+      type: object
+      additionalProperties: true
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          const: system
+          description: System message. Some reasoning or vision models do not support it or do not apply it.
+        name:
+          type: string
+        content:
+          $ref: "#/components/schemas/TextOnlyMessageContent"
+
+    UserMessage:
+      type: object
+      additionalProperties: true
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          const: user
+        name:
+          type: string
+        # user.content can be plain text, an array of strings, or an array of content parts.
+        content:
+          $ref: "#/components/schemas/UserMessageContent"
+
+    AssistantMessage:
+      type: object
+      additionalProperties: true
+      required: [role]
+      properties:
+        role:
+          type: string
+          const: assistant
+        name:
+          type: string
+        audio:
+          $ref: "#/components/schemas/AssistantAudio"
+        # When tool_calls or function_call is present, assistant.content can be null or omitted; otherwise it is usually required.
+        content:
+          $ref: "#/components/schemas/AssistantMessageContent"
+        reasoning_content:
+          type: string
+          # Reasoning content fragment. When Zhipu clear_thinking=false, historical reasoning_content must be passed through in full.
+          description: Reasoning content fragment. Preserve historical thinking content completely and without modification when passing it through.
+        encrypted_content:
+          type: string
+          # Volcano Engine encrypted thinking content.
+          description: Encrypted thinking content.
+        refusal:
+          type: string
+          description: Text of the assistant refusal.
+        partial:
+          type: boolean
+          default: false
+          # Prefix continuation switch, mentioned in Alibaba Cloud and Kimi docs.
+          description: Prefix continuation switch. Support depends on the model.
+        tool_calls:
+          type: array
+          items:
+            $ref: "#/components/schemas/ToolCall"
+          description: Tool calls returned by the model in the previous turn. Pass them back in multi-turn conversations.
+        function_call:
+          $ref: "#/components/schemas/FunctionCall"
+          deprecated: true
+
+    ToolMessage:
+      type: object
+      additionalProperties: true
+      required: [role, tool_call_id, content]
+      properties:
+        role:
+          type: string
+          const: tool
+        tool_call_id:
+          type: string
+          description: Corresponds to assistant.tool_calls[$index].id from the previous turn.
+        content:
+          $ref: "#/components/schemas/ToolMessageContent"
+
+    FunctionMessage:
+      type: object
+      additionalProperties: true
+      required: [role, name, content]
+      deprecated: true
+      properties:
+        role:
+          type: string
+          const: function
+          description: Legacy function message. Prefer role=tool for new APIs.
+        name:
+          type: string
+        content:
+          type: string
+          description: Only strings are supported. Structured results must be JSON-serialized first.
+
+    TextOnlyMessageContent:
+      anyOf:
+        - type: string
+        - type: array
+          items:
+            $ref: "#/components/schemas/TextContentPart"
+      description: Text content. Array form supports only text content parts.
+
+    UserMessageContent:
+      anyOf:
+        - type: string
+        - type: array
+          items:
+            anyOf:
+              - type: string
+              - $ref: "#/components/schemas/ChatContentPart"
+      # User message content. Can be a string, string[] as mentioned in Baidu docs,
+      # or an array of multimodal content parts. Supported content parts vary by provider and model.
+      description: |
+        User message content. Can be a string, an array of strings, or an array of multimodal content parts.
+        Supported content parts depend on the model.
+
+    AssistantMessageContent:
+      anyOf:
+        - type: string
+        - type: "null"
+        - type: array
+          items:
+            $ref: "#/components/schemas/AssistantContentPart"
+      description: Assistant content. Can be a string, null, an array of text parts, or a single refusal part.
+
+    ToolMessageContent:
+      anyOf:
+        - type: string
+        - type: array
+          items:
+            $ref: "#/components/schemas/TextContentPart"
+      # Tool output content. Most providers require a string; structured data must be JSON-serialized.
+      description: Tool output content. Structured data must be JSON-serialized as a string.
+
+    ChatContentPart:
+      oneOf:
+        - $ref: "#/components/schemas/TextContentPart"
+        - $ref: "#/components/schemas/ImageUrlContentPart"
+        - $ref: "#/components/schemas/InputAudioContentPart"
+        - $ref: "#/components/schemas/FileContentPart"
+        - $ref: "#/components/schemas/FileUrlContentPart"
+        - $ref: "#/components/schemas/VideoFramesContentPart"
+        - $ref: "#/components/schemas/VideoUrlContentPart"
+      discriminator:
+        propertyName: type
+
+    AssistantContentPart:
+      oneOf:
+        - $ref: "#/components/schemas/TextContentPart"
+        - $ref: "#/components/schemas/RefusalContentPart"
+      discriminator:
+        propertyName: type
+
+    TextContentPart:
+      type: object
+      additionalProperties: true
+      required: [type, text]
+      properties:
+        type:
+          type: string
+          const: text
+        text:
+          type: string
+        # Content-part cache control for OpenRouter/Alibaba Cloud. Other providers may not support it.
+        # Support depends on the model.
+        cache_control:
+          $ref: "#/components/schemas/CacheControl"
+
+    ImageUrlContentPart:
+      type: object
+      additionalProperties: true
+      required: [type, image_url]
+      properties:
+        type:
+          type: string
+          const: image_url
+        image_url:
+          type: object
+          additionalProperties: true
+          required: [url]
+          properties:
+            url:
+              type: string
+              # Image URL, Base64 data URL, or provider file reference.
+              description: Image URL, Base64 data URL, or file reference.
+            detail:
+              type: string
+              enum: [auto, low, high, default, xhigh]
+              # Image detail level. Enum values vary by provider.
+              description: Image detail level. Specific enum values depend on the model.
+            max_long_side_pixel:
+              type: integer
+              # Longest-side limit supported by some providers.
+              description: Longest-side limit. Support depends on the model.
+            image_pixel_limit:
+              $ref: "#/components/schemas/ImagePixelLimit"
+
+    ImagePixelLimit:
+      type: object
+      additionalProperties: false
+      properties:
+        min_pixels:
+          type: integer
+        max_pixels:
+          type: integer
+      # Volcano Engine image pixel limit, with higher priority than detail.
+      description: Image pixel limit, with higher priority than detail.
+
+    InputAudioContentPart:
+      type: object
+      additionalProperties: true
+      required: [type, input_audio]
+      properties:
+        type:
+          type: string
+          const: input_audio
+        input_audio:
+          type: object
+          additionalProperties: true
+          properties:
+            data:
+              type: string
+              # Base64 audio data. Some providers also allow a URL string.
+              description: Base64 audio data. Some models also allow a URL string.
+            url:
+              type: string
+              # Audio URL supported by providers such as Volcano Engine.
+              description: Audio URL.
+            file_id:
+              type: string
+              # File ID supported by providers such as Volcano Engine.
+              description: File ID.
+            format:
+              type: string
+              # OpenAI/Zhipu commonly use wav/mp3; Volcano Engine uses MIME types such as audio/wav.
+              description: Audio format, such as wav, mp3, or a MIME type.
+
+    FileContentPart:
+      type: object
+      additionalProperties: true
+      required: [type, file]
+      properties:
+        type:
+          type: string
+          const: file
+        file:
+          type: object
+          additionalProperties: true
+          properties:
+            file_id:
+              type: string
+            file_data:
+              type: string
+              description: Base64 file data or data URL.
+            file_url:
+              type: string
+            filename:
+              type: string
+              # Some providers require this when file_data is used.
+              description: File name. Some models may require it when file_data is used.
+
+    FileUrlContentPart:
+      type: object
+      additionalProperties: true
+      required: [type, file_url]
+      properties:
+        type:
+          type: string
+          const: file_url
+        file_url:
+          type: object
+          additionalProperties: false
+          required: [url]
+          properties:
+            url:
+              type: string
+              # Zhipu file_url. Base64 is not supported.
+              description: File URL. This content part does not use Base64.
+
+    VideoFramesContentPart:
+      type: object
+      additionalProperties: true
+      required: [type, video]
+      properties:
+        type:
+          type: string
+          const: video
+        video:
+          type: array
+          items:
+            type: string
+          # Alibaba Cloud video image-frame list.
+          description: Video image-frame list.
+        fps:
+          type: number
+        min_pixels:
+          type: integer
+        max_pixels:
+          type: integer
+        total_pixels:
+          type: integer
+
+    VideoUrlContentPart:
+      type: object
+      additionalProperties: true
+      required: [type, video_url]
+      properties:
+        type:
+          type: string
+          const: video_url
+        video_url:
+          type: object
+          additionalProperties: true
+          required: [url]
+          properties:
+            url:
+              type: string
+              # Video URL, Base64 data URL, or provider file reference.
+              description: Video URL, Base64 data URL, or file reference.
+            file_id:
+              type: string
+            detail:
+              type: string
+              enum: [low, default, high]
+            fps:
+              type: number
+              minimum: 0.2
+              maximum: 5
+            max_long_side_pixel:
+              type: integer
+        fps:
+          type: number
+        min_pixels:
+          type: integer
+        max_pixels:
+          type: integer
+        total_pixels:
+          type: integer
+
+    RefusalContentPart:
+      type: object
+      additionalProperties: false
+      required: [type, refusal]
+      properties:
+        type:
+          type: string
+          const: refusal
+        refusal:
+          type: string
+
+    AssistantAudio:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+          description: Previous model audio response ID. Can be passed back in multi-turn voice conversations.
+
+    ChatCompletionAudioParam:
+      type: object
+      additionalProperties: false
+      required: [format, voice]
+      properties:
+        format:
+          type: string
+          enum: [wav, aac, mp3, flac, opus, pcm16]
+          description: Output audio format.
+        voice:
+          anyOf:
+            - type: string
+              enum: [alloy, ash, ballad, coral, echo, fable, nova, onyx, sage, shimmer, verse, marin, cedar]
+            - type: string
+              # Voice names supported by other providers or future models.
+              description: Voice names supported by other models.
+            - $ref: "#/components/schemas/CustomVoice"
+          description: Built-in voice name or custom voice object.
+
+    CustomVoice:
+      type: object
+      additionalProperties: false
+      required: [id]
+      properties:
+        id:
+          type: string
+          description: Custom voice ID, such as voice_1234.
+
+    FunctionCallOption:
+      anyOf:
+        - type: string
+          enum: [none, auto]
+        - type: object
+          additionalProperties: false
+          required: [name]
+          properties:
+            name:
+              type: string
+              description: Name of the function to force-call.
+
+    FunctionCall:
+      type: object
+      additionalProperties: false
+      required: [name, arguments]
+      properties:
+        name:
+          type: string
+        arguments:
+          type: string
+          description: Model-generated JSON string. Validate it before use.
+
+    ToolCall:
+      oneOf:
+        - $ref: "#/components/schemas/FunctionToolCall"
+        - $ref: "#/components/schemas/CustomToolCall"
+        - $ref: "#/components/schemas/ProviderToolCall"
+
+    FunctionToolCall:
+      type: object
+      additionalProperties: true
+      required: [id, type, function]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          const: function
+        function:
+          type: object
+          additionalProperties: true
+          required: [name, arguments]
+          properties:
+            index:
+              type: integer
+              # Alibaba Cloud tool_calls array index.
+              description: tool_calls array index.
+            name:
+              type: string
+            arguments:
+              type: string
+              description: JSON string. Parse and validate it before executing the tool.
+
+    CustomToolCall:
+      type: object
+      additionalProperties: true
+      required: [id, type, custom]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          const: custom
+        custom:
+          type: object
+          additionalProperties: true
+          required: [name, input]
+          properties:
+            name:
+              type: string
+            input:
+              type: string
+
+    ProviderToolCall:
+      type: object
+      additionalProperties: true
+      required: [id, type]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [web_search, retrieval, mcp]
+        web_search:
+          $ref: "#/components/schemas/AnyJson"
+        retrieval:
+          $ref: "#/components/schemas/AnyJson"
+        mcp:
+          $ref: "#/components/schemas/AnyJson"
+      # Built-in tool call that may appear in responses or historical messages from providers such as Zhipu.
+      description: Built-in tool call that may appear in responses or historical messages.
+
+    ToolDefinition:
+      oneOf:
+        - $ref: "#/components/schemas/FunctionToolDefinition"
+        - $ref: "#/components/schemas/CustomToolDefinition"
+        - $ref: "#/components/schemas/WebSearchToolDefinition"
+        - $ref: "#/components/schemas/RetrievalToolDefinition"
+        - $ref: "#/components/schemas/McpToolDefinition"
+        # Original $ref: "#/components/schemas/OpenRouterServerToolDefinition"
+        - $ref: "#/components/schemas/ServerToolDefinition"
+
+    FunctionToolDefinition:
+      type: object
+      additionalProperties: true
+      required: [type, function]
+      properties:
+        type:
+          type: string
+          const: function
+        function:
+          type: object
+          additionalProperties: true
+          required: [name]
+          properties:
+            name:
+              type: string
+              maxLength: 64
+              pattern: "^[a-zA-Z0-9_-]+$"
+            description:
+              type:
+                - string
+                - "null"
+            parameters:
+              type: object
+              additionalProperties: true
+              # JSON Schema object. Some providers require it.
+              description: JSON Schema object. Some models may require it.
+            strict:
+              type: boolean
+              # Whether to enable strict schema adherence. Not all providers support it.
+              description: Whether to enable strict schema adherence. Support depends on the model.
+
+    CustomToolDefinition:
+      type: object
+      additionalProperties: true
+      required: [type, custom]
+      properties:
+        type:
+          type: string
+          const: custom
+        custom:
+          type: object
+          additionalProperties: true
+          required: [name]
+          properties:
+            name:
+              type: string
+            description:
+              type: string
+            format:
+              oneOf:
+                - $ref: "#/components/schemas/CustomToolTextFormat"
+                - $ref: "#/components/schemas/CustomToolGrammarFormat"
+
+    CustomToolTextFormat:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type:
+          type: string
+          const: text
+
+    CustomToolGrammarFormat:
+      type: object
+      additionalProperties: false
+      required: [type, grammar]
+      properties:
+        type:
+          type: string
+          const: grammar
+        grammar:
+          type: object
+          additionalProperties: false
+          required: [definition, syntax]
+          properties:
+            definition:
+              type: string
+            syntax:
+              type: string
+              enum: [lark, regex]
+
+    WebSearchToolDefinition:
+      type: object
+      additionalProperties: true
+      required: [type]
+      properties:
+        type:
+          type: string
+          const: web_search
+        web_search:
+          type: object
+          additionalProperties: true
+          properties:
+            enable:
+              type: boolean
+            search_engine:
+              type: string
+            search_query:
+              type: string
+            search_intent:
+              type: string
+            count:
+              type: integer
+            search_domain_filter:
+              type: string
+            search_recency_filter:
+              type: string
+            content_size:
+              type: string
+            result_sequence:
+              type: string
+            search_result:
+              type: boolean
+            require_search:
+              type: boolean
+            search_prompt:
+              type: string
+      # Zhipu web_search tool configuration.
+      description: web_search tool configuration.
+
+    RetrievalToolDefinition:
+      type: object
+      additionalProperties: true
+      required: [type, retrieval]
+      properties:
+        type:
+          type: string
+          const: retrieval
+        retrieval:
+          type: object
+          additionalProperties: true
+          properties:
+            knowledge_id:
+              type: string
+            prompt_template:
+              type: string
+
+    McpToolDefinition:
+      type: object
+      additionalProperties: true
+      required: [type, mcp]
+      properties:
+        type:
+          type: string
+          const: mcp
+        mcp:
+          type: object
+          additionalProperties: true
+          properties:
+            server_label:
+              type: string
+            server_url:
+              type: string
+            transport_type:
+              type: string
+            allowed_tools:
+              type: array
+              items:
+                type: string
+            headers:
+              type: object
+              additionalProperties:
+                type: string
+
+    # Original component name: OpenRouterServerToolDefinition
+    ServerToolDefinition:
+      type: object
+      additionalProperties: true
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum:
+            # Original enum values:
+            # - openrouter:web_search
+            # - openrouter:web_fetch
+            # - openrouter:bash
+            # - openrouter:subagent
+            # - openrouter:advisor
+            # - openrouter:image_generation
+            - server:web_search
+            - server:web_fetch
+            - server:bash
+            - server:subagent
+            - server:advisor
+            - server:image_generation
+      # Original description: OpenRouter server tools.
+      description: Server tools.
+
+    ToolChoice:
+      anyOf:
+        - type: string
+          enum: [none, auto, required]
+        - $ref: "#/components/schemas/FunctionToolChoice"
+        - $ref: "#/components/schemas/CustomToolChoice"
+        - $ref: "#/components/schemas/AllowedToolsChoice"
+        # Original $ref: "#/components/schemas/OpenRouterServerToolChoice"
+        - $ref: "#/components/schemas/ServerToolChoice"
+      description: Defaults to none when tools is absent, and usually defaults to auto when tools is present.
+
+    FunctionToolChoice:
+      type: object
+      additionalProperties: false
+      required: [type, function]
+      properties:
+        type:
+          type: string
+          const: function
+        function:
+          type: object
+          additionalProperties: false
+          required: [name]
+          properties:
+            name:
+              type: string
+
+    CustomToolChoice:
+      type: object
+      additionalProperties: false
+      required: [type, custom]
+      properties:
+        type:
+          type: string
+          const: custom
+        custom:
+          type: object
+          additionalProperties: false
+          required: [name]
+          properties:
+            name:
+              type: string
+
+    AllowedToolsChoice:
+      type: object
+      additionalProperties: false
+      required: [type, allowed_tools]
+      properties:
+        type:
+          type: string
+          const: allowed_tools
+        allowed_tools:
+          type: object
+          additionalProperties: false
+          required: [mode, tools]
+          properties:
+            mode:
+              type: string
+              enum: [auto, required]
+            tools:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+
+    # Original component name: OpenRouterServerToolChoice
+    ServerToolChoice:
+      type: object
+      additionalProperties: true
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum:
+            # Original enum values:
+            # - openrouter:web_search
+            # - openrouter:web_fetch
+            # - openrouter:bash
+            # - openrouter:subagent
+            # - openrouter:advisor
+            # - openrouter:image_generation
+            - server:web_search
+            - server:web_fetch
+            - server:bash
+            - server:subagent
+            - server:advisor
+            - server:image_generation
+
+    ResponseFormat:
+      oneOf:
+        - $ref: "#/components/schemas/ResponseFormatText"
+        - $ref: "#/components/schemas/ResponseFormatJsonObject"
+        - $ref: "#/components/schemas/ResponseFormatJsonSchema"
+        - $ref: "#/components/schemas/ResponseFormatGrammar"
+        - $ref: "#/components/schemas/ResponseFormatPython"
+
+    ResponseFormatText:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type:
+          type: string
+          const: text
+
+    ResponseFormatJsonObject:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type:
+          type: string
+          const: json_object
+      description: Legacy JSON mode. You usually still need to explicitly ask for JSON output in the system/user message.
+
+    ResponseFormatJsonSchema:
+      type: object
+      additionalProperties: false
+      required: [type, json_schema]
+      properties:
+        type:
+          type: string
+          const: json_schema
+        json_schema:
+          type: object
+          additionalProperties: false
+          required: [name]
+          properties:
+            name:
+              type: string
+              maxLength: 64
+              pattern: "^[a-zA-Z0-9_-]+$"
+            description:
+              type: string
+            schema:
+              type: object
+              additionalProperties: true
+            strict:
+              type: boolean
+      description: Structured output. When strict=true, usually only a subset of JSON Schema is supported.
+
+    ResponseFormatGrammar:
+      type: object
+      additionalProperties: true
+      required: [type, grammar]
+      properties:
+        type:
+          type: string
+          const: grammar
+        grammar:
+          type: string
+      # Original description: OpenRouter extended response_format.
+      description: Extended response_format.
+
+    ResponseFormatPython:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type:
+          type: string
+          const: python
+      # Original description: OpenRouter extended response_format.
+      description: Extended response_format.
+
+    StreamOptions:
+      type: object
+      additionalProperties: true
+      properties:
+        include_obfuscation:
+          type: boolean
+          description: Set to false to reduce bandwidth if you trust the network path.
+        include_usage:
+          type: boolean
+          description: Returns an extra usage chunk before [DONE]. It may not be received if the stream is interrupted.
+        # chunk_include_usage:
+        #   type: boolean
+        #   # Baidu/Volcano Engine mention returning cumulative usage in each chunk.
+        #   description: Returns cumulative usage up to the current point in each chunk.
+
+    PredictionContent:
+      type: object
+      additionalProperties: false
+      required: [type, content]
+      properties:
+        type:
+          type: string
+          const: content
+        content:
+          anyOf:
+            - type: string
+            - type: array
+              items:
+                $ref: "#/components/schemas/TextContentPart"
+          description: Static predicted content expected to match.
+
+    WebSearchOptions:
+      type: object
+      additionalProperties: true
+      properties:
+        search_context_size:
+          type: string
+          enum: [low, medium, high]
+          default: medium
+        user_location:
+          type: object
+          additionalProperties: true
+          properties:
+            approximate:
+              type: object
+              additionalProperties: false
+              required: [type]
+              properties:
+                type:
+                  type: string
+                  const: approximate
+                city:
+                  type: string
+                country:
+                  type: string
+                  minLength: 2
+                  maxLength: 2
+                region:
+                  type: string
+                timezone:
+                  type: string
+
+    CacheControl:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type:
+          type: string
+          const: ephemeral
+        ttl:
+          type: string
+          enum: [5m, 1h]
+          # OpenRouter content-part cache TTL.
+          description: Content-part cache TTL.
+
+#     OpenRouterPlugin:
+#       type: object
+#       additionalProperties: true
+#       required: [id]
+#       properties:
+#         id:
+#           type: string
+#           enum:
+#             - auto-router
+#             - context-compression
+#             - file-parser
+#             - fusion
+#             - moderation
+#             - pareto-router
+#             - response-healing
+#             - web
+#             - web-fetch
+#         enabled:
+#           type: boolean
+#         engine:
+#           type: string
+#         max_results:
+#           type: integer
+# 
+#     OpenRouterProviderPreferences:
+#       type: object
+#       additionalProperties: true
+#       properties:
+#         allow_fallbacks:
+#           type:
+#             - boolean
+#             - "null"
+#           default: true
+#         data_collection:
+#           type:
+#             - string
+#             - "null"
+#           enum: [allow, deny, null]
+#         order:
+#           type:
+#             - array
+#             - "null"
+#           items:
+#             type: string
+#         only:
+#           type:
+#             - array
+#             - "null"
+#           items:
+#             type: string
+#         ignore:
+#           type:
+#             - array
+#             - "null"
+#           items:
+#             type: string
+#         require_parameters:
+#           type:
+#             - boolean
+#             - "null"
+#         sort:
+#           anyOf:
+#             - type: string
+#               enum: [price, throughput, latency, exacto]
+#             - type: object
+#               additionalProperties: true
+#             - type: "null"
+#         quantizations:
+#           type: array
+#           items:
+#             type: string
+#             enum: [int4, int8, fp4, fp6, fp8, fp16, bf16, fp32, unknown]
+#         zdr:
+#           type:
+#             - boolean
+#             - "null"
+#         max_price:
+#           type: object
+#           additionalProperties: true
+#           properties:
+#             prompt:
+#               type: string
+#             completion:
+#               type: string
+# 
+    StopServerToolCondition:
+      type: object
+      additionalProperties: true
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [finish_reason_is, has_tool_call, max_cost, max_tokens_used, step_count_is]
+        finish_reason:
+          type: string
+        tool_name:
+          type: string
+        max_cost:
+          type: number
+        max_tokens_used:
+          type: integer
+        step_count:
+          type: integer
+
+    ThinkingConfig:
+      type: object
+      additionalProperties: true
+      properties:
+        type:
+          type: string
+          enum: [enabled, disabled, auto, adaptive]
+          description: |
+            Use enabled to turn on unified thinking mode, and disabled to turn it off.
+            Only some models support auto or adaptive, where the model decides whether to enable thinking based on the conversation.
+        # keep:
+        #   type:
+        #     - string
+        #     - "null"
+        #   enum: [all, null]
+        #   # Kimi control field for preserving historical reasoning_content.
+        #   description: Control field for preserving historical reasoning_content.
+        # clear_thinking:
+        #   type: boolean
+        #   # Zhipu field. When false, historical reasoning_content must be passed through complete and unmodified.
+        #   description: When false, historical reasoning_content must be passed through complete and unmodified.
+
+#     AliyunSkill:
+#       type: object
+#       additionalProperties: true
+#       required: [type]
+#       properties:
+#         type:
+#           type: string
+#           enum: [ppt]
+#         mode:
+#           type: string
+#           enum: [general, creative]
+#         template_id:
+#           type: string
+#           enum: [news_01, summary_01, internet_01, thesis_01]
+#       description: Alibaba Cloud qwen-doc-turbo generation skill. stream must be true when used.
+# 
+#     BaiduWebSearch:
+#       type: object
+#       additionalProperties: true
+#       properties:
+#         enable:
+#           type: boolean
+#           description: Whether to enable real-time search.
+#         enable_citation:
+#           type: boolean
+#           description: Whether to attach citation markers to response content when search is enabled.
+#         enable_trace:
+#           type: boolean
+#           description: Whether to return search_results provenance when search is enabled.
+#         enable_status:
+#           type: boolean
+#           description: Whether to return signal packets through delta_tag=search_status when search is enabled.
+#         search_mode:
+#           type: string
+#           enum: [auto, required]
+#         search_number:
+#           type: integer
+#           minimum: 1
+#           maximum: 28
+#         reference_number:
+#           type: integer
+#           minimum: 1
+#           maximum: 28
+# 
+    AnyJson:
+      description: Any JSON value.
+      anyOf:
+        - type: object
+          additionalProperties: true
+        - type: array
+          items: {}
+        - type: string
+        - type: number
+        - type: integer
+        - type: boolean
+        - type: "null"
+
+    ChatCompletionResponse:
+      oneOf:
+        - $ref: "#/components/schemas/ChatCompletionObject"
+        - $ref: "#/components/schemas/ChatCompletionChunk"
+      description: Chat completion response body. Non-streaming responses return a full object; streaming responses return chunk objects.
+
+    ChatCompletionObject:
+      type: object
+      additionalProperties: true
+      required: [id, choices, created, model, object]
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the chat completion response.
+        u_trace_id:
+          type: string
+          description: Request ID.
+        choices:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatCompletionChoice"
+        created:
+          type: integer
+          description: Unix timestamp in seconds when the chat completion was created.
+        model:
+          type: string
+          description: Model used to generate this chat completion.
+        object:
+          type: string
+          enum: [chat.completion, chat.completion.chunk]
+          description: Object type. Non-streaming responses are usually chat.completion; streaming responses are usually chat.completion.chunk.
+        # moderation:
+        #   $ref: "#/components/schemas/ModerationEnvelope"
+        service_tier:
+          type:
+            - string
+            - "null"
+          enum: [auto, default, flex, scale, priority, fast, null]
+          description: Service tier or latency/throughput preference.
+        # system_fingerprint:
+        #   type:
+        #     - string
+        #     - "null"
+        #   description: Model backend configuration fingerprint.
+        # Original field name: openrouter_metadata
+        # routing_metadata:
+        #   $ref: "#/components/schemas/RoutingMetadata"
+        usage:
+          $ref: "#/components/schemas/CompletionUsage"
+        # video_result:
+        #   type: array
+        #   description: Video generation result.
+        #   items:
+        #     $ref: "#/components/schemas/VideoResult"
+        # web_search:
+        #   type: array
+        #   description: Web search source information.
+        #   items:
+        #     $ref: "#/components/schemas/WebSearchResult"
+        content_filter:
+          type: array
+          description: Content filtering results.
+          items:
+            $ref: "#/components/schemas/ContentFilterResult"
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional response metadata.
+        # input_sensitive:
+        #   type: boolean
+        #   description: Whether the input triggered sensitive-content detection.
+        # output_sensitive:
+        #   type: boolean
+        #   description: Whether the output triggered sensitive-content detection.
+        # input_sensitive_type:
+        #   type: integer
+        #   description: Input sensitive-content detection type.
+        # output_sensitive_type:
+        #   type: integer
+        #   description: Output sensitive-content detection type.
+        # output_sensitive_int:
+        #   type: integer
+        #   description: Additional output sensitive-content detection type.
+        # base_resp:
+        #   $ref: "#/components/schemas/BaseResponse"
+        # # Original field name: openrouter_error_example
+        # routing_error_example:
+        #   $ref: "#/components/schemas/ErrorResponse"
+        # # Original field name: zhipu_error_example
+        # provider_error_example:
+        #   $ref: "#/components/schemas/ErrorResponse"
+        # # Original field name: aliyun_stream_chunk_example
+        # stream_chunk_example:
+        #   $ref: "#/components/schemas/ChatCompletionChunk"
+        # # Original field name: aliyun_stream_usage_chunk_example
+        # stream_usage_chunk_example:
+        #   $ref: "#/components/schemas/ChatCompletionChunk"
+
+    ChatCompletionChunk:
+      type: object
+      additionalProperties: true
+      required: [id, choices, created, model, object]
+      properties:
+        id:
+          type: string
+          description: Unique identifier associated with the same streaming response.
+        choices:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatCompletionChunkChoice"
+        created:
+          type: integer
+          description: Unix timestamp in seconds when the chunk was created.
+        model:
+          type: string
+          description: Model that generated this chunk.
+        object:
+          type: string
+          const: chat.completion.chunk
+        service_tier:
+          type:
+            - string
+            - "null"
+          enum: [auto, default, flex, scale, priority, fast, null]
+        system_fingerprint:
+          type:
+            - string
+            - "null"
+        usage:
+          anyOf:
+            - $ref: "#/components/schemas/CompletionUsage"
+            - type: "null"
+
+    ChatCompletionChoice:
+      type: object
+      additionalProperties: true
+      required: [index, message]
+      properties:
+        finish_reason:
+          $ref: "#/components/schemas/FinishReason"
+        index:
+          type: integer
+          description: Index of this choice in the choices array.
+        logprobs:
+          anyOf:
+            - $ref: "#/components/schemas/ChoiceLogprobs"
+            - type: "null"
+        matched_stop:
+          anyOf:
+            - type: integer
+            - type: string
+            - type: "null"
+          description: Matched stop condition.
+        message:
+          $ref: "#/components/schemas/ChatCompletionResponseMessage"
+        moderation_hit_type:
+          type:
+            - string
+            - "null"
+          enum: [severe_violation, violence, null]
+          description: Content guardrail hit type.
+
+    ChatCompletionChunkChoice:
+      type: object
+      additionalProperties: true
+      required: [index, delta]
+      properties:
+        delta:
+          $ref: "#/components/schemas/ChatCompletionResponseDelta"
+        finish_reason:
+          $ref: "#/components/schemas/FinishReason"
+        index:
+          type: integer
+        logprobs:
+          anyOf:
+            - $ref: "#/components/schemas/ChoiceLogprobs"
+            - type: "null"
+
+    FinishReason:
+      type:
+        - string
+        - "null"
+      enum:
+        - stop
+        - length
+        - tool_calls
+        - content_filter
+        - function_call
+        - abort
+        - error
+        - sensitive
+        - network_error
+        - model_context_window_exceeded
+        - null
+      description: Reason generation stopped. null is common when a streaming response has not finished yet.
+
+    ChatCompletionResponseMessage:
+      type: object
+      additionalProperties: true
+      required: [role]
+      properties:
+        role:
+          type: string
+          const: assistant
+        name:
+          type: string
+        reasoning:
+          type:
+            - string
+            - "null"
+          description: Reasoning output text.
+        reasoning_content:
+          type: string
+          description: Thinking content fragment.
+        encrypted_content:
+          type: string
+          description: Encrypted thinking content.
+        reasoning_details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReasoningDetail"
+        content:
+          anyOf:
+            - type: string
+            - type: "null"
+            - type: array
+              items:
+                $ref: "#/components/schemas/TextContentPart"
+        audio_content:
+          type: string
+          description: Audio content string.
+        refusal:
+          type:
+            - string
+            - "null"
+          description: Text of the model refusal.
+        images:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResponseImage"
+        annotations:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResponseAnnotation"
+        audio:
+          $ref: "#/components/schemas/ResponseAudio"
+        function_call:
+          $ref: "#/components/schemas/FunctionCall"
+          deprecated: true
+        tool_calls:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResponseToolCall"
+
+    ChatCompletionResponseDelta:
+      type: object
+      additionalProperties: true
+      properties:
+        role:
+          type: string
+          const: assistant
+        content:
+          type:
+            - string
+            - "null"
+        reasoning_content:
+          type: string
+        encrypted_content:
+          type: string
+        function_call:
+          anyOf:
+            - $ref: "#/components/schemas/FunctionCall"
+            - type: "null"
+          deprecated: true
+        audio:
+          $ref: "#/components/schemas/ResponseAudio"
+        refusal:
+          type:
+            - string
+            - "null"
+        tool_calls:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResponseToolCall"
+
+    ReasoningDetail:
+      type: object
+      additionalProperties: true
+      properties:
+        type:
+          type: string
+          description: Structured thinking fragment type.
+        id:
+          type: string
+        format:
+          type: string
+        index:
+          type: integer
+        text:
+          type: string
+
+    ResponseImage:
+      type: object
+      additionalProperties: true
+      properties:
+        image_url:
+          type: object
+          additionalProperties: true
+          properties:
+            url:
+              type: string
+
+    ResponseAnnotation:
+      type: object
+      additionalProperties: true
+      required: [type]
+      properties:
+        type:
+          type: string
+          const: url_citation
+        url_citation:
+          type: object
+          additionalProperties: true
+          properties:
+            start_index:
+              type: integer
+            end_index:
+              type: integer
+            title:
+              type: string
+            url:
+              type: string
+
+    ResponseAudio:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the audio response.
+        data:
+          type: string
+          description: Base64 audio bytes or streaming audio fragment.
+        expires_at:
+          type: integer
+          description: Unix expiration timestamp in seconds.
+        transcript:
+          type: string
+          description: Transcript text generated for the audio.
+
+    ResponseToolCall:
+      oneOf:
+        - $ref: "#/components/schemas/ResponseFunctionToolCall"
+        - $ref: "#/components/schemas/ResponseCustomToolCall"
+        - $ref: "#/components/schemas/ResponseMcpToolCall"
+
+    ResponseFunctionToolCall:
+      type: object
+      additionalProperties: true
+      required: [id, type, function]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          const: function
+        index:
+          type: integer
+        function:
+          type: object
+          additionalProperties: true
+          required: [name, arguments]
+          properties:
+            name:
+              type: string
+            arguments:
+              type: string
+              description: Model-generated JSON string. Validate it before calling.
+
+    ResponseCustomToolCall:
+      type: object
+      additionalProperties: true
+      required: [id, type, custom]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          const: custom
+        custom:
+          type: object
+          additionalProperties: true
+          required: [name, input]
+          properties:
+            name:
+              type: string
+            input:
+              type: string
+
+    ResponseMcpToolCall:
+      type: object
+      additionalProperties: true
+      required: [id, type, mcp]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          const: mcp
+        mcp:
+          type: object
+          additionalProperties: true
+          properties:
+            id:
+              type: string
+            type:
+              type: string
+            server_label:
+              type: string
+            name:
+              type: string
+            arguments:
+              type: string
+            output:
+              $ref: "#/components/schemas/AnyJson"
+            error:
+              $ref: "#/components/schemas/AnyJson"
+            tools:
+              type: array
+              items:
+                $ref: "#/components/schemas/AnyJson"
+
+    ChoiceLogprobs:
+      type: object
+      additionalProperties: true
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/TokenLogprob"
+        refusal:
+          type: array
+          items:
+            $ref: "#/components/schemas/TokenLogprob"
+
+    TokenLogprob:
+      type: object
+      additionalProperties: true
+      required: [token, logprob]
+      properties:
+        token:
+          type: string
+        bytes:
+          anyOf:
+            - type: array
+              items:
+                type: integer
+            - type: "null"
+          description: UTF-8 byte representation of the token.
+        logprob:
+          type: number
+        top_logprobs:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopLogprob"
+
+    TopLogprob:
+      type: object
+      additionalProperties: true
+      required: [token, logprob]
+      properties:
+        token:
+          type: string
+        bytes:
+          anyOf:
+            - type: array
+              items:
+                type: integer
+            - type: "null"
+        logprob:
+          type: number
+
+    ModerationEnvelope:
+      type: object
+      additionalProperties: true
+      properties:
+        input:
+          oneOf:
+            - $ref: "#/components/schemas/ModerationResults"
+            - $ref: "#/components/schemas/ModerationError"
+        output:
+          oneOf:
+            - $ref: "#/components/schemas/ModerationResults"
+            - $ref: "#/components/schemas/ModerationError"
+
+    ModerationResults:
+      type: object
+      additionalProperties: true
+      properties:
+        type:
+          type: string
+          const: moderation_results
+        model:
+          type: string
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/ModerationResult"
+
+    ModerationResult:
+      type: object
+      additionalProperties: true
+      properties:
+        type:
+          type: string
+          const: moderation_result
+        model:
+          type: string
+        flagged:
+          type: boolean
+        categories:
+          type: object
+          additionalProperties:
+            type: boolean
+        category_scores:
+          type: object
+          additionalProperties:
+            type: number
+        category_applied_input_types:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+    ModerationError:
+      type: object
+      additionalProperties: true
+      properties:
+        type:
+          type: string
+          const: error
+        code:
+          type: string
+        message:
+          type: string
+
+    RoutingMetadata:
+      type: object
+      additionalProperties: true
+      properties:
+        attempt:
+          type: integer
+        attempts:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoutingAttempt"
+        endpoints:
+          type: object
+          additionalProperties: true
+          properties:
+            available:
+              type: array
+              items:
+                $ref: "#/components/schemas/RoutingEndpoint"
+            total:
+              type: integer
+        is_byok:
+          type: boolean
+        params:
+          type: object
+          additionalProperties: true
+          properties:
+            quality_floor:
+              type: number
+            throughput_floor:
+              type: number
+            version_group:
+              type: string
+        pipeline:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoutingPipelineStep"
+        region:
+          anyOf:
+            - type: string
+            - type: "null"
+        requested:
+          type: string
+        strategy:
+          type: string
+          enum: [direct, auto, free, latest, alias, fallback, pareto, bodybuilder, fusion]
+        summary:
+          type: string
+
+    RoutingAttempt:
+      type: object
+      additionalProperties: true
+      properties:
+        model:
+          type: string
+        provider:
+          type: string
+        status:
+          type: integer
+
+    RoutingEndpoint:
+      type: object
+      additionalProperties: true
+      properties:
+        model:
+          type: string
+        provider:
+          type: string
+        selected:
+          type: boolean
+
+    RoutingPipelineStep:
+      type: object
+      additionalProperties: true
+      properties:
+        type:
+          type: string
+        name:
+          type: string
+        summary:
+          type: string
+        cost_usd:
+          type: number
+        data:
+          $ref: "#/components/schemas/AnyJson"
+
+    CompletionUsage:
+      type: object
+      additionalProperties: true
+      properties:
+        completion_tokens:
+          type: integer
+          description: Number of tokens used by generated content.
+        prompt_tokens:
+          type: integer
+          description: Number of tokens used by the prompt.
+        reasoning_tokens:
+          type: integer
+          description: Number of tokens consumed by thinking content.
+        total_tokens:
+          type: integer
+          description: Total number of tokens in the request.
+        # total_characters:
+        #   type: integer
+        #   description: Character count for the request or response.
+        # cost:
+        #   type: number
+        #   description: Estimated cost.
+        # is_byok:
+        #   type: boolean
+        #   description: Whether the bring-your-own-key path is used.
+        # cost_details:
+        #   type: object
+        #   additionalProperties: true
+        #   properties:
+        #     upstream_inference_prompt_cost:
+        #       type: number
+        #     upstream_inference_completions_cost:
+        #       type: number
+        #     upstream_inference_cost:
+        #       type: number
+        completion_tokens_details:
+          $ref: "#/components/schemas/CompletionTokensDetails"
+        prompt_tokens_details:
+          $ref: "#/components/schemas/PromptTokensDetails"
+
+    CompletionTokensDetails:
+      type: object
+      additionalProperties: true
+      properties:
+        accepted_prediction_tokens:
+          type: integer
+        audio_tokens:
+          type: integer
+        reasoning_tokens:
+          type: integer
+        text_tokens:
+          type: integer
+        rejected_prediction_tokens:
+          type: integer
+
+    PromptTokensDetails:
+      type: object
+      additionalProperties: true
+      properties:
+        audio_tokens:
+          type: integer
+        audio_cached_tokens:
+          type: integer
+        text_tokens:
+          type: integer
+        video_tokens:
+          type: integer
+        image_tokens:
+          type: integer
+        cache_write_tokens:
+          type: integer
+        cached_tokens:
+          type: integer
+        cache_creation:
+          type: object
+          additionalProperties: true
+          properties:
+            ephemeral_5m_input_tokens:
+              type: integer
+            cache_creation_input_tokens:
+              type: integer
+            cache_type:
+              type: string
+              const: ephemeral
+
+    # VideoResult:
+    #   type: object
+    #   additionalProperties: true
+    #   properties:
+    #     url:
+    #       type: string
+    #     cover_image_url:
+    #       type: string
+
+    # WebSearchResult:
+    #   type: object
+    #   additionalProperties: true
+    #   properties:
+    #     icon:
+    #       type: string
+    #     title:
+    #       type: string
+    #     link:
+    #       type: string
+    #     media:
+    #       type: string
+    #     publish_date:
+    #       type: string
+    #     content:
+    #       type: string
+    #     refer:
+    #       type: string
+
+    ContentFilterResult:
+      type: object
+      additionalProperties: true
+      properties:
+        role:
+          type: string
+          enum: [assistant, user, history]
+        level:
+          type: integer
+          minimum: 0
+          maximum: 3
+
+    BaseResponse:
+      type: object
+      additionalProperties: true
+      properties:
+        status_code:
+          type: integer
+          description: Business status code.
+        status_msg:
+          type: string
+          description: Error details or status description.
+
+    ErrorResponse:
+      type: object
+      additionalProperties: true
+      properties:
+        error:
+          type: object
+          additionalProperties: true
+          properties:
+            message:
+              type: string
+            type:
+              type: string
+            code:
+              anyOf:
+                - type: string
+                - type: integer
+                - type: "null"
+            metadata:
+              anyOf:
+                - type: object
+                  additionalProperties: true
+                - type: "null"
+        # Original field name: openrouter_metadata
+        # routing_metadata:
+        #   anyOf:
+        #     - $ref: "#/components/schemas/RoutingMetadata"
+        #     - type: "null"
+        # user_id:
+        #   type:
+        #     - string
+        #     - "null"

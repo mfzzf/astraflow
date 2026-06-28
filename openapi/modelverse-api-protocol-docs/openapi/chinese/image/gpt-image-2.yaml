@@ -1,0 +1,385 @@
+openapi: 3.1.0
+x-language: zh-CN
+info:
+  title: gpt-image-2接口文档
+  version: "1.0.0"
+  description: |
+    这是 ModelVerse 上 `gpt-image-2` 的图片接口文档，说明如何发起图片生成或编辑请求、填写参数、读取结果以及处理错误。
+    接口路径包括 `POST /v1/images/generations`、`POST /v1/images/edits`。
+servers:
+  - url: https://api.modelverse.cn
+    description: 该模型文档中使用的 ModelVerse API 端点。
+
+tags:
+  - name: gpt-image-2
+    description: Image generation, localized image editing, and multi-image composition with gpt-image-2.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /v1/images/generations:
+    post:
+      tags:
+        - gpt-image-2
+      operationId: createGptImage2ImageGeneration
+      summary: 使用 gpt-image-2 生成图像
+      description: |
+        发起图片生成请求。请求体包含模型、提示词和可选生成参数，响应返回图片 URL 或 Base64 图像数据。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GptImage2GenerationRequest"
+            examples:
+              flower:
+                summary: 生成 PNG 图像
+                value:
+                  model: gpt-image-2
+                  prompt: a beautiful flower
+                  size: 1024x1024
+                  quality: high
+                  output_format: png
+                  output_compression: 100
+      responses:
+        "200":
+          description: 图像生成响应。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GptImage2ImagesResponse"
+              examples:
+                generatedImage:
+                  summary: 带 token 用量的生成图像
+                  value:
+                    created: 1750667997
+                    data:
+                      - b64_json: "{image_base64_string}"
+                    usage:
+                      total_tokens: 4169
+                      input_tokens: 9
+                      output_tokens: 4160
+                      input_tokens_details:
+                        text_tokens: 9
+        "400":
+          description: Invalid request parameters or generation error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GptImage2ErrorResponse"
+              examples:
+                documentedError:
+                  $ref: "#/components/examples/GptImage2Error"
+        default:
+          description: 错误响应。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GptImage2ErrorResponse"
+              examples:
+                documentedError:
+                  $ref: "#/components/examples/GptImage2Error"
+
+  /v1/images/edits:
+    post:
+      tags:
+        - gpt-image-2
+      operationId: createGptImage2ImageEdit
+      summary: 使用 gpt-image-2 编辑图像
+      description: |
+        发起图片编辑请求。通过 multipart 上传图片和可选 mask，响应返回编辑后的图片结果。
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/GptImage2EditRequest"
+            encoding:
+              image:
+                contentType: image/png
+              mask:
+                contentType: image/png
+              image[]:
+                contentType: image/png
+                style: form
+                explode: true
+            examples:
+              localizedEdit:
+                summary: 带可选遮罩的局部编辑
+                value:
+                  image: /path/to/your/image.png
+                  mask: /path/to/your/mask.png
+                  model: gpt-image-2
+                  prompt: Add a beach ball in the center
+                  size: 1024x1024
+                  n: 1
+                  quality: low
+                  output_format: png
+                  output_compression: 100
+              multiImageComposition:
+                summary: 通过重复 image[] 合成多张图片
+                value:
+                  model: gpt-image-2
+                  image[]:
+                    - ./body-lotion.png
+                    - ./bath-bomb.png
+                    - ./incense-kit.png
+                    - ./soap.png
+                  prompt: a beautiful gift basket containing all these products arranged elegantly
+      responses:
+        "200":
+          description: 图像编辑响应。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GptImage2ImagesResponse"
+              examples:
+                editedImage:
+                  summary: 带 token 用量的编辑图像
+                  value:
+                    created: 1750667997
+                    data:
+                      - b64_json: "{image_base64_string}"
+                    usage:
+                      total_tokens: 4169
+                      input_tokens: 9
+                      output_tokens: 4160
+                      input_tokens_details:
+                        text_tokens: 9
+        "400":
+          description: Invalid request parameters or edit error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GptImage2ErrorResponse"
+              examples:
+                documentedError:
+                  $ref: "#/components/examples/GptImage2Error"
+        default:
+          description: 错误响应。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GptImage2ErrorResponse"
+              examples:
+                documentedError:
+                  $ref: "#/components/examples/GptImage2Error"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+    GptImage2Model:
+      type: string
+      const: gpt-image-2
+      description: |
+        发起图片编辑请求。通过 multipart 上传图片和可选 mask，响应返回编辑后的图片结果。
+    GptImage2Prompt:
+      type: string
+      minLength: 1
+      description: |
+        发起图片编辑请求。通过 multipart 上传图片和可选 mask，响应返回编辑后的图片结果。
+    GptImage2ImageCount:
+      type: integer
+      minimum: 1
+      maximum: 10
+      default: 1
+      description: |
+        发起图片编辑请求。通过 multipart 上传图片和可选 mask，响应返回编辑后的图片结果。
+    GptImage2Size:
+      type: string
+      default: auto
+      description: |
+        分辨率。可使用 `auto` 或 `WIDTHxHEIGHT`。显式尺寸要求宽高都为
+        16 像素的倍数，单边不超过 3840 像素，宽高比最高 3:1，
+        像素总数范围为 655360 到 8294400。
+      x-width-multiple-of: 16
+      x-height-multiple-of: 16
+      x-max-side: 3840
+      x-min-pixels: 655360
+      x-max-pixels: 8294400
+      x-max-aspect-ratio: "3:1"
+      oneOf:
+        - const: auto
+        - pattern: "^[1-9][0-9]*x[1-9][0-9]*$"
+      examples:
+        - 1024x1024
+        - 1024x1536
+        - 1536x1024
+        - 2048x2048
+        - 2048x1152
+        - 2160x3840
+
+    GptImage2Quality:
+      type: string
+      enum:
+        - low
+        - medium
+        - high
+      description: |
+        发起图片编辑请求。通过 multipart 上传图片和可选 mask，响应返回编辑后的图片结果。
+    GptImage2OutputFormat:
+      type: string
+      enum:
+        - png
+        - jpeg
+      default: png
+      description: |
+        发起图片编辑请求。通过 multipart 上传图片和可选 mask，响应返回编辑后的图片结果。
+    GptImage2OutputCompression:
+      type: integer
+      minimum: 0
+      maximum: 100
+      default: 100
+      description: |
+        发起图片编辑请求。通过 multipart 上传图片和可选 mask，响应返回编辑后的图片结果。
+    GptImage2GenerationRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - model
+        - prompt
+      properties:
+        model:
+          $ref: "#/components/schemas/GptImage2Model"
+        prompt:
+          $ref: "#/components/schemas/GptImage2Prompt"
+        n:
+          $ref: "#/components/schemas/GptImage2ImageCount"
+        size:
+          $ref: "#/components/schemas/GptImage2Size"
+        quality:
+          $ref: "#/components/schemas/GptImage2Quality"
+        output_format:
+          $ref: "#/components/schemas/GptImage2OutputFormat"
+        output_compression:
+          $ref: "#/components/schemas/GptImage2OutputCompression"
+
+    GptImage2EditRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - model
+        - prompt
+      anyOf:
+        - required:
+            - image
+        - required:
+            - image[]
+      properties:
+        image:
+          type: string
+          format: binary
+          description: 单图局部编辑时要编辑的图像文件。
+        image[]:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            format: binary
+          description: 多图合成时可重复传入的 multipart `image` 字段。
+        mask:
+          type: string
+          format: binary
+          description: 可选的 mask 文件，用于限制单图局部编辑区域。
+        model:
+          $ref: "#/components/schemas/GptImage2Model"
+        prompt:
+          $ref: "#/components/schemas/GptImage2Prompt"
+        n:
+          $ref: "#/components/schemas/GptImage2ImageCount"
+        size:
+          $ref: "#/components/schemas/GptImage2Size"
+        quality:
+          $ref: "#/components/schemas/GptImage2Quality"
+        output_format:
+          $ref: "#/components/schemas/GptImage2OutputFormat"
+        output_compression:
+          $ref: "#/components/schemas/GptImage2OutputCompression"
+
+    GptImage2ImagesResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - created
+        - data
+      properties:
+        created:
+          type: integer
+          format: int64
+          description: Unix timestamp in seconds for when the request was created.
+        data:
+          type: array
+          minItems: 1
+          description: Generated image data. The documented gpt-image-2 response returns base64 image data.
+          items:
+            $ref: "#/components/schemas/GptImage2ImageData"
+        usage:
+          $ref: "#/components/schemas/GptImage2Usage"
+
+    GptImage2ImageData:
+      type: object
+      additionalProperties: false
+      required:
+        - b64_json
+      properties:
+        b64_json:
+          type: string
+          description: Base64 编码图像数据，可带 data URL 前缀。
+
+    GptImage2Usage:
+      type: object
+      additionalProperties: true
+      properties:
+        total_tokens:
+          type: integer
+        input_tokens:
+          type: integer
+        output_tokens:
+          type: integer
+        input_tokens_details:
+          type: object
+          additionalProperties: true
+          properties:
+            text_tokens:
+              type: integer
+
+    GptImage2ErrorResponse:
+      type: object
+      additionalProperties: true
+      required:
+        - error
+      properties:
+        error:
+          $ref: "#/components/schemas/GptImage2Error"
+
+    GptImage2Error:
+      type: object
+      additionalProperties: true
+      properties:
+        message:
+          type: string
+          description: 错误信息。
+        type:
+          type: string
+          description: 错误类型。
+        param:
+          type: string
+          description: 请求 ID 或相关参数。
+        code:
+          type: string
+          description: 错误码。
+
+  examples:
+    GptImage2Error:
+      summary: 文档中的错误响应
+      value:
+        error:
+          message: error_message
+          type: error_type
+          param: request_id
+          code: error_code

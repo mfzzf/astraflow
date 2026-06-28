@@ -1,0 +1,81 @@
+openapi: 3.1.0
+x-language: zh-CN
+info:
+  title: modelverse-shared接口文档
+  version: "1.0.0"
+  description: |
+    这是 ModelVerse OpenAPI 的共享配置文档，定义通用服务地址、认证方式、请求头和基础字段。
+    具体模型接口文档可以复用这些通用组件。
+servers:
+  - url: https://api.modelverse.cn
+    description: 中国大陆节点，国内用户推荐，访问延迟低。
+  - url: https://api.umodelverse.ai
+    description: 全球节点，海外通用域名。
+  - url: https://api-sg.umodelverse.ai
+    description: 新加坡节点，东南亚用户推荐。
+  - url: https://api-us-ca.umodelverse.ai
+    description: 美国洛杉矶节点，海外用户推荐，数据不回国。
+  - url: https://api-ge-fra.umodelverse.ai
+    description: 法兰克福节点，欧洲用户推荐。
+paths: {}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: |
+        ModelVerse API Key。请通过 `Authorization: Bearer $MODELVERSE_API_KEY` 发送。
+  parameters:
+    RequestIdHeader:
+      name: X-Request-Id
+      in: header
+      required: false
+      description: 可选的客户端请求标识，用于链路追踪。
+      schema:
+        type: string
+    TaskIdQuery:
+      name: task_id
+      in: query
+      required: true
+      description: 提交异步任务接口返回的任务标识。
+      schema:
+        type: string
+  schemas:
+    RequestId:
+      type: string
+      description: 服务端请求标识，用于排查问题。
+    UnixTimestamp:
+      type: integer
+      format: int64
+      description: Unix 时间戳，单位为秒。
+    NullableString:
+      type:
+        - string
+        - "null"
+    Metadata:
+      type: object
+      additionalProperties: true
+      description: 供应商特定的元数据。
+      examples:
+        requestMetadata:
+          value:
+            language_type: Chinese
+            customer_id: customer_123
+    UsageTokens:
+      type: object
+      additionalProperties: true
+      properties:
+        total_tokens:
+          type: integer
+        input_tokens:
+          type: integer
+        output_tokens:
+          type: integer
+      description: Token 或供应商用量详情。
+      examples:
+        tokenUsage:
+          value:
+            total_tokens: 4169
+            input_tokens: 9
+            output_tokens: 4160

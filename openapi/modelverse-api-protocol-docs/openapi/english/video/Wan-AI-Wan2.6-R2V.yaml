@@ -1,0 +1,362 @@
+openapi: 3.1.0
+x-language: en-US
+info:
+  title: ModelVerse Wan-AI/Wan2.6-R2V Video Task API
+  version: "1.0.0"
+  description: |
+    Self-contained OpenAPI 3.1 schema for the ModelVerse Wan-AI/Wan2.6-R2V
+    reference-to-video asynchronous task API.
+
+servers:
+  - url: https://api.modelverse.cn
+    description: ModelVerse API endpoint documented for this model.
+
+tags:
+  - name: Wan-AI/Wan2.6-R2V
+    description: Reference-to-video asynchronous task operations.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /v1/tasks/submit:
+    post:
+      tags:
+        - Wan-AI/Wan2.6-R2V
+      operationId: submitWanAIWan26R2VTask
+      summary: Submit a Wan-AI/Wan2.6-R2V reference-to-video task
+      description: Submit an asynchronous reference-to-video generation task.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WanAIWan26R2VSubmitRequest"
+            examples:
+              documented:
+                summary: Submit a reference-to-video task
+                value:
+                  model: wan2.6-r2v
+                  input:
+                    prompt: "Character2 坐在靠窗的椅子上，手持 character3，在 character4 旁演奏一首舒缓的美国乡村民谣。Character1 对Character2开口说道：“听起来不错”"
+                    reference_urls:
+                      - https://example.com/wan-r2v-role1.mp4
+                      - https://example.com/wan-r2v-role2.mp4
+                      - https://example.com/wan-r2v-object4.png
+                      - https://example.com/wan-r2v-backgroud5.png
+                  parameters:
+                    size: 1920x1080
+                    duration: 5
+                    shot_type: single
+      responses:
+        "200":
+          description: Task submitted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WanAIWan26R2VSubmitResponse"
+              examples:
+                submitted:
+                  summary: Submitted task
+                  value:
+                    output:
+                      task_id: task_id
+                    request_id: request_id
+        "400":
+          description: Invalid request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                paramError:
+                  $ref: "#/components/examples/ParamError"
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                error:
+                  $ref: "#/components/examples/ParamError"
+
+  /v1/tasks/status:
+    get:
+      tags:
+        - Wan-AI/Wan2.6-R2V
+      operationId: getWanAIWan26R2VTaskStatus
+      summary: Query Wan-AI/Wan2.6-R2V task status
+      description: Query the status, result URLs, and failure details for an asynchronous task.
+      parameters:
+        - name: task_id
+          in: query
+          required: true
+          description: Asynchronous task identifier returned by `/v1/tasks/submit`.
+          schema:
+            type: string
+          example: task_id
+      responses:
+        "200":
+          description: Task status response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WanAIWan26R2VStatusResponse"
+              examples:
+                success:
+                  summary: Successful task
+                  value:
+                    output:
+                      task_id: task_id
+                      task_status: Success
+                      urls:
+                        - https://xxxxx/xxxx.mp4
+                      submit_time: 1756959000
+                      finish_time: 1756959050
+                    usage:
+                      duration: 5
+                    request_id: ""
+                failure:
+                  summary: Failed task
+                  value:
+                    output:
+                      task_id: task_id
+                      task_status: Failure
+                      submit_time: 1756959000
+                      finish_time: 1756959019
+                      error_message: error_message
+                    usage:
+                      duration: 5
+                    request_id: ""
+        "400":
+          description: Invalid request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                paramError:
+                  $ref: "#/components/examples/ParamError"
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                error:
+                  $ref: "#/components/examples/ParamError"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: |
+        ModelVerse API key sent in the `Authorization: Bearer <token>` header.
+
+  schemas:
+    WanAIWan26R2VSubmitRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - model
+        - input
+        - parameters
+      properties:
+        model:
+          type: string
+          const: wan2.6-r2v
+          description: Model name. This schema is pinned to `wan2.6-r2v`.
+        input:
+          $ref: "#/components/schemas/WanAIWan26R2VInput"
+        parameters:
+          $ref: "#/components/schemas/WanAIWan26R2VParameters"
+
+    WanAIWan26R2VInput:
+      type: object
+      additionalProperties: false
+      required:
+        - prompt
+        - reference_urls
+      properties:
+        prompt:
+          type: string
+          description: Prompt used to guide video generation.
+        reference_urls:
+          type: array
+          maxItems: 5
+          description: |
+            Reference file URL array used to extract character appearance and,
+            when available, voice characteristics. Each URL points to one image
+            or one video, and the array order defines character order
+            (`character1`, `character2`, and so on). Image count is documented
+            as 0 to 5, video count as 0 to 3, with a total image plus video
+            limit of 5. Reference videos must be MP4 or MOV, 1 to 30 seconds,
+            and no larger than 100 MB. Reference images must be JPEG, JPG, PNG
+            without alpha, BMP, or WEBP; width and height must each be between
+            240 and 8000 pixels; file size must not exceed 20 MB.
+          items:
+            type: string
+            format: uri
+
+    WanAIWan26R2VParameters:
+      type: object
+      additionalProperties: false
+      required:
+        - size
+      properties:
+        size:
+          type: string
+          description: Generated video size. The documented options cover 720P and 1080P landscape or portrait outputs.
+          enum:
+            - 1280x720
+            - 720x1280
+            - 1920x1080
+            - 1080x1920
+        duration:
+          type: integer
+          description: Generated video duration in seconds.
+          enum:
+            - 5
+            - 10
+          default: 5
+        shot_type:
+          type: string
+          description: |
+            Shot composition type. This parameter has priority over prompt
+            instructions: `single` generates a single-shot video, while `multi`
+            generates a multi-shot video.
+          enum:
+            - single
+            - multi
+          default: single
+        watermark:
+          type: boolean
+          description: Whether to add the fixed "AI generated" watermark in the lower-right corner.
+          default: false
+
+    WanAIWan26R2VSubmitResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - output
+        - request_id
+      properties:
+        output:
+          type: object
+          additionalProperties: false
+          required:
+            - task_id
+          properties:
+            task_id:
+              type: string
+              description: Unique identifier of the asynchronous task.
+        request_id:
+          type: string
+          description: Unique request identifier.
+
+    WanAIWan26R2VStatusResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - output
+        - request_id
+      properties:
+        output:
+          type: object
+          additionalProperties: false
+          required:
+            - task_id
+            - task_status
+          properties:
+            task_id:
+              type: string
+              description: Unique identifier of the asynchronous task.
+            task_status:
+              $ref: "#/components/schemas/WanAIWan26R2VTaskStatus"
+            urls:
+              type: array
+              description: Video result URL list.
+              items:
+                type: string
+                format: uri
+            submit_time:
+              type: integer
+              format: int64
+              description: Task submission Unix timestamp in seconds.
+            finish_time:
+              type: integer
+              format: int64
+              description: Task completion Unix timestamp in seconds.
+            error_message:
+              type: string
+              description: Error message returned when the task fails.
+        usage:
+          type: object
+          additionalProperties: false
+          properties:
+            duration:
+              type: integer
+              description: Task execution duration in seconds.
+        request_id:
+          type: string
+          description: Unique request identifier.
+        error:
+          $ref: "#/components/schemas/ErrorObject"
+
+    WanAIWan26R2VTaskStatus:
+      type: string
+      description: Task status.
+      enum:
+        - Pending
+        - Running
+        - Success
+        - Failure
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+      properties:
+        error:
+          $ref: "#/components/schemas/ErrorObject"
+
+    ErrorObject:
+      type: object
+      additionalProperties: true
+      required:
+        - message
+        - type
+      properties:
+        message:
+          type: string
+          description: Error message.
+        type:
+          type: string
+          description: Error type.
+          examples:
+            - invalid_request_error
+        code:
+          type: string
+          description: Error code.
+          examples:
+            - param_error
+        param:
+          type:
+            - string
+            - "null"
+          description: Related request parameter, if any.
+
+  examples:
+    ParamError:
+      summary: Parameter error
+      value:
+        error:
+          message: Invalid param
+          type: invalid_request_error
+          code: param_error
+          param: model

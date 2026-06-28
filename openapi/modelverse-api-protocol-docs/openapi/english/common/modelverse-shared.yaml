@@ -1,0 +1,79 @@
+openapi: 3.1.0
+x-language: en-US
+info:
+  title: ModelVerse Shared OpenAPI Components
+  version: "1.0.0"
+  description: Shared servers, security schemes, headers, and small utility schemas for ModelVerse OpenAPI files.
+servers:
+  - url: https://api.modelverse.cn
+    description: China mainland endpoint, recommended for users in mainland China with lower latency.
+  - url: https://api.umodelverse.ai
+    description: Global endpoint for overseas users.
+  - url: https://api-sg.umodelverse.ai
+    description: Singapore endpoint, recommended for Southeast Asia users.
+  - url: https://api-us-ca.umodelverse.ai
+    description: US Los Angeles endpoint for overseas users; data does not return to China.
+  - url: https://api-ge-fra.umodelverse.ai
+    description: Frankfurt endpoint, recommended for European users.
+paths: {}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: |
+        ModelVerse API Key. Send as `Authorization: Bearer $MODELVERSE_API_KEY`.
+  parameters:
+    RequestIdHeader:
+      name: X-Request-Id
+      in: header
+      required: false
+      description: Optional client request identifier for tracing.
+      schema:
+        type: string
+    TaskIdQuery:
+      name: task_id
+      in: query
+      required: true
+      description: Async task identifier returned by a submit endpoint.
+      schema:
+        type: string
+  schemas:
+    RequestId:
+      type: string
+      description: Server request identifier for troubleshooting.
+    UnixTimestamp:
+      type: integer
+      format: int64
+      description: Unix timestamp in seconds.
+    NullableString:
+      type:
+        - string
+        - "null"
+    Metadata:
+      type: object
+      additionalProperties: true
+      description: Provider-specific metadata.
+      examples:
+        requestMetadata:
+          value:
+            language_type: Chinese
+            customer_id: customer_123
+    UsageTokens:
+      type: object
+      additionalProperties: true
+      properties:
+        total_tokens:
+          type: integer
+        input_tokens:
+          type: integer
+        output_tokens:
+          type: integer
+      description: Token or provider usage details.
+      examples:
+        tokenUsage:
+          value:
+            total_tokens: 4169
+            input_tokens: 9
+            output_tokens: 4160

@@ -1,0 +1,5166 @@
+openapi: "3.1.0"
+info:
+  title: "anthropic_message接口文档"
+  description: "这是 ModelVerse 上 Anthropic Messages 兼容接口文档，覆盖发送消息、工具、内容块、流式事件、错误响应等内容。"
+  version: "1.0.0"
+servers:
+  # 原说明：ModelVerse OpenAI 兼容 API 节点；按地理位置和数据驻留需求选择。
+  # ModelVerse 兼容 API 节点；按地理位置和数据驻留需求选择。
+  -
+    url: "https://api.modelverse.cn"
+    description: "中国大陆节点，国内用户推荐，访问延迟低。"
+  -
+    url: "https://api-sg.umodelverse.ai"
+    description: "新加坡节点，东南亚用户推荐，访问更快。"
+  -
+    url: "https://api-us-ca.umodelverse.ai"
+    description: "美国洛杉矶节点，海外用户推荐，数据不回国。"
+  -
+    url: "https://api-ge-fra.umodelverse.ai"
+    description: "法兰克福节点，欧洲用户推荐，访问更快。"
+security:
+  -
+    apiKeyAuth: []
+paths:
+  "/v1/messages":
+    post:
+      summary: "创建消息"
+      description: "发送包含文本和/或图片内容的结构化输入消息列表，模型会生成对话中的下一条消息。\n\nMessages API 既可用于单次查询，也可用于无状态的多轮对话。\n\n更多信息请参阅 [Messages API 用户指南](https://docs.claude.com/en/docs/initial-setup)。"
+      operationId: "messages_post"
+      parameters:
+        -
+          name: "anthropic-version"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+            description: "要使用的 Claude API 版本。\n\n版本机制和历史版本请参阅[版本说明](https://docs.claude.com/en/api/versioning)。"
+            title: "Anthropic-Version"
+          description: "要使用的 Claude API 版本。\n\n版本机制和历史版本请参阅[版本说明](https://docs.claude.com/en/api/versioning)。"
+      responses:
+        "200":
+          description: "消息对象。"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Message"
+        "4XX":
+          description: "错误响应。\n\n更多信息请参阅[错误文档](https://docs.claude.com/en/api/errors)。"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/CreateMessageParams"
+        required: true
+  "/v1/messages/count_tokens":
+    post:
+      summary: "统计消息 Token 数"
+      description: "统计一条消息中的 Token 数。\n\nToken Count API 可在不创建消息的情况下，统计消息中包含工具、图片和文档在内的 Token 数。\n\n更多信息请参阅 [Token 统计用户指南](https://docs.claude.com/en/docs/build-with-claude/token-counting)。"
+      operationId: "messages_count_tokens_post"
+      parameters:
+        -
+          name: "anthropic-version"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+            description: "要使用的 Claude API 版本。\n\n版本机制和历史版本请参阅[版本说明](https://docs.claude.com/en/api/versioning)。"
+            title: "Anthropic-Version"
+          description: "要使用的 Claude API 版本。\n\n版本机制和历史版本请参阅[版本说明](https://docs.claude.com/en/api/versioning)。"
+      responses:
+        "200":
+          description: "成功响应。"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/CountMessageTokensResponse"
+        "4XX":
+          description: "错误响应。\n\n更多信息请参阅[错误文档](https://docs.claude.com/en/api/errors)。"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/CountMessageTokensParams"
+        required: true
+components:
+  securitySchemes:
+    apiKeyAuth:
+      type: "apiKey"
+      in: "header"
+      name: "x-api-key"
+      description: "Anthropic API 密钥请求头。"
+  schemas:
+    Message:
+      examples:
+        -
+          content:
+            -
+              citations: null
+              text: "Hi! My name is Claude."
+              type: "text"
+          id: "msg_013Zva2CMHLNnXjNJJKqJ2EF"
+          model: "claude-opus-4-6"
+          role: "assistant"
+          stop_details: null
+          stop_reason: "end_turn"
+          stop_sequence: null
+          type: "message"
+          usage:
+            input_tokens: 2095
+            output_tokens: 503
+      properties:
+        id:
+          description: "唯一对象标识符。\n\nID 的格式和长度未来可能变化。"
+          examples:
+            - "msg_013Zva2CMHLNnXjNJJKqJ2EF"
+          title: "ID"
+          type: "string"
+        type:
+          const: "message"
+          default: "message"
+          description: "对象类型。\n\n对于 Messages，该值始终为 `\"message\"`。"
+          title: "类型"
+          type: "string"
+        role:
+          const: "assistant"
+          default: "assistant"
+          description: "生成消息在对话中的角色。\n\n该值始终为 `\"assistant\"`。"
+          title: "角色"
+          type: "string"
+        content:
+          description: "模型生成的内容。\n\n这是一个内容块数组，每个内容块都有一个决定其结构的 `type`。\n\n示例：\n\n```json\n[{\"type\": \"text\", \"text\": \"Hi, I'm Claude.\"}]\n```\n\n如果请求输入的 `messages` 以 `assistant` 轮次结尾，那么响应的 `content` 会直接从该轮继续。你可以用这种方式约束模型输出。\n\n例如，如果输入 `messages` 是：\n```json\n[\n  {\"role\": \"user\", \"content\": \"What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun\"},\n  {\"role\": \"assistant\", \"content\": \"The best answer is (\"}\n]\n```\n\n那么响应 `content` 可能是：\n\n```json\n[{\"type\": \"text\", \"text\": \"B)\"}]\n```"
+          examples:
+            -
+              -
+                citations: null
+                text: "Hi! My name is Claude."
+                type: "text"
+          items:
+            "$ref": "#/components/schemas/ContentBlock"
+          title: "内容"
+          type: "array"
+        model:
+          "$ref": "#/components/schemas/Model"
+        stop_reason:
+          anyOf:
+            -
+              "$ref": "#/components/schemas/StopReason"
+            -
+              type: "null"
+          description: "停止生成的原因。\n\n可能取以下值：\n* `\"end_turn\"`：模型到达自然停止点\n* `\"max_tokens\"`：达到请求的 `max_tokens` 或模型上限\n* `\"stop_sequence\"`：生成了你提供的某个自定义 `stop_sequences`\n* `\"tool_use\"`：模型调用了一个或多个工具\n* `\"pause_turn\"`：暂停了长时间运行的轮次。你可以在后续请求中原样传回该响应，让模型继续。\n* `\"refusal\"`：流式分类器介入以处理潜在策略违规\n\n非流式模式下该值始终非 null。流式模式下，该值在 `message_start` 事件中为 null，其他事件中为非 null。"
+          title: "停止原因"
+        stop_sequence:
+          anyOf:
+            -
+              type: "string"
+            -
+              type: "null"
+          default: null
+          description: "生成了哪个自定义停止序列（如果有）。\n\n如果生成了某个自定义停止序列，该值将是一个非 null 字符串。"
+          title: "停止序列"
+        stop_details:
+          anyOf:
+            -
+              "$ref": "#/components/schemas/RefusalStopDetails"
+            -
+              type: "null"
+          default: null
+          description: "关于模型输出停止原因的结构化信息。\n\n当 `stop_reason` 没有额外细节可报告时，该值为 `null`。"
+        usage:
+          "$ref": "#/components/schemas/Usage"
+          description: "计费和限流用量。\n\nAnthropic API 按 Token 数计费并限流，因为 Token 数代表系统的底层成本。\n\nAPI 会在内部把请求转换为适合模型的格式，模型输出也会经过解析阶段后才成为 API 响应。因此，`usage` 中的 Token 数不会与 API 请求或响应中可见内容一一对应。\n\n例如，即使 Claude 返回空字符串，`output_tokens` 也会非零。\n\n一次请求的总输入 Token 数是 `input_tokens`、`cache_creation_input_tokens` 和 `cache_read_input_tokens` 的总和。"
+          examples:
+            -
+              input_tokens: 2095
+              output_tokens: 503
+        # container:
+        #   anyOf:
+        #     -
+        #       "$ref": "#/components/schemas/Container"
+        #     -
+        #       type: "null"
+        #   default: null
+        #   description: "Information about the container used in this request.\n\nThis will be non-null if a container tool (e.g. code execution) was used."
+      required:
+        - "id"
+        - "type"
+        - "role"
+        - "content"
+        - "model"
+        - "stop_reason"
+        - "stop_sequence"
+        - "stop_details"
+        - "usage"
+        # - "container"
+      title: "消息"
+      type: "object"
+      x-stainless-python-custom-imports:
+        - "from .content_block import ContentBlock as ContentBlock"
+    ErrorResponse:
+      properties:
+        error:
+          discriminator:
+            mapping:
+              api_error: "#/components/schemas/APIError"
+              authentication_error: "#/components/schemas/AuthenticationError"
+              billing_error: "#/components/schemas/BillingError"
+              invalid_request_error: "#/components/schemas/InvalidRequestError"
+              not_found_error: "#/components/schemas/NotFoundError"
+              overloaded_error: "#/components/schemas/OverloadedError"
+              permission_error: "#/components/schemas/PermissionError"
+              rate_limit_error: "#/components/schemas/RateLimitError"
+              timeout_error: "#/components/schemas/GatewayTimeoutError"
+            propertyName: "type"
+          oneOf:
+            -
+              "$ref": "#/components/schemas/InvalidRequestError"
+            -
+              "$ref": "#/components/schemas/AuthenticationError"
+            -
+              "$ref": "#/components/schemas/BillingError"
+            -
+              "$ref": "#/components/schemas/PermissionError"
+            -
+              "$ref": "#/components/schemas/NotFoundError"
+            -
+              "$ref": "#/components/schemas/RateLimitError"
+            -
+              "$ref": "#/components/schemas/GatewayTimeoutError"
+            -
+              "$ref": "#/components/schemas/APIError"
+            -
+              "$ref": "#/components/schemas/OverloadedError"
+          title: "错误"
+        request_id:
+          anyOf:
+            -
+              type: "string"
+            -
+              type: "null"
+          default: null
+          title: "请求 ID"
+        type:
+          const: "error"
+          default: "error"
+          title: "类型"
+          type: "string"
+      required:
+        - "error"
+        - "request_id"
+        - "type"
+      title: "错误响应"
+      type: "object"
+    CreateMessageParams:
+      additionalProperties: false
+      example:
+        max_tokens: 1024
+        messages:
+          -
+            content: "Hello, world"
+            role: "user"
+        model: "claude-opus-4-6"
+      properties:
+        model:
+          "$ref": "#/components/schemas/Model"
+        messages:
+          description: "输入消息。\n\n模型按交替出现的 `user` 和 `assistant` 对话轮次进行训练。创建新的 `Message` 时，你通过 `messages` 参数指定此前的对话轮次，模型随后生成对话中的下一条 `Message`。请求中连续的 `user` 或 `assistant` 轮次会合并为单个轮次。\n\n每条输入消息都必须是包含 `role` 和 `content` 的对象。你可以只指定一条 `user` 角色消息，也可以包含多条 `user` 和 `assistant` 消息。\n\n如果最后一条消息使用 `assistant` 角色，响应内容会直接从该消息内容继续。这可用于约束模型响应的一部分。\n\n单条 `user` 消息示例：\n\n```json\n[{\"role\": \"user\", \"content\": \"Hello, Claude\"}]\n```\n\n多轮对话示例：\n\n```json\n[\n  {\"role\": \"user\", \"content\": \"Hello there.\"},\n  {\"role\": \"assistant\", \"content\": \"Hi, I'm Claude. How can I help you?\"},\n  {\"role\": \"user\", \"content\": \"Can you explain LLMs in plain English?\"},\n]\n```\n\nClaude 部分补全响应示例：\n\n```json\n[\n  {\"role\": \"user\", \"content\": \"What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun\"},\n  {\"role\": \"assistant\", \"content\": \"The best answer is (\"},\n]\n```\n\n每条输入消息的 `content` 可以是单个 `string`，也可以是内容块数组，其中每个内容块都有特定的 `type`。对 `content` 使用 `string` 是由一个 `\"text\"` 类型内容块组成的数组的简写。以下输入消息等价：\n\n```json\n{\"role\": \"user\", \"content\": \"Hello, Claude\"}\n```\n\n```json\n{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"Hello, Claude\"}]}\n```\n\n参阅[输入示例](https://docs.claude.com/en/api/messages-examples)。\n\n注意，如果要包含[系统提示词](https://docs.claude.com/en/docs/system-prompts)，可以使用顶层 `system` 参数；Messages API 的输入消息中没有 `\"system\"` 角色。\n\n单个请求最多包含 100,000 条消息。"
+          items:
+            "$ref": "#/components/schemas/InputMessage"
+          title: "消息列表"
+          type: "array"
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "顶层缓存控制会自动把 cache_control 标记应用到请求中最后一个可缓存内容块。"
+          title: "缓存控制"
+        container:
+          anyOf:
+            -
+              type: "string"
+            -
+              type: "null"
+          description: "用于跨请求复用的容器标识符。"
+          title: "容器"
+        inference_geo:
+          anyOf:
+            -
+              type: "string"
+            -
+              type: "null"
+          description: "指定执行推理处理的地理区域。未指定时使用工作区的 `default_inference_geo`。"
+          title: "推理地域"
+        max_tokens:
+          description: "停止前最多生成的 Token 数。\n\n请注意，模型可能在达到该最大值之前停止。此参数只指定可生成 Token 的绝对上限。\n\n不同模型对该参数有不同最大值，详情请参阅[模型](https://docs.claude.com/en/docs/models-overview)。"
+          examples:
+            - 1024
+          minimum: 1
+          title: "最大 Token 数"
+          type: "integer"
+        metadata:
+          "$ref": "#/components/schemas/Metadata"
+          description: "描述请求元数据的对象。"
+        output_config:
+          "$ref": "#/components/schemas/OutputConfig"
+          description: "模型输出的配置选项，例如输出格式。"
+        service_tier:
+          description: "决定本次请求使用优先容量（如可用）还是标准容量。\n\nAnthropic 为 API 请求提供不同服务级别，详情请参阅 [service-tiers](https://docs.claude.com/en/api/service-tiers)。"
+          enum:
+            - "auto"
+            - "standard_only"
+          title: "服务层级"
+          type: "string"
+        stop_sequences:
+          description: "会使模型停止生成的自定义文本序列。\n\n模型通常会在自然完成当前轮次时停止，此时响应的 `stop_reason` 为 `\"end_turn\"`。\n\n如果希望模型在遇到自定义字符串时停止生成，可以使用 `stop_sequences` 参数。模型遇到其中一个自定义序列时，响应的 `stop_reason` 值为 `\"stop_sequence\"`，响应的 `stop_sequence` 值会包含匹配到的停止序列。"
+          items:
+            type: "string"
+          title: "停止序列"
+          type: "array"
+        stream:
+          description: "是否使用服务器发送事件（SSE）增量流式返回响应。\n\n详情请参阅[流式传输](https://docs.claude.com/en/api/messages-streaming)。"
+          title: "流式"
+          type: "boolean"
+        system:
+          anyOf:
+            -
+              type: "string"
+              x-stainless-skip:
+                - "go"
+            -
+              items:
+                "$ref": "#/components/schemas/RequestTextBlock"
+              type: "array"
+          description: "系统提示词。\n\n系统提示词用于向 Claude 提供上下文和指令，例如指定特定目标或角色。参阅[系统提示词指南](https://docs.claude.com/en/docs/system-prompts)。"
+          examples:
+            -
+              -
+                text: "Today's date is 2024-06-01."
+                type: "text"
+            - "Today's date is 2023-01-01."
+          title: "系统提示词"
+        temperature:
+          deprecated: true
+          description: "注入响应的随机性大小。\n\n默认值为 `1.0`，取值范围为 `0.0` 到 `1.0`。分析类/选择题任务可使用更接近 `0.0` 的 `temperature`，创意和生成类任务可使用更接近 `1.0` 的值。\n\n注意，即使 `temperature` 为 `0.0`，结果也不会完全确定。"
+          examples:
+            - 1
+          maximum: 1
+          minimum: 0
+          title: "温度"
+          type: "number"
+          x-stainless-deprecation-message: "Deprecated. Models released after Claude Opus 4.6 do not support setting temperature. A value of 1.0 of will be accepted for backwards compatibility, all other values will be rejected with a 400 error."
+        thinking:
+          "$ref": "#/components/schemas/ThinkingConfigParam"
+        tool_choice:
+          "$ref": "#/components/schemas/ToolChoice"
+        tools:
+          description: "模型可使用的工具定义。\n\n如果请求中包含 `tools`，模型可能返回 `tool_use` 内容块，表示它调用了这些工具。你可以根据模型生成的工具输入运行工具，并可选择用 `tool_result` 内容块把结果返回给模型。\n\n工具分为客户端工具和服务器工具；服务器工具请参阅对应文档。每个工具定义通常包含 `name`、`description` 和 `input_schema`。更多信息请参阅[工具使用指南](https://docs.claude.com/en/docs/tool-use)。"
+          examples:
+            -
+              description: "获取指定地点的当前天气"
+              input_schema:
+                properties:
+                  location:
+                    description: "城市和州，例如 San Francisco, CA"
+                    type: "string"
+                  unit:
+                    description: "输出单位，取值为 celsius 或 fahrenheit"
+                    type: "string"
+                required:
+                  - "location"
+                type: "object"
+              name: "get_weather"
+          items:
+            oneOf:
+              -
+                "$ref": "#/components/schemas/Tool"
+              -
+                "$ref": "#/components/schemas/BashTool_20250124"
+              -
+                "$ref": "#/components/schemas/CodeExecutionTool_20250522"
+              -
+                "$ref": "#/components/schemas/CodeExecutionTool_20250825"
+              -
+                "$ref": "#/components/schemas/CodeExecutionTool_20260120"
+              -
+                "$ref": "#/components/schemas/MemoryTool_20250818"
+              -
+                "$ref": "#/components/schemas/TextEditor_20250124"
+              -
+                "$ref": "#/components/schemas/TextEditor_20250429"
+              -
+                "$ref": "#/components/schemas/TextEditor_20250728"
+              -
+                "$ref": "#/components/schemas/WebSearchTool_20250305"
+              -
+                "$ref": "#/components/schemas/WebFetchTool_20250910"
+              -
+                "$ref": "#/components/schemas/WebSearchTool_20260209"
+              -
+                "$ref": "#/components/schemas/WebFetchTool_20260209"
+              -
+                "$ref": "#/components/schemas/WebFetchTool_20260309"
+              -
+                "$ref": "#/components/schemas/ToolSearchToolBM25_20251119"
+              -
+                "$ref": "#/components/schemas/ToolSearchToolRegex_20251119"
+          title: "工具"
+          type: "array"
+        top_k:
+          deprecated: true
+          description: "每个后续 Token 只从概率最高的 K 个选项中采样。\n\n用于去除“长尾”的低概率响应。[了解更多技术细节](https://towardsdatascience.com/how-to-sample-from-language-models-682bceb97277)。\n\n仅建议高级用例使用。"
+          examples:
+            - 5
+          minimum: 0
+          title: "Top K"
+          type: "integer"
+          x-stainless-deprecation-message: "Deprecated. Models released after Claude Opus 4.6 do not accept top_k; any value will be rejected with a 400 error."
+        top_p:
+          deprecated: true
+          description: "使用 nucleus 采样。\n\n在 nucleus 采样中，会按概率从高到低计算每个后续 Token 所有选项的累积分布，并在达到 `top_p` 指定的概率后截断。\n\n仅建议高级用例使用。"
+          examples:
+            - 0.7
+          maximum: 1
+          minimum: 0
+          title: "Top P"
+          type: "number"
+          x-stainless-deprecation-message: "Deprecated. Models released after Claude Opus 4.6 do not support setting top_p. A value >= 0.99 will be accepted for backwards compatibility, all other values will be rejected with a 400 error."
+      required:
+        - "model"
+        - "messages"
+        - "max_tokens"
+      title: "创建消息参数"
+      type: "object"
+    CountMessageTokensResponse:
+      properties:
+        input_tokens:
+          type: "integer"
+          title: "输入 Token 数"
+          description: "所提供消息列表、系统提示词和工具中的 Token 总数。"
+          examples:
+            - 2095
+      type: "object"
+      required:
+        - "input_tokens"
+      title: "统计消息 Token 响应"
+      examples:
+        -
+          input_tokens: 2095
+    CountMessageTokensParams:
+      additionalProperties: false
+      examples:
+        -
+          messages:
+            -
+              content: "Hello, world"
+              role: "user"
+          model: "claude-opus-4-6"
+      properties:
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "顶层缓存控制会自动把 cache_control 标记应用到请求中最后一个可缓存内容块。"
+          title: "缓存控制"
+        messages:
+          description: "输入消息。\n\n模型按交替出现的 `user` 和 `assistant` 对话轮次进行训练。创建新的 `Message` 时，你通过 `messages` 参数指定此前的对话轮次，模型随后生成对话中的下一条 `Message`。请求中连续的 `user` 或 `assistant` 轮次会合并为单个轮次。\n\n每条输入消息都必须是包含 `role` 和 `content` 的对象。你可以只指定一条 `user` 角色消息，也可以包含多条 `user` 和 `assistant` 消息。\n\n如果最后一条消息使用 `assistant` 角色，响应内容会直接从该消息内容继续。这可用于约束模型响应的一部分。\n\n单条 `user` 消息示例：\n\n```json\n[{\"role\": \"user\", \"content\": \"Hello, Claude\"}]\n```\n\n多轮对话示例：\n\n```json\n[\n  {\"role\": \"user\", \"content\": \"Hello there.\"},\n  {\"role\": \"assistant\", \"content\": \"Hi, I'm Claude. How can I help you?\"},\n  {\"role\": \"user\", \"content\": \"Can you explain LLMs in plain English?\"},\n]\n```\n\nClaude 部分补全响应示例：\n\n```json\n[\n  {\"role\": \"user\", \"content\": \"What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun\"},\n  {\"role\": \"assistant\", \"content\": \"The best answer is (\"},\n]\n```\n\n每条输入消息的 `content` 可以是单个 `string`，也可以是内容块数组，其中每个内容块都有特定的 `type`。对 `content` 使用 `string` 是由一个 `\"text\"` 类型内容块组成的数组的简写。以下输入消息等价：\n\n```json\n{\"role\": \"user\", \"content\": \"Hello, Claude\"}\n```\n\n```json\n{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"Hello, Claude\"}]}\n```\n\n参阅[输入示例](https://docs.claude.com/en/api/messages-examples)。\n\n注意，如果要包含[系统提示词](https://docs.claude.com/en/docs/system-prompts)，可以使用顶层 `system` 参数；Messages API 的输入消息中没有 `\"system\"` 角色。\n\n单个请求最多包含 100,000 条消息。"
+          items:
+            "$ref": "#/components/schemas/InputMessage"
+          title: "消息列表"
+          type: "array"
+        model:
+          "$ref": "#/components/schemas/Model"
+        output_config:
+          "$ref": "#/components/schemas/OutputConfig"
+          description: "模型输出的配置选项，例如输出格式。"
+        system:
+          anyOf:
+            -
+              type: "string"
+            -
+              items:
+                "$ref": "#/components/schemas/RequestTextBlock"
+              type: "array"
+          description: "系统提示词。\n\n系统提示词用于向 Claude 提供上下文和指令，例如指定特定目标或角色。参阅[系统提示词指南](https://docs.claude.com/en/docs/system-prompts)。"
+          examples:
+            -
+              -
+                text: "Today's date is 2024-06-01."
+                type: "text"
+            - "Today's date is 2023-01-01."
+          title: "系统提示词"
+        thinking:
+          "$ref": "#/components/schemas/ThinkingConfigParam"
+        tool_choice:
+          "$ref": "#/components/schemas/ToolChoice"
+        tools:
+          description: "模型可使用的工具定义。\n\n如果请求中包含 `tools`，模型可能返回 `tool_use` 内容块，表示它调用了这些工具。你可以根据模型生成的工具输入运行工具，并可选择用 `tool_result` 内容块把结果返回给模型。\n\n工具分为客户端工具和服务器工具；服务器工具请参阅对应文档。每个工具定义通常包含 `name`、`description` 和 `input_schema`。更多信息请参阅[工具使用指南](https://docs.claude.com/en/docs/tool-use)。"
+          examples:
+            -
+              description: "获取指定地点的当前天气"
+              input_schema:
+                properties:
+                  location:
+                    description: "城市和州，例如 San Francisco, CA"
+                    type: "string"
+                  unit:
+                    description: "输出单位，取值为 celsius 或 fahrenheit"
+                    type: "string"
+                required:
+                  - "location"
+                type: "object"
+              name: "get_weather"
+          items:
+            oneOf:
+              -
+                "$ref": "#/components/schemas/Tool"
+              -
+                "$ref": "#/components/schemas/BashTool_20250124"
+              -
+                "$ref": "#/components/schemas/CodeExecutionTool_20250522"
+              -
+                "$ref": "#/components/schemas/CodeExecutionTool_20250825"
+              -
+                "$ref": "#/components/schemas/CodeExecutionTool_20260120"
+              -
+                "$ref": "#/components/schemas/MemoryTool_20250818"
+              -
+                "$ref": "#/components/schemas/TextEditor_20250124"
+              -
+                "$ref": "#/components/schemas/TextEditor_20250429"
+              -
+                "$ref": "#/components/schemas/TextEditor_20250728"
+              -
+                "$ref": "#/components/schemas/WebSearchTool_20250305"
+              -
+                "$ref": "#/components/schemas/WebFetchTool_20250910"
+              -
+                "$ref": "#/components/schemas/WebSearchTool_20260209"
+              -
+                "$ref": "#/components/schemas/WebFetchTool_20260209"
+              -
+                "$ref": "#/components/schemas/WebFetchTool_20260309"
+              -
+                "$ref": "#/components/schemas/ToolSearchToolBM25_20251119"
+              -
+                "$ref": "#/components/schemas/ToolSearchToolRegex_20251119"
+          title: "工具"
+          type: "array"
+      required:
+        - "messages"
+        - "model"
+      title: "统计消息 Token 参数"
+      type: "object"
+    ContentBlock:
+      discriminator:
+        mapping:
+          bash_code_execution_tool_result: "#/components/schemas/ResponseBashCodeExecutionToolResultBlock"
+          code_execution_tool_result: "#/components/schemas/ResponseCodeExecutionToolResultBlock"
+          container_upload: "#/components/schemas/ResponseContainerUploadBlock"
+          redacted_thinking: "#/components/schemas/ResponseRedactedThinkingBlock"
+          server_tool_use: "#/components/schemas/ResponseServerToolUseBlock"
+          text: "#/components/schemas/ResponseTextBlock"
+          text_editor_code_execution_tool_result: "#/components/schemas/ResponseTextEditorCodeExecutionToolResultBlock"
+          thinking: "#/components/schemas/ResponseThinkingBlock"
+          tool_search_tool_result: "#/components/schemas/ResponseToolSearchToolResultBlock"
+          tool_use: "#/components/schemas/ResponseToolUseBlock"
+          web_fetch_tool_result: "#/components/schemas/ResponseWebFetchToolResultBlock"
+          web_search_tool_result: "#/components/schemas/ResponseWebSearchToolResultBlock"
+        propertyName: "type"
+      oneOf:
+        -
+          "$ref": "#/components/schemas/ResponseTextBlock"
+        -
+          "$ref": "#/components/schemas/ResponseThinkingBlock"
+        -
+          "$ref": "#/components/schemas/ResponseRedactedThinkingBlock"
+        -
+          "$ref": "#/components/schemas/ResponseToolUseBlock"
+        -
+          "$ref": "#/components/schemas/ResponseServerToolUseBlock"
+        -
+          "$ref": "#/components/schemas/ResponseWebSearchToolResultBlock"
+        -
+          "$ref": "#/components/schemas/ResponseWebFetchToolResultBlock"
+        -
+          "$ref": "#/components/schemas/ResponseCodeExecutionToolResultBlock"
+        -
+          "$ref": "#/components/schemas/ResponseBashCodeExecutionToolResultBlock"
+        -
+          "$ref": "#/components/schemas/ResponseTextEditorCodeExecutionToolResultBlock"
+        -
+          "$ref": "#/components/schemas/ResponseToolSearchToolResultBlock"
+        -
+          "$ref": "#/components/schemas/ResponseContainerUploadBlock"
+    Model:
+      title: "模型"
+      description: "用于完成提示词的模型。\\n\\n更多细节和选项请参阅[模型](https://docs.anthropic.com/en/docs/models-overview)。"
+      anyOf:
+        -
+          type: "string"
+        -
+          const: "claude-opus-4-7"
+          description: "面向长时间运行 Agent 和编程任务的前沿智能模型"
+          x-stainless-nominal: false
+        -
+          const: "claude-mythos-preview"
+          description: "新一代智能模型，在编程和网络安全方面最强"
+          x-stainless-nominal: false
+        -
+          const: "claude-opus-4-6"
+          description: "面向长时间运行 Agent 和编程任务的前沿智能模型"
+          x-stainless-nominal: false
+        -
+          const: "claude-sonnet-4-6"
+          description: "速度与智能的最佳组合"
+          x-stainless-nominal: false
+        -
+          const: "claude-haiku-4-5"
+          description: "具备接近前沿智能的最快模型"
+          x-stainless-nominal: false
+        -
+          const: "claude-haiku-4-5-20251001"
+          description: "具备接近前沿智能的最快模型"
+          x-stainless-nominal: false
+        -
+          const: "claude-opus-4-5"
+          description: "兼具最高智能和实用性能的高端模型"
+          x-stainless-nominal: false
+        -
+          const: "claude-opus-4-5-20251101"
+          description: "兼具最高智能和实用性能的高端模型"
+          x-stainless-nominal: false
+        -
+          const: "claude-sonnet-4-5"
+          description: "面向 Agent 和编程任务的高性能模型"
+          x-stainless-nominal: false
+        -
+          const: "claude-sonnet-4-5-20250929"
+          description: "面向 Agent 和编程任务的高性能模型"
+          x-stainless-nominal: false
+        -
+          const: "claude-opus-4-1"
+          description: "适合专业复杂任务的卓越模型"
+          x-stainless-nominal: false
+        -
+          const: "claude-opus-4-1-20250805"
+          description: "适合专业复杂任务的卓越模型"
+          x-stainless-nominal: false
+        -
+          const: "claude-opus-4-0"
+          description: "适合复杂任务的强大模型"
+          x-stainless-nominal: false
+          deprecated: true
+          x-stainless-deprecation-message: "Will reach end-of-life on June 15th, 2026. Please migrate to a newer model. Visit https://docs.anthropic.com/en/docs/resources/model-deprecations for more information."
+        -
+          const: "claude-opus-4-20250514"
+          description: "适合复杂任务的强大模型"
+          x-stainless-nominal: false
+          deprecated: true
+          x-stainless-deprecation-message: "Will reach end-of-life on June 15th, 2026. Please migrate to a newer model. Visit https://docs.anthropic.com/en/docs/resources/model-deprecations for more information."
+        -
+          const: "claude-sonnet-4-0"
+          description: "支持扩展思考的高性能模型"
+          x-stainless-nominal: false
+          deprecated: true
+          x-stainless-deprecation-message: "Will reach end-of-life on June 15th, 2026. Please migrate to a newer model. Visit https://docs.anthropic.com/en/docs/resources/model-deprecations for more information."
+        -
+          const: "claude-sonnet-4-20250514"
+          description: "支持扩展思考的高性能模型"
+          x-stainless-nominal: false
+          deprecated: true
+          x-stainless-deprecation-message: "Will reach end-of-life on June 15th, 2026. Please migrate to a newer model. Visit https://docs.anthropic.com/en/docs/resources/model-deprecations for more information."
+        -
+          const: "claude-3-haiku-20240307"
+          description: "快速且高性价比的模型"
+          x-stainless-nominal: false
+          deprecated: true
+          x-stainless-deprecation-message: "Will reach end-of-life on April 20th, 2026. Please migrate to claude-haiku-4-5. Visit https://docs.anthropic.com/en/docs/resources/model-deprecations for more information."
+    StopReason:
+      enum:
+        - "end_turn"
+        - "max_tokens"
+        - "stop_sequence"
+        - "tool_use"
+        - "pause_turn"
+        - "refusal"
+      type: "string"
+    RefusalStopDetails:
+      description: "关于拒绝原因的结构化信息。"
+      properties:
+        category:
+          anyOf:
+            -
+              enum:
+                - "cyber"
+                - "bio"
+              type: "string"
+            -
+              type: "null"
+          default: null
+          description: "触发拒绝的策略类别。\n\n当拒绝原因无法映射到命名类别时为 `null`。"
+          title: "类别"
+        explanation:
+          anyOf:
+            -
+              type: "string"
+            -
+              type: "null"
+          default: null
+          description: "拒绝原因的人类可读说明。\n\n该文本不保证稳定。该类别没有可用说明时为 `null`。"
+          title: "说明"
+        type:
+          const: "refusal"
+          default: "refusal"
+          title: "类型"
+          type: "string"
+      required:
+        - "category"
+        - "explanation"
+        - "type"
+      title: "拒绝停止详情"
+      type: "object"
+    Usage:
+      properties:
+        cache_creation:
+          anyOf:
+            -
+              "$ref": "#/components/schemas/CacheCreation"
+            -
+              type: "null"
+          default: null
+          description: "按 TTL 细分的缓存 Token 数。"
+        cache_creation_input_tokens:
+          anyOf:
+            -
+              minimum: 0
+              type: "integer"
+            -
+              type: "null"
+          default: null
+          description: "用于创建缓存条目的输入 Token 数。"
+          examples:
+            - 2051
+          title: "缓存创建输入 Token 数"
+        cache_read_input_tokens:
+          anyOf:
+            -
+              minimum: 0
+              type: "integer"
+            -
+              type: "null"
+          default: null
+          description: "从缓存读取的输入 Token 数。"
+          examples:
+            - 2051
+          title: "缓存读取输入 Token 数"
+        inference_geo:
+          anyOf:
+            -
+              type: "string"
+            -
+              type: "null"
+          default: null
+          description: "本次请求执行推理的地理区域。"
+          title: "推理地域"
+        input_tokens:
+          description: "使用的输入 Token 数。"
+          examples:
+            - 2095
+          minimum: 0
+          title: "输入 Token 数"
+          type: "integer"
+        output_tokens:
+          description: "使用的输出 Token 数。"
+          examples:
+            - 503
+          minimum: 0
+          title: "输出 Token 数"
+          type: "integer"
+        server_tool_use:
+          anyOf:
+            -
+              "$ref": "#/components/schemas/ServerToolUsage"
+            -
+              type: "null"
+          default: null
+          description: "服务器工具请求数量。"
+        service_tier:
+          anyOf:
+            -
+              enum:
+                - "standard"
+                - "priority"
+                - "batch"
+              type: "string"
+            -
+              type: "null"
+          default: null
+          description: "请求使用的是优先、标准还是批处理服务层级。"
+          title: "服务层级"
+      required:
+        - "cache_creation"
+        - "cache_creation_input_tokens"
+        - "cache_read_input_tokens"
+        - "inference_geo"
+        - "input_tokens"
+        - "output_tokens"
+        - "server_tool_use"
+        - "service_tier"
+      title: "用量"
+      type: "object"
+    Container:
+      description: "请求中使用的容器信息（用于代码执行工具）。"
+      properties:
+        expires_at:
+          description: "容器过期时间。"
+          format: "date-time"
+          title: "过期时间"
+          type: "string"
+        id:
+          description: "本次请求所用容器的标识符。"
+          title: "ID"
+          type: "string"
+      required:
+        - "expires_at"
+        - "id"
+      title: "容器"
+      type: "object"
+    InvalidRequestError:
+      properties:
+        message:
+          default: "Invalid request"
+          title: "消息"
+          type: "string"
+        type:
+          const: "invalid_request_error"
+          default: "invalid_request_error"
+          title: "类型"
+          type: "string"
+      required:
+        - "message"
+        - "type"
+      title: "无效请求错误"
+      type: "object"
+    AuthenticationError:
+      properties:
+        message:
+          default: "Authentication error"
+          title: "消息"
+          type: "string"
+        type:
+          const: "authentication_error"
+          default: "authentication_error"
+          title: "类型"
+          type: "string"
+      required:
+        - "message"
+        - "type"
+      title: "认证错误"
+      type: "object"
+    BillingError:
+      properties:
+        message:
+          default: "Billing error"
+          title: "消息"
+          type: "string"
+        type:
+          const: "billing_error"
+          default: "billing_error"
+          title: "类型"
+          type: "string"
+      required:
+        - "message"
+        - "type"
+      title: "计费错误"
+      type: "object"
+    PermissionError:
+      properties:
+        message:
+          default: "Permission denied"
+          title: "消息"
+          type: "string"
+        type:
+          const: "permission_error"
+          default: "permission_error"
+          title: "类型"
+          type: "string"
+      required:
+        - "message"
+        - "type"
+      title: "权限错误"
+      type: "object"
+    NotFoundError:
+      properties:
+        message:
+          default: "Not found"
+          title: "消息"
+          type: "string"
+        type:
+          const: "not_found_error"
+          default: "not_found_error"
+          title: "类型"
+          type: "string"
+      required:
+        - "message"
+        - "type"
+      title: "未找到错误"
+      type: "object"
+    RateLimitError:
+      properties:
+        message:
+          default: "Rate limited"
+          title: "消息"
+          type: "string"
+        type:
+          const: "rate_limit_error"
+          default: "rate_limit_error"
+          title: "类型"
+          type: "string"
+      required:
+        - "message"
+        - "type"
+      title: "限流错误"
+      type: "object"
+    GatewayTimeoutError:
+      properties:
+        message:
+          default: "Request timeout"
+          title: "消息"
+          type: "string"
+        type:
+          const: "timeout_error"
+          default: "timeout_error"
+          title: "类型"
+          type: "string"
+      required:
+        - "message"
+        - "type"
+      title: "网关超时错误"
+      type: "object"
+    APIError:
+      properties:
+        message:
+          default: "Internal server error"
+          title: "消息"
+          type: "string"
+        type:
+          const: "api_error"
+          default: "api_error"
+          title: "类型"
+          type: "string"
+      required:
+        - "message"
+        - "type"
+      title: "API 错误"
+      type: "object"
+    OverloadedError:
+      properties:
+        message:
+          default: "Overloaded"
+          title: "消息"
+          type: "string"
+        type:
+          const: "overloaded_error"
+          default: "overloaded_error"
+          title: "类型"
+          type: "string"
+      required:
+        - "message"
+        - "type"
+      title: "过载错误"
+      type: "object"
+    InputMessage:
+      additionalProperties: false
+      properties:
+        content:
+          anyOf:
+            -
+              type: "string"
+              x-stainless-skip:
+                - "go"
+                - "cli"
+            -
+              items:
+                "$ref": "#/components/schemas/InputContentBlock"
+              type: "array"
+              example:
+                -
+                  type: "text"
+                  text: "What is a quaternion?"
+          title: "内容"
+        role:
+          enum:
+            - "user"
+            - "assistant"
+          title: "角色"
+          type: "string"
+      required:
+        - "content"
+        - "role"
+      title: "输入消息"
+      type: "object"
+      discriminator:
+        propertyName: "role"
+    CacheControlEphemeral:
+      additionalProperties: false
+      properties:
+        ttl:
+          description: "缓存控制断点的存活时间。\n\n可取以下值：\n- `5m`：5 分钟\n- `1h`：1 小时\n\n默认值为 `5m`。"
+          enum:
+            - "5m"
+            - "1h"
+          title: "TTL"
+          type: "string"
+          x-stainless-renameMap:
+            ttl_5m: "5m"
+            ttl_1h: "1h"
+        type:
+          const: "ephemeral"
+          title: "类型"
+          type: "string"
+      required:
+        - "type"
+      title: "临时缓存控制"
+      type: "object"
+      x-stainless-go-constant-constructor: true
+    Metadata:
+      additionalProperties: false
+      properties:
+        user_id:
+          anyOf:
+            -
+              maxLength: 512
+              type: "string"
+            -
+              type: "null"
+          description: "与请求相关用户的外部标识符。\n\n该值应为 UUID、哈希值或其他不透明标识符。Anthropic 可能使用该 ID 协助检测滥用。请勿包含姓名、电子邮件地址或电话号码等身份识别信息。"
+          examples:
+            - "13803d75-b4b5-4c3e-b2a2-6f21399b021b"
+          title: "用户 ID"
+      title: "元数据"
+      type: "object"
+    OutputConfig:
+      additionalProperties: false
+      properties:
+        effort:
+          anyOf:
+            -
+              "$ref": "#/components/schemas/EffortLevel"
+            -
+              type: "null"
+          description: "模型在响应中应投入的努力程度。更高努力程度可能带来更充分的分析，但耗时更长。\n\n有效值为 `low`、`medium`、`high` 或 `max`。"
+        format:
+          anyOf:
+            -
+              "$ref": "#/components/schemas/JsonOutputFormat"
+            -
+              type: "null"
+          description: "用于指定 Claude 响应输出格式的 schema。参阅[结构化输出](https://platform.claude.com/docs/en/build-with-claude/structured-outputs)。"
+      title: "输出配置"
+      type: "object"
+    RequestTextBlock:
+      additionalProperties: false
+      properties:
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        citations:
+          anyOf:
+            -
+              items:
+                discriminator:
+                  mapping:
+                    char_location: "#/components/schemas/RequestCharLocationCitation"
+                    content_block_location: "#/components/schemas/RequestContentBlockLocationCitation"
+                    page_location: "#/components/schemas/RequestPageLocationCitation"
+                    search_result_location: "#/components/schemas/RequestSearchResultLocationCitation"
+                    web_search_result_location: "#/components/schemas/RequestWebSearchResultLocationCitation"
+                  propertyName: "type"
+                oneOf:
+                  -
+                    "$ref": "#/components/schemas/RequestCharLocationCitation"
+                  -
+                    "$ref": "#/components/schemas/RequestPageLocationCitation"
+                  -
+                    "$ref": "#/components/schemas/RequestContentBlockLocationCitation"
+                  -
+                    "$ref": "#/components/schemas/RequestWebSearchResultLocationCitation"
+                  -
+                    "$ref": "#/components/schemas/RequestSearchResultLocationCitation"
+              type: "array"
+            -
+              type: "null"
+          title: "引用"
+        text:
+          minLength: 1
+          title: "文本"
+          type: "string"
+        type:
+          const: "text"
+          title: "类型"
+          type: "string"
+      required:
+        - "text"
+        - "type"
+      title: "请求文本块"
+      type: "object"
+    ThinkingConfigParam:
+      description: "启用 Claude 扩展思考的配置。\n\n启用后，响应会包含 `thinking` 内容块，展示 Claude 在最终答案前的思考过程。至少需要 1,024 Token 预算，并计入 `max_tokens` 限制。\n\n详情请参阅[扩展思考](https://docs.claude.com/en/docs/build-with-claude/extended-thinking)。"
+      discriminator:
+        mapping:
+          adaptive: "#/components/schemas/ThinkingConfigAdaptive"
+          disabled: "#/components/schemas/ThinkingConfigDisabled"
+          enabled: "#/components/schemas/ThinkingConfigEnabled"
+        propertyName: "type"
+      examples:
+        -
+          type: "adaptive"
+      oneOf:
+        -
+          "$ref": "#/components/schemas/ThinkingConfigEnabled"
+        -
+          "$ref": "#/components/schemas/ThinkingConfigDisabled"
+        -
+          "$ref": "#/components/schemas/ThinkingConfigAdaptive"
+      title: "思考"
+    ToolChoice:
+      description: "模型应如何使用所提供的工具。模型可以使用指定工具、任意可用工具、自行决定，或完全不使用工具。"
+      discriminator:
+        mapping:
+          any: "#/components/schemas/ToolChoiceAny"
+          auto: "#/components/schemas/ToolChoiceAuto"
+          none: "#/components/schemas/ToolChoiceNone"
+          tool: "#/components/schemas/ToolChoiceTool"
+        propertyName: "type"
+      oneOf:
+        -
+          "$ref": "#/components/schemas/ToolChoiceAuto"
+        -
+          "$ref": "#/components/schemas/ToolChoiceAny"
+        -
+          "$ref": "#/components/schemas/ToolChoiceTool"
+        -
+          "$ref": "#/components/schemas/ToolChoiceNone"
+      title: "工具选择"
+    Tool:
+      additionalProperties: false
+      properties:
+        type:
+          anyOf:
+            -
+              type: "null"
+            -
+              const: "custom"
+              type: "string"
+          title: "类型"
+        description:
+          description: "该工具功能的说明。\n\n工具描述应尽可能详细。模型获得的工具用途和使用方式信息越多，表现就越好。你可以使用自然语言描述来强调工具输入 JSON schema 的重要方面。"
+          examples:
+            - "Get the current weather in a given location"
+          title: "描述"
+          type: "string"
+        name:
+          description: "工具名称。\n\n模型会使用该名称调用工具，该名称也会出现在 `tool_use` 块中。"
+          maxLength: 128
+          minLength: 1
+          pattern: "^[a-zA-Z0-9_-]{1,128}$"
+          title: "名称"
+          type: "string"
+        input_schema:
+          "$ref": "#/components/schemas/InputSchema"
+          description: "此工具输入的 [JSON schema](https://json-schema.org/draft/2020-12)。\n\n它定义工具接受、且模型会生成的 `input` 结构。"
+          examples:
+            -
+              properties:
+                location:
+                  description: "城市和州，例如 San Francisco, CA"
+                  type: "string"
+                unit:
+                  description: "输出单位，取值为 celsius 或 fahrenheit"
+                  type: "string"
+              required:
+                - "location"
+              type: "object"
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        strict:
+          description: "为 true 时，保证对工具名称和输入进行 schema 校验。"
+          title: "严格模式"
+          type: "boolean"
+        eager_input_streaming:
+          anyOf:
+            -
+              type: "boolean"
+            -
+              type: "null"
+          description: "为此工具启用即时输入流式传输。为 true 时，工具输入参数会在生成过程中增量流式传输，并即时推断类型，而不是缓冲完整 JSON 输出。为 false 时，即使 fine-grained-tool-streaming beta 已启用，也会禁用此工具的流式传输。为 null（默认）时，根据 beta 请求头使用默认行为。"
+          title: "即时输入流式传输"
+        allowed_callers:
+          items:
+            "$ref": "#/components/schemas/AllowedCaller"
+          title: "允许调用方"
+          type: "array"
+        defer_loading:
+          description: "为 true 时，工具不会包含在初始系统提示词中，只会在工具搜索通过 tool_reference 返回时加载。"
+          title: "延迟加载"
+          type: "boolean"
+        input_examples:
+          items:
+            additionalProperties:
+              "$ref": "#/components/schemas/JsonValue"
+            type: "object"
+          title: "输入示例"
+          type: "array"
+      required:
+        - "name"
+        - "input_schema"
+      title: "工具"
+      type: "object"
+    BashTool_20250124:
+      additionalProperties: false
+      properties:
+        allowed_callers:
+          items:
+            "$ref": "#/components/schemas/AllowedCaller"
+          title: "允许调用方"
+          type: "array"
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        defer_loading:
+          description: "为 true 时，工具不会包含在初始系统提示词中，只会在工具搜索通过 tool_reference 返回时加载。"
+          title: "延迟加载"
+          type: "boolean"
+        input_examples:
+          items:
+            additionalProperties:
+              "$ref": "#/components/schemas/JsonValue"
+            type: "object"
+          title: "输入示例"
+          type: "array"
+        name:
+          const: "bash"
+          description: "工具名称。\n\n模型会使用该名称调用工具，该名称也会出现在 `tool_use` 块中。"
+          title: "名称"
+          type: "string"
+        strict:
+          description: "为 true 时，保证对工具名称和输入进行 schema 校验。"
+          title: "严格模式"
+          type: "boolean"
+        type:
+          const: "bash_20250124"
+          title: "类型"
+          type: "string"
+      required:
+        - "name"
+        - "type"
+      title: "Bash 工具_20250124"
+      type: "object"
+    CodeExecutionTool_20250522:
+      additionalProperties: false
+      properties:
+        allowed_callers:
+          items:
+            "$ref": "#/components/schemas/AllowedCaller"
+          title: "允许调用方"
+          type: "array"
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        defer_loading:
+          description: "为 true 时，工具不会包含在初始系统提示词中，只会在工具搜索通过 tool_reference 返回时加载。"
+          title: "延迟加载"
+          type: "boolean"
+        name:
+          const: "code_execution"
+          description: "工具名称。\n\n模型会使用该名称调用工具，该名称也会出现在 `tool_use` 块中。"
+          title: "名称"
+          type: "string"
+        strict:
+          description: "为 true 时，保证对工具名称和输入进行 schema 校验。"
+          title: "严格模式"
+          type: "boolean"
+        type:
+          const: "code_execution_20250522"
+          title: "类型"
+          type: "string"
+      required:
+        - "name"
+        - "type"
+      title: "代码执行工具_20250522"
+      type: "object"
+    CodeExecutionTool_20250825:
+      additionalProperties: false
+      properties:
+        allowed_callers:
+          items:
+            "$ref": "#/components/schemas/AllowedCaller"
+          title: "允许调用方"
+          type: "array"
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        defer_loading:
+          description: "为 true 时，工具不会包含在初始系统提示词中，只会在工具搜索通过 tool_reference 返回时加载。"
+          title: "延迟加载"
+          type: "boolean"
+        name:
+          const: "code_execution"
+          description: "工具名称。\n\n模型会使用该名称调用工具，该名称也会出现在 `tool_use` 块中。"
+          title: "名称"
+          type: "string"
+        strict:
+          description: "为 true 时，保证对工具名称和输入进行 schema 校验。"
+          title: "严格模式"
+          type: "boolean"
+        type:
+          const: "code_execution_20250825"
+          title: "类型"
+          type: "string"
+      required:
+        - "name"
+        - "type"
+      title: "代码执行工具_20250825"
+      type: "object"
+    CodeExecutionTool_20260120:
+      additionalProperties: false
+      description: "支持 REPL 状态持久化的代码执行工具（守护进程模式 + gVisor 检查点）。"
+      properties:
+        allowed_callers:
+          items:
+            "$ref": "#/components/schemas/AllowedCaller"
+          title: "允许调用方"
+          type: "array"
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        defer_loading:
+          description: "为 true 时，工具不会包含在初始系统提示词中，只会在工具搜索通过 tool_reference 返回时加载。"
+          title: "延迟加载"
+          type: "boolean"
+        name:
+          const: "code_execution"
+          description: "工具名称。\n\n模型会使用该名称调用工具，该名称也会出现在 `tool_use` 块中。"
+          title: "名称"
+          type: "string"
+        strict:
+          description: "为 true 时，保证对工具名称和输入进行 schema 校验。"
+          title: "严格模式"
+          type: "boolean"
+        type:
+          const: "code_execution_20260120"
+          title: "类型"
+          type: "string"
+      required:
+        - "name"
+        - "type"
+      title: "代码执行工具_20260120"
+      type: "object"
+    MemoryTool_20250818:
+      additionalProperties: false
+      properties:
+        allowed_callers:
+          items:
+            "$ref": "#/components/schemas/AllowedCaller"
+          title: "允许调用方"
+          type: "array"
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        defer_loading:
+          description: "为 true 时，工具不会包含在初始系统提示词中，只会在工具搜索通过 tool_reference 返回时加载。"
+          title: "延迟加载"
+          type: "boolean"
+        input_examples:
+          items:
+            additionalProperties:
+              "$ref": "#/components/schemas/JsonValue"
+            type: "object"
+          title: "输入示例"
+          type: "array"
+        name:
+          const: "memory"
+          description: "工具名称。\n\n模型会使用该名称调用工具，该名称也会出现在 `tool_use` 块中。"
+          title: "名称"
+          type: "string"
+        strict:
+          description: "为 true 时，保证对工具名称和输入进行 schema 校验。"
+          title: "严格模式"
+          type: "boolean"
+        type:
+          const: "memory_20250818"
+          title: "类型"
+          type: "string"
+      required:
+        - "name"
+        - "type"
+      title: "记忆工具_20250818"
+      type: "object"
+    TextEditor_20250124:
+      additionalProperties: false
+      properties:
+        allowed_callers:
+          items:
+            "$ref": "#/components/schemas/AllowedCaller"
+          title: "允许调用方"
+          type: "array"
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        defer_loading:
+          description: "为 true 时，工具不会包含在初始系统提示词中，只会在工具搜索通过 tool_reference 返回时加载。"
+          title: "延迟加载"
+          type: "boolean"
+        input_examples:
+          items:
+            additionalProperties:
+              "$ref": "#/components/schemas/JsonValue"
+            type: "object"
+          title: "输入示例"
+          type: "array"
+        name:
+          const: "str_replace_editor"
+          description: "工具名称。\n\n模型会使用该名称调用工具，该名称也会出现在 `tool_use` 块中。"
+          title: "名称"
+          type: "string"
+        strict:
+          description: "为 true 时，保证对工具名称和输入进行 schema 校验。"
+          title: "严格模式"
+          type: "boolean"
+        type:
+          const: "text_editor_20250124"
+          title: "类型"
+          type: "string"
+      required:
+        - "name"
+        - "type"
+      title: "文本编辑器_20250124"
+      type: "object"
+    TextEditor_20250429:
+      additionalProperties: false
+      properties:
+        allowed_callers:
+          items:
+            "$ref": "#/components/schemas/AllowedCaller"
+          title: "允许调用方"
+          type: "array"
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        defer_loading:
+          description: "为 true 时，工具不会包含在初始系统提示词中，只会在工具搜索通过 tool_reference 返回时加载。"
+          title: "延迟加载"
+          type: "boolean"
+        input_examples:
+          items:
+            additionalProperties:
+              "$ref": "#/components/schemas/JsonValue"
+            type: "object"
+          title: "输入示例"
+          type: "array"
+        name:
+          const: "str_replace_based_edit_tool"
+          description: "工具名称。\n\n模型会使用该名称调用工具，该名称也会出现在 `tool_use` 块中。"
+          title: "名称"
+          type: "string"
+        strict:
+          description: "为 true 时，保证对工具名称和输入进行 schema 校验。"
+          title: "严格模式"
+          type: "boolean"
+        type:
+          const: "text_editor_20250429"
+          title: "类型"
+          type: "string"
+      required:
+        - "name"
+        - "type"
+      title: "文本编辑器_20250429"
+      type: "object"
+    TextEditor_20250728:
+      additionalProperties: false
+      properties:
+        allowed_callers:
+          items:
+            "$ref": "#/components/schemas/AllowedCaller"
+          title: "允许调用方"
+          type: "array"
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        defer_loading:
+          description: "为 true 时，工具不会包含在初始系统提示词中，只会在工具搜索通过 tool_reference 返回时加载。"
+          title: "延迟加载"
+          type: "boolean"
+        input_examples:
+          items:
+            additionalProperties:
+              "$ref": "#/components/schemas/JsonValue"
+            type: "object"
+          title: "输入示例"
+          type: "array"
+        max_characters:
+          anyOf:
+            -
+              minimum: 1
+              type: "integer"
+            -
+              type: "null"
+          description: "查看文件时显示的最大字符数。未指定时默认显示完整文件。"
+          title: "最大字符数"
+        name:
+          const: "str_replace_based_edit_tool"
+          description: "工具名称。\n\n模型会使用该名称调用工具，该名称也会出现在 `tool_use` 块中。"
+          title: "名称"
+          type: "string"
+        strict:
+          description: "为 true 时，保证对工具名称和输入进行 schema 校验。"
+          title: "严格模式"
+          type: "boolean"
+        type:
+          const: "text_editor_20250728"
+          title: "类型"
+          type: "string"
+      required:
+        - "name"
+        - "type"
+      title: "文本编辑器_20250728"
+      type: "object"
+    WebSearchTool_20250305:
+      additionalProperties: false
+      properties:
+        allowed_callers:
+          items:
+            "$ref": "#/components/schemas/AllowedCaller"
+          title: "允许调用方"
+          type: "array"
+        allowed_domains:
+          anyOf:
+            -
+              items:
+                type: "string"
+              type: "array"
+            -
+              type: "null"
+          description: "提供后，结果中只会包含这些域名。不能与 `blocked_domains` 同时使用。"
+          title: "允许域名"
+        blocked_domains:
+          anyOf:
+            -
+              items:
+                type: "string"
+              type: "array"
+            -
+              type: "null"
+          description: "提供后，这些域名绝不会出现在结果中。不能与 `allowed_domains` 同时使用。"
+          title: "阻止域名"
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        defer_loading:
+          description: "为 true 时，工具不会包含在初始系统提示词中，只会在工具搜索通过 tool_reference 返回时加载。"
+          title: "延迟加载"
+          type: "boolean"
+        max_uses:
+          anyOf:
+            -
+              exclusiveMinimum: 0
+              type: "integer"
+            -
+              type: "null"
+          description: "该工具在 API 请求中可使用的最大次数。"
+          title: "最大使用次数"
+        name:
+          const: "web_search"
+          description: "工具名称。\n\n模型会使用该名称调用工具，该名称也会出现在 `tool_use` 块中。"
+          title: "名称"
+          type: "string"
+        strict:
+          description: "为 true 时，保证对工具名称和输入进行 schema 校验。"
+          title: "严格模式"
+          type: "boolean"
+        type:
+          const: "web_search_20250305"
+          title: "类型"
+          type: "string"
+        user_location:
+          anyOf:
+            -
+              "$ref": "#/components/schemas/UserLocation"
+            -
+              type: "null"
+          description: "用户位置参数，用于提供更相关的搜索结果。"
+      required:
+        - "name"
+        - "type"
+      title: "网页搜索工具_20250305"
+      type: "object"
+    WebFetchTool_20250910:
+      additionalProperties: false
+      properties:
+        allowed_callers:
+          items:
+            "$ref": "#/components/schemas/AllowedCaller"
+          title: "允许调用方"
+          type: "array"
+        allowed_domains:
+          anyOf:
+            -
+              items:
+                type: "string"
+              type: "array"
+            -
+              type: "null"
+          description: "允许获取内容的域名列表。"
+          title: "允许域名"
+        blocked_domains:
+          anyOf:
+            -
+              items:
+                type: "string"
+              type: "array"
+            -
+              type: "null"
+          description: "禁止获取内容的域名列表。"
+          title: "阻止域名"
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        citations:
+          anyOf:
+            -
+              "$ref": "#/components/schemas/RequestCitationsConfig"
+            -
+              type: "null"
+          description: "已获取文档的引用配置。默认禁用引用。"
+        defer_loading:
+          description: "为 true 时，工具不会包含在初始系统提示词中，只会在工具搜索通过 tool_reference 返回时加载。"
+          title: "延迟加载"
+          type: "boolean"
+        max_content_tokens:
+          anyOf:
+            -
+              exclusiveMinimum: 0
+              type: "integer"
+            -
+              type: "null"
+          description: "网页文本内容加入上下文时可使用的最大 Token 数。该限制为近似值，不适用于 PDF 等二进制内容。"
+          title: "最大内容 Token 数"
+        max_uses:
+          anyOf:
+            -
+              exclusiveMinimum: 0
+              type: "integer"
+            -
+              type: "null"
+          description: "该工具在 API 请求中可使用的最大次数。"
+          title: "最大使用次数"
+        name:
+          const: "web_fetch"
+          description: "工具名称。\n\n模型会使用该名称调用工具，该名称也会出现在 `tool_use` 块中。"
+          title: "名称"
+          type: "string"
+        strict:
+          description: "为 true 时，保证对工具名称和输入进行 schema 校验。"
+          title: "严格模式"
+          type: "boolean"
+        type:
+          const: "web_fetch_20250910"
+          title: "类型"
+          type: "string"
+      required:
+        - "name"
+        - "type"
+      title: "网页获取工具_20250910"
+      type: "object"
+    WebSearchTool_20260209:
+      additionalProperties: false
+      properties:
+        allowed_callers:
+          items:
+            "$ref": "#/components/schemas/AllowedCaller"
+          title: "允许调用方"
+          type: "array"
+        allowed_domains:
+          anyOf:
+            -
+              items:
+                type: "string"
+              type: "array"
+            -
+              type: "null"
+          description: "提供后，结果中只会包含这些域名。不能与 `blocked_domains` 同时使用。"
+          title: "允许域名"
+        blocked_domains:
+          anyOf:
+            -
+              items:
+                type: "string"
+              type: "array"
+            -
+              type: "null"
+          description: "提供后，这些域名绝不会出现在结果中。不能与 `allowed_domains` 同时使用。"
+          title: "阻止域名"
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        defer_loading:
+          description: "为 true 时，工具不会包含在初始系统提示词中，只会在工具搜索通过 tool_reference 返回时加载。"
+          title: "延迟加载"
+          type: "boolean"
+        max_uses:
+          anyOf:
+            -
+              exclusiveMinimum: 0
+              type: "integer"
+            -
+              type: "null"
+          description: "该工具在 API 请求中可使用的最大次数。"
+          title: "最大使用次数"
+        name:
+          const: "web_search"
+          description: "工具名称。\n\n模型会使用该名称调用工具，该名称也会出现在 `tool_use` 块中。"
+          title: "名称"
+          type: "string"
+        strict:
+          description: "为 true 时，保证对工具名称和输入进行 schema 校验。"
+          title: "严格模式"
+          type: "boolean"
+        type:
+          const: "web_search_20260209"
+          title: "类型"
+          type: "string"
+        user_location:
+          anyOf:
+            -
+              "$ref": "#/components/schemas/UserLocation"
+            -
+              type: "null"
+          description: "用户位置参数，用于提供更相关的搜索结果。"
+      required:
+        - "name"
+        - "type"
+      title: "网页搜索工具_20260209"
+      type: "object"
+    WebFetchTool_20260209:
+      additionalProperties: false
+      properties:
+        allowed_callers:
+          items:
+            "$ref": "#/components/schemas/AllowedCaller"
+          title: "允许调用方"
+          type: "array"
+        allowed_domains:
+          anyOf:
+            -
+              items:
+                type: "string"
+              type: "array"
+            -
+              type: "null"
+          description: "允许获取内容的域名列表。"
+          title: "允许域名"
+        blocked_domains:
+          anyOf:
+            -
+              items:
+                type: "string"
+              type: "array"
+            -
+              type: "null"
+          description: "禁止获取内容的域名列表。"
+          title: "阻止域名"
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        citations:
+          anyOf:
+            -
+              "$ref": "#/components/schemas/RequestCitationsConfig"
+            -
+              type: "null"
+          description: "已获取文档的引用配置。默认禁用引用。"
+        defer_loading:
+          description: "为 true 时，工具不会包含在初始系统提示词中，只会在工具搜索通过 tool_reference 返回时加载。"
+          title: "延迟加载"
+          type: "boolean"
+        max_content_tokens:
+          anyOf:
+            -
+              exclusiveMinimum: 0
+              type: "integer"
+            -
+              type: "null"
+          description: "网页文本内容加入上下文时可使用的最大 Token 数。该限制为近似值，不适用于 PDF 等二进制内容。"
+          title: "最大内容 Token 数"
+        max_uses:
+          anyOf:
+            -
+              exclusiveMinimum: 0
+              type: "integer"
+            -
+              type: "null"
+          description: "该工具在 API 请求中可使用的最大次数。"
+          title: "最大使用次数"
+        name:
+          const: "web_fetch"
+          description: "工具名称。\n\n模型会使用该名称调用工具，该名称也会出现在 `tool_use` 块中。"
+          title: "名称"
+          type: "string"
+        strict:
+          description: "为 true 时，保证对工具名称和输入进行 schema 校验。"
+          title: "严格模式"
+          type: "boolean"
+        type:
+          const: "web_fetch_20260209"
+          title: "类型"
+          type: "string"
+      required:
+        - "name"
+        - "type"
+      title: "网页获取工具_20260209"
+      type: "object"
+    WebFetchTool_20260309:
+      additionalProperties: false
+      description: "带有 use_cache 参数的网页获取工具，可绕过缓存内容。"
+      properties:
+        allowed_callers:
+          items:
+            "$ref": "#/components/schemas/AllowedCaller"
+          title: "允许调用方"
+          type: "array"
+        allowed_domains:
+          anyOf:
+            -
+              items:
+                type: "string"
+              type: "array"
+            -
+              type: "null"
+          description: "允许获取内容的域名列表。"
+          title: "允许域名"
+        blocked_domains:
+          anyOf:
+            -
+              items:
+                type: "string"
+              type: "array"
+            -
+              type: "null"
+          description: "禁止获取内容的域名列表。"
+          title: "阻止域名"
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        citations:
+          anyOf:
+            -
+              "$ref": "#/components/schemas/RequestCitationsConfig"
+            -
+              type: "null"
+          description: "已获取文档的引用配置。默认禁用引用。"
+        defer_loading:
+          description: "为 true 时，工具不会包含在初始系统提示词中，只会在工具搜索通过 tool_reference 返回时加载。"
+          title: "延迟加载"
+          type: "boolean"
+        max_content_tokens:
+          anyOf:
+            -
+              exclusiveMinimum: 0
+              type: "integer"
+            -
+              type: "null"
+          description: "网页文本内容加入上下文时可使用的最大 Token 数。该限制为近似值，不适用于 PDF 等二进制内容。"
+          title: "最大内容 Token 数"
+        max_uses:
+          anyOf:
+            -
+              exclusiveMinimum: 0
+              type: "integer"
+            -
+              type: "null"
+          description: "该工具在 API 请求中可使用的最大次数。"
+          title: "最大使用次数"
+        name:
+          const: "web_fetch"
+          description: "工具名称。\n\n模型会使用该名称调用工具，该名称也会出现在 `tool_use` 块中。"
+          title: "名称"
+          type: "string"
+        strict:
+          description: "为 true 时，保证对工具名称和输入进行 schema 校验。"
+          title: "严格模式"
+          type: "boolean"
+        type:
+          const: "web_fetch_20260309"
+          title: "类型"
+          type: "string"
+        use_cache:
+          description: "是否使用缓存内容。设为 false 可绕过缓存并获取新内容。仅在用户明确请求最新内容或获取快速变化来源时设为 false。"
+          title: "使用缓存"
+          type: "boolean"
+      required:
+        - "name"
+        - "type"
+      title: "网页获取工具_20260309"
+      type: "object"
+    ToolSearchToolBM25_20251119:
+      additionalProperties: false
+      properties:
+        allowed_callers:
+          items:
+            "$ref": "#/components/schemas/AllowedCaller"
+          title: "允许调用方"
+          type: "array"
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        defer_loading:
+          description: "为 true 时，工具不会包含在初始系统提示词中，只会在工具搜索通过 tool_reference 返回时加载。"
+          title: "延迟加载"
+          type: "boolean"
+        name:
+          const: "tool_search_tool_bm25"
+          description: "工具名称。\n\n模型会使用该名称调用工具，该名称也会出现在 `tool_use` 块中。"
+          title: "名称"
+          type: "string"
+        strict:
+          description: "为 true 时，保证对工具名称和输入进行 schema 校验。"
+          title: "严格模式"
+          type: "boolean"
+        type:
+          enum:
+            - "tool_search_tool_bm25_20251119"
+            - "tool_search_tool_bm25"
+          title: "类型"
+          type: "string"
+      required:
+        - "name"
+        - "type"
+      title: "BM25 工具搜索工具_20251119"
+      type: "object"
+    ToolSearchToolRegex_20251119:
+      additionalProperties: false
+      properties:
+        allowed_callers:
+          items:
+            "$ref": "#/components/schemas/AllowedCaller"
+          title: "允许调用方"
+          type: "array"
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        defer_loading:
+          description: "为 true 时，工具不会包含在初始系统提示词中，只会在工具搜索通过 tool_reference 返回时加载。"
+          title: "延迟加载"
+          type: "boolean"
+        name:
+          const: "tool_search_tool_regex"
+          description: "工具名称。\n\n模型会使用该名称调用工具，该名称也会出现在 `tool_use` 块中。"
+          title: "名称"
+          type: "string"
+        strict:
+          description: "为 true 时，保证对工具名称和输入进行 schema 校验。"
+          title: "严格模式"
+          type: "boolean"
+        type:
+          enum:
+            - "tool_search_tool_regex_20251119"
+            - "tool_search_tool_regex"
+          title: "类型"
+          type: "string"
+      required:
+        - "name"
+        - "type"
+      title: "正则工具搜索工具_20251119"
+      type: "object"
+    ResponseTextBlock:
+      properties:
+        citations:
+          anyOf:
+            -
+              items:
+                discriminator:
+                  mapping:
+                    char_location: "#/components/schemas/ResponseCharLocationCitation"
+                    content_block_location: "#/components/schemas/ResponseContentBlockLocationCitation"
+                    page_location: "#/components/schemas/ResponsePageLocationCitation"
+                    search_result_location: "#/components/schemas/ResponseSearchResultLocationCitation"
+                    web_search_result_location: "#/components/schemas/ResponseWebSearchResultLocationCitation"
+                  propertyName: "type"
+                oneOf:
+                  -
+                    "$ref": "#/components/schemas/ResponseCharLocationCitation"
+                  -
+                    "$ref": "#/components/schemas/ResponsePageLocationCitation"
+                  -
+                    "$ref": "#/components/schemas/ResponseContentBlockLocationCitation"
+                  -
+                    "$ref": "#/components/schemas/ResponseWebSearchResultLocationCitation"
+                  -
+                    "$ref": "#/components/schemas/ResponseSearchResultLocationCitation"
+              type: "array"
+            -
+              type: "null"
+          default: null
+          description: "支持该文本块的引用。\n\n返回的引用类型取决于被引用文档的类型。引用 PDF 会得到 `page_location`，纯文本会得到 `char_location`，内容文档会得到 `content_block_location`。"
+          title: "引用"
+        text:
+          maxLength: 5000000
+          minLength: 0
+          title: "文本"
+          type: "string"
+        type:
+          const: "text"
+          default: "text"
+          title: "类型"
+          type: "string"
+      required:
+        - "citations"
+        - "text"
+        - "type"
+      title: "响应文本块"
+      type: "object"
+    ResponseThinkingBlock:
+      properties:
+        signature:
+          title: "签名"
+          type: "string"
+        thinking:
+          title: "思考"
+          type: "string"
+        type:
+          const: "thinking"
+          default: "thinking"
+          title: "类型"
+          type: "string"
+      required:
+        - "signature"
+        - "thinking"
+        - "type"
+      title: "响应思考块"
+      type: "object"
+    ResponseRedactedThinkingBlock:
+      properties:
+        data:
+          title: "数据"
+          type: "string"
+        type:
+          const: "redacted_thinking"
+          default: "redacted_thinking"
+          title: "类型"
+          type: "string"
+      required:
+        - "data"
+        - "type"
+      title: "响应遮盖思考块"
+      type: "object"
+    ResponseToolUseBlock:
+      properties:
+        caller:
+          default:
+            type: "direct"
+          discriminator:
+            mapping:
+              code_execution_20250825: "#/components/schemas/ServerToolCaller"
+              code_execution_20260120: "#/components/schemas/ServerToolCaller_20260120"
+              direct: "#/components/schemas/DirectCaller"
+            propertyName: "type"
+          oneOf:
+            -
+              "$ref": "#/components/schemas/DirectCaller"
+            -
+              "$ref": "#/components/schemas/ServerToolCaller"
+            -
+              "$ref": "#/components/schemas/ServerToolCaller_20260120"
+          title: "调用方"
+        id:
+          pattern: "^[a-zA-Z0-9_-]+$"
+          title: "ID"
+          type: "string"
+        input:
+          additionalProperties: true
+          title: "输入"
+          type: "object"
+        name:
+          minLength: 1
+          title: "名称"
+          type: "string"
+        type:
+          const: "tool_use"
+          default: "tool_use"
+          title: "类型"
+          type: "string"
+      required:
+        - "caller"
+        - "id"
+        - "input"
+        - "name"
+        - "type"
+      title: "响应工具使用块"
+      type: "object"
+    ResponseServerToolUseBlock:
+      properties:
+        caller:
+          default:
+            type: "direct"
+          discriminator:
+            mapping:
+              code_execution_20250825: "#/components/schemas/ServerToolCaller"
+              code_execution_20260120: "#/components/schemas/ServerToolCaller_20260120"
+              direct: "#/components/schemas/DirectCaller"
+            propertyName: "type"
+          oneOf:
+            -
+              "$ref": "#/components/schemas/DirectCaller"
+            -
+              "$ref": "#/components/schemas/ServerToolCaller"
+            -
+              "$ref": "#/components/schemas/ServerToolCaller_20260120"
+          title: "调用方"
+        id:
+          pattern: "^srvtoolu_[a-zA-Z0-9_]+$"
+          title: "ID"
+          type: "string"
+        input:
+          additionalProperties: true
+          title: "输入"
+          type: "object"
+        name:
+          enum:
+            - "web_search"
+            - "web_fetch"
+            - "code_execution"
+            - "bash_code_execution"
+            - "text_editor_code_execution"
+            - "tool_search_tool_regex"
+            - "tool_search_tool_bm25"
+          title: "名称"
+          type: "string"
+        type:
+          const: "server_tool_use"
+          default: "server_tool_use"
+          title: "类型"
+          type: "string"
+      required:
+        - "caller"
+        - "id"
+        - "input"
+        - "name"
+        - "type"
+      title: "响应服务器工具使用块"
+      type: "object"
+    ResponseWebSearchToolResultBlock:
+      properties:
+        caller:
+          default:
+            type: "direct"
+          discriminator:
+            mapping:
+              code_execution_20250825: "#/components/schemas/ServerToolCaller"
+              code_execution_20260120: "#/components/schemas/ServerToolCaller_20260120"
+              direct: "#/components/schemas/DirectCaller"
+            propertyName: "type"
+          oneOf:
+            -
+              "$ref": "#/components/schemas/DirectCaller"
+            -
+              "$ref": "#/components/schemas/ServerToolCaller"
+            -
+              "$ref": "#/components/schemas/ServerToolCaller_20260120"
+          title: "调用方"
+        content:
+          anyOf:
+            -
+              "$ref": "#/components/schemas/ResponseWebSearchToolResultError"
+            -
+              items:
+                "$ref": "#/components/schemas/ResponseWebSearchResultBlock"
+              type: "array"
+          title: "内容"
+        tool_use_id:
+          pattern: "^srvtoolu_[a-zA-Z0-9_]+$"
+          title: "工具使用 ID"
+          type: "string"
+        type:
+          const: "web_search_tool_result"
+          default: "web_search_tool_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "caller"
+        - "content"
+        - "tool_use_id"
+        - "type"
+      title: "响应网页搜索工具结果块"
+      type: "object"
+    ResponseWebFetchToolResultBlock:
+      properties:
+        caller:
+          default:
+            type: "direct"
+          discriminator:
+            mapping:
+              code_execution_20250825: "#/components/schemas/ServerToolCaller"
+              code_execution_20260120: "#/components/schemas/ServerToolCaller_20260120"
+              direct: "#/components/schemas/DirectCaller"
+            propertyName: "type"
+          oneOf:
+            -
+              "$ref": "#/components/schemas/DirectCaller"
+            -
+              "$ref": "#/components/schemas/ServerToolCaller"
+            -
+              "$ref": "#/components/schemas/ServerToolCaller_20260120"
+          title: "调用方"
+        content:
+          anyOf:
+            -
+              "$ref": "#/components/schemas/ResponseWebFetchToolResultError"
+            -
+              "$ref": "#/components/schemas/ResponseWebFetchResultBlock"
+          title: "内容"
+        tool_use_id:
+          pattern: "^srvtoolu_[a-zA-Z0-9_]+$"
+          title: "工具使用 ID"
+          type: "string"
+        type:
+          const: "web_fetch_tool_result"
+          default: "web_fetch_tool_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "caller"
+        - "content"
+        - "tool_use_id"
+        - "type"
+      title: "响应网页获取工具结果块"
+      type: "object"
+    ResponseCodeExecutionToolResultBlock:
+      properties:
+        content:
+          anyOf:
+            -
+              "$ref": "#/components/schemas/ResponseCodeExecutionToolResultError"
+            -
+              "$ref": "#/components/schemas/ResponseCodeExecutionResultBlock"
+            -
+              "$ref": "#/components/schemas/ResponseEncryptedCodeExecutionResultBlock"
+          title: "内容"
+        tool_use_id:
+          pattern: "^srvtoolu_[a-zA-Z0-9_]+$"
+          title: "工具使用 ID"
+          type: "string"
+        type:
+          const: "code_execution_tool_result"
+          default: "code_execution_tool_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "content"
+        - "tool_use_id"
+        - "type"
+      title: "响应代码执行工具结果块"
+      type: "object"
+    ResponseBashCodeExecutionToolResultBlock:
+      properties:
+        content:
+          anyOf:
+            -
+              "$ref": "#/components/schemas/ResponseBashCodeExecutionToolResultError"
+            -
+              "$ref": "#/components/schemas/ResponseBashCodeExecutionResultBlock"
+          title: "内容"
+        tool_use_id:
+          pattern: "^srvtoolu_[a-zA-Z0-9_]+$"
+          title: "工具使用 ID"
+          type: "string"
+        type:
+          const: "bash_code_execution_tool_result"
+          default: "bash_code_execution_tool_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "content"
+        - "tool_use_id"
+        - "type"
+      title: "响应 Bash 代码执行工具结果块"
+      type: "object"
+    ResponseTextEditorCodeExecutionToolResultBlock:
+      properties:
+        content:
+          anyOf:
+            -
+              "$ref": "#/components/schemas/ResponseTextEditorCodeExecutionToolResultError"
+            -
+              "$ref": "#/components/schemas/ResponseTextEditorCodeExecutionViewResultBlock"
+            -
+              "$ref": "#/components/schemas/ResponseTextEditorCodeExecutionCreateResultBlock"
+            -
+              "$ref": "#/components/schemas/ResponseTextEditorCodeExecutionStrReplaceResultBlock"
+          title: "内容"
+        tool_use_id:
+          pattern: "^srvtoolu_[a-zA-Z0-9_]+$"
+          title: "工具使用 ID"
+          type: "string"
+        type:
+          const: "text_editor_code_execution_tool_result"
+          default: "text_editor_code_execution_tool_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "content"
+        - "tool_use_id"
+        - "type"
+      title: "响应文本编辑器代码执行工具结果块"
+      type: "object"
+    ResponseToolSearchToolResultBlock:
+      properties:
+        content:
+          anyOf:
+            -
+              "$ref": "#/components/schemas/ResponseToolSearchToolResultError"
+            -
+              "$ref": "#/components/schemas/ResponseToolSearchToolSearchResultBlock"
+          title: "内容"
+        tool_use_id:
+          pattern: "^srvtoolu_[a-zA-Z0-9_]+$"
+          title: "工具使用 ID"
+          type: "string"
+        type:
+          const: "tool_search_tool_result"
+          default: "tool_search_tool_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "content"
+        - "tool_use_id"
+        - "type"
+      title: "响应工具搜索结果块"
+      type: "object"
+    ResponseContainerUploadBlock:
+      description: "上传到容器的文件响应模型。"
+      properties:
+        file_id:
+          title: "文件 ID"
+          type: "string"
+        type:
+          const: "container_upload"
+          default: "container_upload"
+          title: "类型"
+          type: "string"
+      required:
+        - "file_id"
+        - "type"
+      title: "响应容器上传块"
+      type: "object"
+    CacheCreation:
+      properties:
+        ephemeral_1h_input_tokens:
+          default: 0
+          description: "用于创建 1 小时缓存条目的输入 Token 数。"
+          minimum: 0
+          title: "临时 1 小时输入 Token 数"
+          type: "integer"
+        ephemeral_5m_input_tokens:
+          default: 0
+          description: "用于创建 5 分钟缓存条目的输入 Token 数。"
+          minimum: 0
+          title: "临时 5 分钟输入 Token 数"
+          type: "integer"
+      required:
+        - "ephemeral_1h_input_tokens"
+        - "ephemeral_5m_input_tokens"
+      title: "缓存创建"
+      type: "object"
+    ServerToolUsage:
+      properties:
+        web_fetch_requests:
+          default: 0
+          description: "网页获取工具请求数量。"
+          examples:
+            - 2
+          minimum: 0
+          title: "网页获取请求数"
+          type: "integer"
+        web_search_requests:
+          default: 0
+          description: "网页搜索工具请求数量。"
+          examples:
+            - 0
+          minimum: 0
+          title: "网页搜索请求数"
+          type: "integer"
+      required:
+        - "web_fetch_requests"
+        - "web_search_requests"
+      title: "服务器工具用量"
+      type: "object"
+    InputContentBlock:
+      discriminator:
+        mapping:
+          bash_code_execution_tool_result: "#/components/schemas/RequestBashCodeExecutionToolResultBlock"
+          code_execution_tool_result: "#/components/schemas/RequestCodeExecutionToolResultBlock"
+          container_upload: "#/components/schemas/RequestContainerUploadBlock"
+          document: "#/components/schemas/RequestDocumentBlock"
+          image: "#/components/schemas/RequestImageBlock"
+          redacted_thinking: "#/components/schemas/RequestRedactedThinkingBlock"
+          search_result: "#/components/schemas/RequestSearchResultBlock"
+          server_tool_use: "#/components/schemas/RequestServerToolUseBlock"
+          text: "#/components/schemas/RequestTextBlock"
+          text_editor_code_execution_tool_result: "#/components/schemas/RequestTextEditorCodeExecutionToolResultBlock"
+          thinking: "#/components/schemas/RequestThinkingBlock"
+          tool_result: "#/components/schemas/RequestToolResultBlock"
+          tool_search_tool_result: "#/components/schemas/RequestToolSearchToolResultBlock"
+          tool_use: "#/components/schemas/RequestToolUseBlock"
+          web_fetch_tool_result: "#/components/schemas/RequestWebFetchToolResultBlock"
+          web_search_tool_result: "#/components/schemas/RequestWebSearchToolResultBlock"
+        propertyName: "type"
+      oneOf:
+        -
+          "$ref": "#/components/schemas/RequestTextBlock"
+          description: "普通文本内容。"
+        -
+          "$ref": "#/components/schemas/RequestImageBlock"
+          description: "以 base64 数据直接指定或通过 URL 引用的图片内容。"
+        -
+          "$ref": "#/components/schemas/RequestDocumentBlock"
+          description: "文档内容，可用 base64 数据、文本直接指定，或通过 URL 引用。"
+        -
+          "$ref": "#/components/schemas/RequestSearchResultBlock"
+          description: "搜索结果块，包含搜索操作返回的来源、标题和内容。"
+        -
+          "$ref": "#/components/schemas/RequestThinkingBlock"
+          description: "表示模型内部思考的内容块。"
+        -
+          "$ref": "#/components/schemas/RequestRedactedThinkingBlock"
+          description: "表示模型内部已遮盖思考的内容块。"
+        -
+          "$ref": "#/components/schemas/RequestToolUseBlock"
+          description: "表示模型使用工具的内容块。"
+        -
+          "$ref": "#/components/schemas/RequestToolResultBlock"
+          description: "表示工具使用结果的内容块。"
+        -
+          "$ref": "#/components/schemas/RequestServerToolUseBlock"
+        -
+          "$ref": "#/components/schemas/RequestWebSearchToolResultBlock"
+        -
+          "$ref": "#/components/schemas/RequestWebFetchToolResultBlock"
+        -
+          "$ref": "#/components/schemas/RequestCodeExecutionToolResultBlock"
+        -
+          "$ref": "#/components/schemas/RequestBashCodeExecutionToolResultBlock"
+        -
+          "$ref": "#/components/schemas/RequestTextEditorCodeExecutionToolResultBlock"
+        -
+          "$ref": "#/components/schemas/RequestToolSearchToolResultBlock"
+        -
+          "$ref": "#/components/schemas/RequestContainerUploadBlock"
+      x-stainless-python-extend-union:
+        - "ContentBlock"
+      x-stainless-python-extend-union-imports:
+        - "from .content_block import ContentBlock"
+      x-stainless-go-variant-constructor:
+        naming: "new_{variant}_block"
+    EffortLevel:
+      description: "所有可用的努力程度。"
+      enum:
+        - "low"
+        - "medium"
+        - "high"
+        - "xhigh"
+        - "max"
+      title: "努力程度"
+      type: "string"
+    JsonOutputFormat:
+      additionalProperties: false
+      properties:
+        schema:
+          additionalProperties: true
+          description: "该格式的 JSON schema。"
+          title: "Schema"
+          type: "object"
+        type:
+          const: "json_schema"
+          title: "类型"
+          type: "string"
+      required:
+        - "schema"
+        - "type"
+      title: "JSON 输出格式"
+      type: "object"
+    RequestCharLocationCitation:
+      additionalProperties: false
+      properties:
+        cited_text:
+          title: "引用文本"
+          type: "string"
+        document_index:
+          minimum: 0
+          title: "文档索引"
+          type: "integer"
+        document_title:
+          anyOf:
+            -
+              maxLength: 255
+              minLength: 1
+              type: "string"
+            -
+              type: "null"
+          title: "文档标题"
+        end_char_index:
+          title: "结束字符索引"
+          type: "integer"
+        start_char_index:
+          minimum: 0
+          title: "起始字符索引"
+          type: "integer"
+        type:
+          const: "char_location"
+          title: "类型"
+          type: "string"
+      required:
+        - "cited_text"
+        - "document_index"
+        - "document_title"
+        - "end_char_index"
+        - "start_char_index"
+        - "type"
+      title: "请求字符位置引用"
+      type: "object"
+    RequestPageLocationCitation:
+      additionalProperties: false
+      properties:
+        cited_text:
+          title: "引用文本"
+          type: "string"
+        document_index:
+          minimum: 0
+          title: "文档索引"
+          type: "integer"
+        document_title:
+          anyOf:
+            -
+              maxLength: 255
+              minLength: 1
+              type: "string"
+            -
+              type: "null"
+          title: "文档标题"
+        end_page_number:
+          title: "结束页码"
+          type: "integer"
+        start_page_number:
+          minimum: 1
+          title: "起始页码"
+          type: "integer"
+        type:
+          const: "page_location"
+          title: "类型"
+          type: "string"
+      required:
+        - "cited_text"
+        - "document_index"
+        - "document_title"
+        - "end_page_number"
+        - "start_page_number"
+        - "type"
+      title: "请求页面位置引用"
+      type: "object"
+    RequestContentBlockLocationCitation:
+      additionalProperties: false
+      properties:
+        cited_text:
+          title: "引用文本"
+          type: "string"
+        document_index:
+          minimum: 0
+          title: "文档索引"
+          type: "integer"
+        document_title:
+          anyOf:
+            -
+              maxLength: 255
+              minLength: 1
+              type: "string"
+            -
+              type: "null"
+          title: "文档标题"
+        end_block_index:
+          title: "结束块索引"
+          type: "integer"
+        start_block_index:
+          minimum: 0
+          title: "起始块索引"
+          type: "integer"
+        type:
+          const: "content_block_location"
+          title: "类型"
+          type: "string"
+      required:
+        - "cited_text"
+        - "document_index"
+        - "document_title"
+        - "end_block_index"
+        - "start_block_index"
+        - "type"
+      title: "请求内容块位置引用"
+      type: "object"
+    RequestWebSearchResultLocationCitation:
+      additionalProperties: false
+      properties:
+        cited_text:
+          title: "引用文本"
+          type: "string"
+        encrypted_index:
+          title: "加密索引"
+          type: "string"
+        title:
+          anyOf:
+            -
+              maxLength: 512
+              minLength: 1
+              type: "string"
+            -
+              type: "null"
+          title: "标题"
+        type:
+          const: "web_search_result_location"
+          title: "类型"
+          type: "string"
+        url:
+          maxLength: 2048
+          minLength: 1
+          title: "URL"
+          type: "string"
+      required:
+        - "cited_text"
+        - "encrypted_index"
+        - "title"
+        - "type"
+        - "url"
+      title: "请求网页搜索结果位置引用"
+      type: "object"
+    RequestSearchResultLocationCitation:
+      additionalProperties: false
+      properties:
+        cited_text:
+          title: "引用文本"
+          type: "string"
+        end_block_index:
+          title: "结束块索引"
+          type: "integer"
+        search_result_index:
+          minimum: 0
+          title: "搜索结果索引"
+          type: "integer"
+        source:
+          title: "来源"
+          type: "string"
+        start_block_index:
+          minimum: 0
+          title: "起始块索引"
+          type: "integer"
+        title:
+          anyOf:
+            -
+              type: "string"
+            -
+              type: "null"
+          title: "标题"
+        type:
+          const: "search_result_location"
+          title: "类型"
+          type: "string"
+      required:
+        - "cited_text"
+        - "end_block_index"
+        - "search_result_index"
+        - "source"
+        - "start_block_index"
+        - "title"
+        - "type"
+      title: "请求搜索结果位置引用"
+      type: "object"
+    ThinkingConfigEnabled:
+      additionalProperties: false
+      properties:
+        budget_tokens:
+          description: "决定 Claude 可用于内部推理过程的 Token 数。更大的预算可支持对复杂问题进行更充分的分析，从而提升响应质量。\n\n必须 ≥1024 且小于 `max_tokens`。\n\n详情请参阅[扩展思考](https://docs.claude.com/en/docs/build-with-claude/extended-thinking)。"
+          minimum: 1024
+          title: "预算 Token 数"
+          type: "integer"
+        display:
+          anyOf:
+            -
+              "$ref": "#/components/schemas/ThinkingDisplayMode"
+            -
+              type: "null"
+          description: "控制思考内容在响应中的呈现方式。设为 `summarized` 时正常返回思考内容。设为 `omitted` 时遮盖思考内容，但返回用于多轮连续性的签名。默认值为 `summarized`。"
+        type:
+          const: "enabled"
+          title: "类型"
+          type: "string"
+      required:
+        - "budget_tokens"
+        - "type"
+      title: "启用思考配置"
+      type: "object"
+    ThinkingConfigDisabled:
+      additionalProperties: false
+      properties:
+        type:
+          const: "disabled"
+          title: "类型"
+          type: "string"
+      required:
+        - "type"
+      title: "禁用思考配置"
+      type: "object"
+      x-stainless-go-constant-constructor: true
+    ThinkingConfigAdaptive:
+      additionalProperties: false
+      properties:
+        display:
+          anyOf:
+            -
+              "$ref": "#/components/schemas/ThinkingDisplayMode"
+            -
+              type: "null"
+          description: "控制思考内容在响应中的呈现方式。设为 `summarized` 时正常返回思考内容。设为 `omitted` 时遮盖思考内容，但返回用于多轮连续性的签名。默认值为 `summarized`。"
+        type:
+          const: "adaptive"
+          title: "类型"
+          type: "string"
+      required:
+        - "type"
+      title: "自适应思考配置"
+      type: "object"
+    ToolChoiceAuto:
+      additionalProperties: false
+      description: "模型会自动决定是否使用工具。"
+      properties:
+        disable_parallel_tool_use:
+          description: "是否禁用并行工具使用。\n\n默认值为 `false`。设为 `true` 时，模型最多输出一次工具使用。"
+          title: "禁用并行工具使用"
+          type: "boolean"
+        type:
+          const: "auto"
+          title: "类型"
+          type: "string"
+      required:
+        - "type"
+      title: "自动工具选择"
+      type: "object"
+    ToolChoiceAny:
+      additionalProperties: false
+      description: "模型会使用任意可用工具。"
+      properties:
+        disable_parallel_tool_use:
+          description: "是否禁用并行工具使用。\n\n默认值为 `false`。设为 `true` 时，模型会刚好输出一次工具使用。"
+          title: "禁用并行工具使用"
+          type: "boolean"
+        type:
+          const: "any"
+          title: "类型"
+          type: "string"
+      required:
+        - "type"
+      title: "任意工具选择"
+      type: "object"
+    ToolChoiceTool:
+      additionalProperties: false
+      description: "模型会使用 `tool_choice.name` 指定的工具。"
+      properties:
+        disable_parallel_tool_use:
+          description: "是否禁用并行工具使用。\n\n默认值为 `false`。设为 `true` 时，模型会刚好输出一次工具使用。"
+          title: "禁用并行工具使用"
+          type: "boolean"
+        name:
+          description: "要使用的工具名称。"
+          title: "名称"
+          type: "string"
+        type:
+          const: "tool"
+          title: "类型"
+          type: "string"
+      required:
+        - "name"
+        - "type"
+      title: "指定工具选择"
+      type: "object"
+    ToolChoiceNone:
+      additionalProperties: false
+      description: "不允许模型使用工具。"
+      properties:
+        type:
+          const: "none"
+          title: "类型"
+          type: "string"
+      required:
+        - "type"
+      title: "不使用工具"
+      type: "object"
+      x-stainless-go-constant-constructor: true
+    InputSchema:
+      additionalProperties: true
+      properties:
+        properties:
+          anyOf:
+            -
+              additionalProperties: true
+              type: "object"
+            -
+              type: "null"
+          title: "属性"
+        required:
+          anyOf:
+            -
+              items:
+                type: "string"
+              type: "array"
+            -
+              type: "null"
+          title: "必需字段"
+        type:
+          const: "object"
+          title: "类型"
+          type: "string"
+      required:
+        - "type"
+      title: "输入 Schema"
+      type: "object"
+    AllowedCaller:
+      description: "指定谁可以调用工具。\n\n取值：\n    direct：模型可以直接调用此工具。\n    code_execution_20250825：工具可以从代码执行环境调用（v1）。\n    code_execution_20260120：工具可以从支持持久化的代码执行环境调用（v2）。"
+      enum:
+        - "direct"
+        - "code_execution_20250825"
+        - "code_execution_20260120"
+      title: "允许调用方"
+      type: "string"
+    JsonValue: {}
+    UserLocation:
+      additionalProperties: false
+      properties:
+        city:
+          anyOf:
+            -
+              maxLength: 255
+              minLength: 1
+              type: "string"
+            -
+              type: "null"
+          description: "用户所在城市。"
+          examples:
+            - "New York"
+            - "Tokyo"
+            - "Los Angeles"
+          title: "城市"
+        country:
+          anyOf:
+            -
+              maxLength: 2
+              minLength: 2
+              type: "string"
+            -
+              type: "null"
+          description: "用户所在国家/地区的两字母 [ISO 国家代码](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2)。"
+          examples:
+            - "US"
+            - "JP"
+            - "GB"
+          title: "国家/地区"
+        region:
+          anyOf:
+            -
+              maxLength: 255
+              minLength: 1
+              type: "string"
+            -
+              type: "null"
+          description: "用户所在地区。"
+          examples:
+            - "California"
+            - "Ontario"
+            - "Wales"
+          title: "地区"
+        timezone:
+          anyOf:
+            -
+              maxLength: 255
+              minLength: 1
+              type: "string"
+            -
+              type: "null"
+          description: "用户所在的 [IANA 时区](https://nodatime.org/TimeZones)。"
+          examples:
+            - "America/New_York"
+            - "Asia/Tokyo"
+            - "Europe/London"
+          title: "时区"
+        type:
+          const: "approximate"
+          title: "类型"
+          type: "string"
+      required:
+        - "type"
+      title: "用户位置"
+      type: "object"
+    RequestCitationsConfig:
+      additionalProperties: false
+      properties:
+        enabled:
+          title: "启用"
+          type: "boolean"
+      title: "请求引用配置"
+      type: "object"
+    ResponseCharLocationCitation:
+      properties:
+        cited_text:
+          title: "引用文本"
+          type: "string"
+        document_index:
+          minimum: 0
+          title: "文档索引"
+          type: "integer"
+        document_title:
+          anyOf:
+            -
+              type: "string"
+            -
+              type: "null"
+          title: "文档标题"
+        end_char_index:
+          title: "结束字符索引"
+          type: "integer"
+        file_id:
+          anyOf:
+            -
+              type: "string"
+            -
+              type: "null"
+          default: null
+          title: "文件 ID"
+        start_char_index:
+          minimum: 0
+          title: "起始字符索引"
+          type: "integer"
+        type:
+          const: "char_location"
+          default: "char_location"
+          title: "类型"
+          type: "string"
+      required:
+        - "cited_text"
+        - "document_index"
+        - "document_title"
+        - "end_char_index"
+        - "file_id"
+        - "start_char_index"
+        - "type"
+      title: "响应字符位置引用"
+      type: "object"
+    ResponsePageLocationCitation:
+      properties:
+        cited_text:
+          title: "引用文本"
+          type: "string"
+        document_index:
+          minimum: 0
+          title: "文档索引"
+          type: "integer"
+        document_title:
+          anyOf:
+            -
+              type: "string"
+            -
+              type: "null"
+          title: "文档标题"
+        end_page_number:
+          title: "结束页码"
+          type: "integer"
+        file_id:
+          anyOf:
+            -
+              type: "string"
+            -
+              type: "null"
+          default: null
+          title: "文件 ID"
+        start_page_number:
+          minimum: 1
+          title: "起始页码"
+          type: "integer"
+        type:
+          const: "page_location"
+          default: "page_location"
+          title: "类型"
+          type: "string"
+      required:
+        - "cited_text"
+        - "document_index"
+        - "document_title"
+        - "end_page_number"
+        - "file_id"
+        - "start_page_number"
+        - "type"
+      title: "响应页面位置引用"
+      type: "object"
+    ResponseContentBlockLocationCitation:
+      properties:
+        cited_text:
+          title: "引用文本"
+          type: "string"
+        document_index:
+          minimum: 0
+          title: "文档索引"
+          type: "integer"
+        document_title:
+          anyOf:
+            -
+              type: "string"
+            -
+              type: "null"
+          title: "文档标题"
+        end_block_index:
+          title: "结束块索引"
+          type: "integer"
+        file_id:
+          anyOf:
+            -
+              type: "string"
+            -
+              type: "null"
+          default: null
+          title: "文件 ID"
+        start_block_index:
+          minimum: 0
+          title: "起始块索引"
+          type: "integer"
+        type:
+          const: "content_block_location"
+          default: "content_block_location"
+          title: "类型"
+          type: "string"
+      required:
+        - "cited_text"
+        - "document_index"
+        - "document_title"
+        - "end_block_index"
+        - "file_id"
+        - "start_block_index"
+        - "type"
+      title: "响应内容块位置引用"
+      type: "object"
+    ResponseWebSearchResultLocationCitation:
+      properties:
+        cited_text:
+          title: "引用文本"
+          type: "string"
+        encrypted_index:
+          title: "加密索引"
+          type: "string"
+        title:
+          anyOf:
+            -
+              maxLength: 512
+              type: "string"
+            -
+              type: "null"
+          title: "标题"
+        type:
+          const: "web_search_result_location"
+          default: "web_search_result_location"
+          title: "类型"
+          type: "string"
+        url:
+          title: "URL"
+          type: "string"
+      required:
+        - "cited_text"
+        - "encrypted_index"
+        - "title"
+        - "type"
+        - "url"
+      title: "响应网页搜索结果位置引用"
+      type: "object"
+    ResponseSearchResultLocationCitation:
+      properties:
+        cited_text:
+          title: "引用文本"
+          type: "string"
+        end_block_index:
+          title: "结束块索引"
+          type: "integer"
+        search_result_index:
+          minimum: 0
+          title: "搜索结果索引"
+          type: "integer"
+        source:
+          title: "来源"
+          type: "string"
+        start_block_index:
+          minimum: 0
+          title: "起始块索引"
+          type: "integer"
+        title:
+          anyOf:
+            -
+              type: "string"
+            -
+              type: "null"
+          title: "标题"
+        type:
+          const: "search_result_location"
+          default: "search_result_location"
+          title: "类型"
+          type: "string"
+      required:
+        - "cited_text"
+        - "end_block_index"
+        - "search_result_index"
+        - "source"
+        - "start_block_index"
+        - "title"
+        - "type"
+      title: "响应搜索结果位置引用"
+      type: "object"
+    DirectCaller:
+      additionalProperties: false
+      description: "模型直接发起的工具调用。"
+      properties:
+        type:
+          const: "direct"
+          title: "类型"
+          type: "string"
+      required:
+        - "type"
+      title: "直接调用方"
+      type: "object"
+    ServerToolCaller:
+      additionalProperties: false
+      description: "服务器端工具生成的工具调用。"
+      properties:
+        tool_id:
+          pattern: "^srvtoolu_[a-zA-Z0-9_]+$"
+          title: "工具 ID"
+          type: "string"
+        type:
+          const: "code_execution_20250825"
+          title: "类型"
+          type: "string"
+      required:
+        - "tool_id"
+        - "type"
+      title: "服务器工具调用方"
+      type: "object"
+    ServerToolCaller_20260120:
+      additionalProperties: false
+      properties:
+        tool_id:
+          pattern: "^srvtoolu_[a-zA-Z0-9_]+$"
+          title: "工具 ID"
+          type: "string"
+        type:
+          const: "code_execution_20260120"
+          title: "类型"
+          type: "string"
+      required:
+        - "tool_id"
+        - "type"
+      title: "服务器工具调用方_20260120"
+      type: "object"
+    ResponseWebSearchToolResultError:
+      properties:
+        error_code:
+          "$ref": "#/components/schemas/WebSearchToolResultErrorCode"
+        type:
+          const: "web_search_tool_result_error"
+          default: "web_search_tool_result_error"
+          title: "类型"
+          type: "string"
+      required:
+        - "error_code"
+        - "type"
+      title: "响应网页搜索工具结果错误"
+      type: "object"
+    ResponseWebSearchResultBlock:
+      properties:
+        encrypted_content:
+          title: "加密内容"
+          type: "string"
+        page_age:
+          anyOf:
+            -
+              type: "string"
+            -
+              type: "null"
+          default: null
+          title: "页面时间"
+        title:
+          title: "标题"
+          type: "string"
+        type:
+          const: "web_search_result"
+          default: "web_search_result"
+          title: "类型"
+          type: "string"
+        url:
+          title: "URL"
+          type: "string"
+      required:
+        - "encrypted_content"
+        - "page_age"
+        - "title"
+        - "type"
+        - "url"
+      title: "响应网页搜索结果块"
+      type: "object"
+    ResponseWebFetchToolResultError:
+      properties:
+        error_code:
+          "$ref": "#/components/schemas/WebFetchToolResultErrorCode"
+        type:
+          const: "web_fetch_tool_result_error"
+          default: "web_fetch_tool_result_error"
+          title: "类型"
+          type: "string"
+      required:
+        - "error_code"
+        - "type"
+      title: "响应网页获取工具结果错误"
+      type: "object"
+    ResponseWebFetchResultBlock:
+      properties:
+        content:
+          "$ref": "#/components/schemas/ResponseDocumentBlock"
+        retrieved_at:
+          anyOf:
+            -
+              type: "string"
+            -
+              type: "null"
+          default: null
+          description: "内容检索时间的 ISO 8601 时间戳。"
+          title: "检索时间"
+        type:
+          const: "web_fetch_result"
+          default: "web_fetch_result"
+          title: "类型"
+          type: "string"
+        url:
+          description: "已获取内容的 URL。"
+          title: "URL"
+          type: "string"
+      required:
+        - "content"
+        - "retrieved_at"
+        - "type"
+        - "url"
+      title: "响应网页获取结果块"
+      type: "object"
+    ResponseCodeExecutionToolResultError:
+      properties:
+        error_code:
+          "$ref": "#/components/schemas/CodeExecutionToolResultErrorCode"
+        type:
+          const: "code_execution_tool_result_error"
+          default: "code_execution_tool_result_error"
+          title: "类型"
+          type: "string"
+      required:
+        - "error_code"
+        - "type"
+      title: "响应代码执行工具结果错误"
+      type: "object"
+    ResponseCodeExecutionResultBlock:
+      properties:
+        content:
+          items:
+            "$ref": "#/components/schemas/ResponseCodeExecutionOutputBlock"
+          title: "内容"
+          type: "array"
+        return_code:
+          title: "返回码"
+          type: "integer"
+        stderr:
+          title: "标准错误"
+          type: "string"
+        stdout:
+          title: "标准输出"
+          type: "string"
+        type:
+          const: "code_execution_result"
+          default: "code_execution_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "content"
+        - "return_code"
+        - "stderr"
+        - "stdout"
+        - "type"
+      title: "响应代码执行结果块"
+      type: "object"
+    ResponseEncryptedCodeExecutionResultBlock:
+      description: "包含加密 stdout 的代码执行结果，用于 PFC + web_search 结果。"
+      properties:
+        content:
+          items:
+            "$ref": "#/components/schemas/ResponseCodeExecutionOutputBlock"
+          title: "内容"
+          type: "array"
+        encrypted_stdout:
+          title: "加密标准输出"
+          type: "string"
+        return_code:
+          title: "返回码"
+          type: "integer"
+        stderr:
+          title: "标准错误"
+          type: "string"
+        type:
+          const: "encrypted_code_execution_result"
+          default: "encrypted_code_execution_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "content"
+        - "encrypted_stdout"
+        - "return_code"
+        - "stderr"
+        - "type"
+      title: "响应加密代码执行结果块"
+      type: "object"
+    ResponseBashCodeExecutionToolResultError:
+      properties:
+        error_code:
+          "$ref": "#/components/schemas/BashCodeExecutionToolResultErrorCode"
+        type:
+          const: "bash_code_execution_tool_result_error"
+          default: "bash_code_execution_tool_result_error"
+          title: "类型"
+          type: "string"
+      required:
+        - "error_code"
+        - "type"
+      title: "响应 Bash 代码执行工具结果错误"
+      type: "object"
+    ResponseBashCodeExecutionResultBlock:
+      properties:
+        content:
+          items:
+            "$ref": "#/components/schemas/ResponseBashCodeExecutionOutputBlock"
+          title: "内容"
+          type: "array"
+        return_code:
+          title: "返回码"
+          type: "integer"
+        stderr:
+          title: "标准错误"
+          type: "string"
+        stdout:
+          title: "标准输出"
+          type: "string"
+        type:
+          const: "bash_code_execution_result"
+          default: "bash_code_execution_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "content"
+        - "return_code"
+        - "stderr"
+        - "stdout"
+        - "type"
+      title: "响应 Bash 代码执行结果块"
+      type: "object"
+    ResponseTextEditorCodeExecutionToolResultError:
+      properties:
+        error_code:
+          "$ref": "#/components/schemas/TextEditorCodeExecutionToolResultErrorCode"
+        error_message:
+          anyOf:
+            -
+              type: "string"
+            -
+              type: "null"
+          default: null
+          title: "错误消息"
+        type:
+          const: "text_editor_code_execution_tool_result_error"
+          default: "text_editor_code_execution_tool_result_error"
+          title: "类型"
+          type: "string"
+      required:
+        - "error_code"
+        - "error_message"
+        - "type"
+      title: "响应文本编辑器代码执行工具结果错误"
+      type: "object"
+    ResponseTextEditorCodeExecutionViewResultBlock:
+      properties:
+        content:
+          title: "内容"
+          type: "string"
+        file_type:
+          enum:
+            - "text"
+            - "image"
+            - "pdf"
+          title: "文件类型"
+          type: "string"
+        num_lines:
+          anyOf:
+            -
+              type: "integer"
+            -
+              type: "null"
+          default: null
+          title: "行数"
+        start_line:
+          anyOf:
+            -
+              type: "integer"
+            -
+              type: "null"
+          default: null
+          title: "起始行"
+        total_lines:
+          anyOf:
+            -
+              type: "integer"
+            -
+              type: "null"
+          default: null
+          title: "总行数"
+        type:
+          const: "text_editor_code_execution_view_result"
+          default: "text_editor_code_execution_view_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "content"
+        - "file_type"
+        - "num_lines"
+        - "start_line"
+        - "total_lines"
+        - "type"
+      title: "响应文本编辑器代码执行查看结果块"
+      type: "object"
+    ResponseTextEditorCodeExecutionCreateResultBlock:
+      properties:
+        is_file_update:
+          title: "是否文件更新"
+          type: "boolean"
+        type:
+          const: "text_editor_code_execution_create_result"
+          default: "text_editor_code_execution_create_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "is_file_update"
+        - "type"
+      title: "响应文本编辑器代码执行创建结果块"
+      type: "object"
+    ResponseTextEditorCodeExecutionStrReplaceResultBlock:
+      properties:
+        lines:
+          anyOf:
+            -
+              items:
+                type: "string"
+              type: "array"
+            -
+              type: "null"
+          default: null
+          title: "行"
+        new_lines:
+          anyOf:
+            -
+              type: "integer"
+            -
+              type: "null"
+          default: null
+          title: "新行"
+        new_start:
+          anyOf:
+            -
+              type: "integer"
+            -
+              type: "null"
+          default: null
+          title: "新起点"
+        old_lines:
+          anyOf:
+            -
+              type: "integer"
+            -
+              type: "null"
+          default: null
+          title: "旧行"
+        old_start:
+          anyOf:
+            -
+              type: "integer"
+            -
+              type: "null"
+          default: null
+          title: "旧起点"
+        type:
+          const: "text_editor_code_execution_str_replace_result"
+          default: "text_editor_code_execution_str_replace_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "lines"
+        - "new_lines"
+        - "new_start"
+        - "old_lines"
+        - "old_start"
+        - "type"
+      title: "响应文本编辑器代码执行字符串替换结果块"
+      type: "object"
+    ResponseToolSearchToolResultError:
+      properties:
+        error_code:
+          "$ref": "#/components/schemas/ToolSearchToolResultErrorCode"
+        error_message:
+          anyOf:
+            -
+              type: "string"
+            -
+              type: "null"
+          default: null
+          title: "错误消息"
+        type:
+          const: "tool_search_tool_result_error"
+          default: "tool_search_tool_result_error"
+          title: "类型"
+          type: "string"
+      required:
+        - "error_code"
+        - "error_message"
+        - "type"
+      title: "响应工具搜索结果错误"
+      type: "object"
+    ResponseToolSearchToolSearchResultBlock:
+      properties:
+        tool_references:
+          items:
+            "$ref": "#/components/schemas/ResponseToolReferenceBlock"
+          title: "工具引用"
+          type: "array"
+        type:
+          const: "tool_search_tool_search_result"
+          default: "tool_search_tool_search_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "tool_references"
+        - "type"
+      title: "响应工具搜索结果块"
+      type: "object"
+    RequestImageBlock:
+      additionalProperties: false
+      properties:
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        source:
+          discriminator:
+            mapping:
+              base64: "#/components/schemas/Base64ImageSource"
+              url: "#/components/schemas/URLImageSource"
+            propertyName: "type"
+          oneOf:
+            -
+              "$ref": "#/components/schemas/Base64ImageSource"
+            -
+              "$ref": "#/components/schemas/URLImageSource"
+          title: "来源"
+        type:
+          const: "image"
+          title: "类型"
+          type: "string"
+      required:
+        - "source"
+        - "type"
+      title: "请求图片块"
+      type: "object"
+    RequestDocumentBlock:
+      additionalProperties: false
+      properties:
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        citations:
+          anyOf:
+            -
+              "$ref": "#/components/schemas/RequestCitationsConfig"
+            -
+              type: "null"
+        context:
+          anyOf:
+            -
+              minLength: 1
+              type: "string"
+            -
+              type: "null"
+          title: "上下文"
+        source:
+          discriminator:
+            mapping:
+              base64: "#/components/schemas/Base64PDFSource"
+              content: "#/components/schemas/ContentBlockSource"
+              text: "#/components/schemas/PlainTextSource"
+              url: "#/components/schemas/URLPDFSource"
+            propertyName: "type"
+          oneOf:
+            -
+              "$ref": "#/components/schemas/Base64PDFSource"
+            -
+              "$ref": "#/components/schemas/PlainTextSource"
+            -
+              "$ref": "#/components/schemas/ContentBlockSource"
+            -
+              "$ref": "#/components/schemas/URLPDFSource"
+          title: "来源"
+        title:
+          anyOf:
+            -
+              maxLength: 500
+              minLength: 1
+              type: "string"
+            -
+              type: "null"
+          title: "标题"
+        type:
+          const: "document"
+          title: "类型"
+          type: "string"
+      required:
+        - "source"
+        - "type"
+      title: "请求文档块"
+      type: "object"
+    RequestSearchResultBlock:
+      additionalProperties: false
+      properties:
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        citations:
+          "$ref": "#/components/schemas/RequestCitationsConfig"
+        content:
+          items:
+            "$ref": "#/components/schemas/RequestTextBlock"
+          title: "内容"
+          type: "array"
+        source:
+          title: "来源"
+          type: "string"
+        title:
+          title: "标题"
+          type: "string"
+        type:
+          const: "search_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "content"
+        - "source"
+        - "title"
+        - "type"
+      title: "请求搜索结果块"
+      type: "object"
+    RequestThinkingBlock:
+      additionalProperties: false
+      properties:
+        signature:
+          title: "签名"
+          type: "string"
+        thinking:
+          title: "思考"
+          type: "string"
+        type:
+          const: "thinking"
+          title: "类型"
+          type: "string"
+      required:
+        - "signature"
+        - "thinking"
+        - "type"
+      title: "请求思考块"
+      type: "object"
+    RequestRedactedThinkingBlock:
+      additionalProperties: false
+      properties:
+        data:
+          title: "数据"
+          type: "string"
+        type:
+          const: "redacted_thinking"
+          title: "类型"
+          type: "string"
+      required:
+        - "data"
+        - "type"
+      title: "请求遮盖思考块"
+      type: "object"
+    RequestToolUseBlock:
+      additionalProperties: false
+      properties:
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        caller:
+          discriminator:
+            mapping:
+              code_execution_20250825: "#/components/schemas/ServerToolCaller"
+              code_execution_20260120: "#/components/schemas/ServerToolCaller_20260120"
+              direct: "#/components/schemas/DirectCaller"
+            propertyName: "type"
+          oneOf:
+            -
+              "$ref": "#/components/schemas/DirectCaller"
+            -
+              "$ref": "#/components/schemas/ServerToolCaller"
+            -
+              "$ref": "#/components/schemas/ServerToolCaller_20260120"
+          title: "调用方"
+        id:
+          pattern: "^[a-zA-Z0-9_-]+$"
+          title: "ID"
+          type: "string"
+        input:
+          additionalProperties: true
+          title: "输入"
+          type: "object"
+        name:
+          maxLength: 200
+          minLength: 1
+          title: "名称"
+          type: "string"
+        type:
+          const: "tool_use"
+          title: "类型"
+          type: "string"
+      required:
+        - "id"
+        - "input"
+        - "name"
+        - "type"
+      title: "请求工具使用块"
+      type: "object"
+    RequestToolResultBlock:
+      additionalProperties: false
+      properties:
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        content:
+          anyOf:
+            -
+              type: "string"
+              x-stainless-skip:
+                - "go"
+                - "cli"
+            -
+              items:
+                discriminator:
+                  mapping:
+                    document: "#/components/schemas/RequestDocumentBlock"
+                    image: "#/components/schemas/RequestImageBlock"
+                    search_result: "#/components/schemas/RequestSearchResultBlock"
+                    text: "#/components/schemas/RequestTextBlock"
+                    tool_reference: "#/components/schemas/RequestToolReferenceBlock"
+                  propertyName: "type"
+                oneOf:
+                  -
+                    "$ref": "#/components/schemas/RequestTextBlock"
+                  -
+                    "$ref": "#/components/schemas/RequestImageBlock"
+                  -
+                    "$ref": "#/components/schemas/RequestSearchResultBlock"
+                  -
+                    "$ref": "#/components/schemas/RequestDocumentBlock"
+                  -
+                    "$ref": "#/components/schemas/RequestToolReferenceBlock"
+                title: "块"
+              type: "array"
+              x-stainless-naming:
+                python:
+                  type_name: "Content"
+                ruby:
+                  type_name: "Content"
+                php:
+                  type_name: "Content"
+          title: "内容"
+        is_error:
+          title: "是否错误"
+          type: "boolean"
+        tool_use_id:
+          pattern: "^[a-zA-Z0-9_-]+$"
+          title: "工具使用 ID"
+          type: "string"
+        type:
+          const: "tool_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "tool_use_id"
+        - "type"
+      title: "请求工具结果块"
+      type: "object"
+    RequestServerToolUseBlock:
+      additionalProperties: false
+      properties:
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        caller:
+          discriminator:
+            mapping:
+              code_execution_20250825: "#/components/schemas/ServerToolCaller"
+              code_execution_20260120: "#/components/schemas/ServerToolCaller_20260120"
+              direct: "#/components/schemas/DirectCaller"
+            propertyName: "type"
+          oneOf:
+            -
+              "$ref": "#/components/schemas/DirectCaller"
+            -
+              "$ref": "#/components/schemas/ServerToolCaller"
+            -
+              "$ref": "#/components/schemas/ServerToolCaller_20260120"
+          title: "调用方"
+        id:
+          pattern: "^srvtoolu_[a-zA-Z0-9_]+$"
+          title: "ID"
+          type: "string"
+        input:
+          additionalProperties: true
+          title: "输入"
+          type: "object"
+        name:
+          enum:
+            - "web_search"
+            - "web_fetch"
+            - "code_execution"
+            - "bash_code_execution"
+            - "text_editor_code_execution"
+            - "tool_search_tool_regex"
+            - "tool_search_tool_bm25"
+          title: "名称"
+          type: "string"
+        type:
+          const: "server_tool_use"
+          title: "类型"
+          type: "string"
+      required:
+        - "id"
+        - "input"
+        - "name"
+        - "type"
+      title: "请求服务器工具使用块"
+      type: "object"
+    RequestWebSearchToolResultBlock:
+      additionalProperties: false
+      properties:
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        caller:
+          discriminator:
+            mapping:
+              code_execution_20250825: "#/components/schemas/ServerToolCaller"
+              code_execution_20260120: "#/components/schemas/ServerToolCaller_20260120"
+              direct: "#/components/schemas/DirectCaller"
+            propertyName: "type"
+          oneOf:
+            -
+              "$ref": "#/components/schemas/DirectCaller"
+            -
+              "$ref": "#/components/schemas/ServerToolCaller"
+            -
+              "$ref": "#/components/schemas/ServerToolCaller_20260120"
+          title: "调用方"
+        content:
+          anyOf:
+            -
+              items:
+                "$ref": "#/components/schemas/RequestWebSearchResultBlock"
+              type: "array"
+              title: "网页搜索工具结果块项"
+            -
+              "$ref": "#/components/schemas/RequestWebSearchToolResultError"
+              x-stainless-naming:
+                go:
+                  variant_constructor: "NewWebSearchToolRequestError"
+          title: "内容"
+        tool_use_id:
+          pattern: "^srvtoolu_[a-zA-Z0-9_]+$"
+          title: "工具使用 ID"
+          type: "string"
+        type:
+          const: "web_search_tool_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "content"
+        - "tool_use_id"
+        - "type"
+      title: "请求网页搜索工具结果块"
+      type: "object"
+    RequestWebFetchToolResultBlock:
+      additionalProperties: false
+      properties:
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        caller:
+          discriminator:
+            mapping:
+              code_execution_20250825: "#/components/schemas/ServerToolCaller"
+              code_execution_20260120: "#/components/schemas/ServerToolCaller_20260120"
+              direct: "#/components/schemas/DirectCaller"
+            propertyName: "type"
+          oneOf:
+            -
+              "$ref": "#/components/schemas/DirectCaller"
+            -
+              "$ref": "#/components/schemas/ServerToolCaller"
+            -
+              "$ref": "#/components/schemas/ServerToolCaller_20260120"
+          title: "调用方"
+        content:
+          anyOf:
+            -
+              "$ref": "#/components/schemas/RequestWebFetchToolResultError"
+            -
+              "$ref": "#/components/schemas/RequestWebFetchResultBlock"
+          title: "内容"
+        tool_use_id:
+          pattern: "^srvtoolu_[a-zA-Z0-9_]+$"
+          title: "工具使用 ID"
+          type: "string"
+        type:
+          const: "web_fetch_tool_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "content"
+        - "tool_use_id"
+        - "type"
+      title: "请求网页获取工具结果块"
+      type: "object"
+    RequestCodeExecutionToolResultBlock:
+      additionalProperties: false
+      properties:
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        content:
+          anyOf:
+            -
+              "$ref": "#/components/schemas/RequestCodeExecutionToolResultError"
+            -
+              "$ref": "#/components/schemas/RequestCodeExecutionResultBlock"
+            -
+              "$ref": "#/components/schemas/RequestEncryptedCodeExecutionResultBlock"
+          title: "内容"
+        tool_use_id:
+          pattern: "^srvtoolu_[a-zA-Z0-9_]+$"
+          title: "工具使用 ID"
+          type: "string"
+        type:
+          const: "code_execution_tool_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "content"
+        - "tool_use_id"
+        - "type"
+      title: "请求代码执行工具结果块"
+      type: "object"
+    RequestBashCodeExecutionToolResultBlock:
+      additionalProperties: false
+      properties:
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        content:
+          anyOf:
+            -
+              "$ref": "#/components/schemas/RequestBashCodeExecutionToolResultError"
+            -
+              "$ref": "#/components/schemas/RequestBashCodeExecutionResultBlock"
+          title: "内容"
+        tool_use_id:
+          pattern: "^srvtoolu_[a-zA-Z0-9_]+$"
+          title: "工具使用 ID"
+          type: "string"
+        type:
+          const: "bash_code_execution_tool_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "content"
+        - "tool_use_id"
+        - "type"
+      title: "请求 Bash 代码执行工具结果块"
+      type: "object"
+    RequestTextEditorCodeExecutionToolResultBlock:
+      additionalProperties: false
+      properties:
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        content:
+          anyOf:
+            -
+              "$ref": "#/components/schemas/RequestTextEditorCodeExecutionToolResultError"
+            -
+              "$ref": "#/components/schemas/RequestTextEditorCodeExecutionViewResultBlock"
+            -
+              "$ref": "#/components/schemas/RequestTextEditorCodeExecutionCreateResultBlock"
+            -
+              "$ref": "#/components/schemas/RequestTextEditorCodeExecutionStrReplaceResultBlock"
+          title: "内容"
+        tool_use_id:
+          pattern: "^srvtoolu_[a-zA-Z0-9_]+$"
+          title: "工具使用 ID"
+          type: "string"
+        type:
+          const: "text_editor_code_execution_tool_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "content"
+        - "tool_use_id"
+        - "type"
+      title: "请求文本编辑器代码执行工具结果块"
+      type: "object"
+    RequestToolSearchToolResultBlock:
+      additionalProperties: false
+      properties:
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        content:
+          anyOf:
+            -
+              "$ref": "#/components/schemas/RequestToolSearchToolResultError"
+            -
+              "$ref": "#/components/schemas/RequestToolSearchToolSearchResultBlock"
+          title: "内容"
+        tool_use_id:
+          pattern: "^srvtoolu_[a-zA-Z0-9_]+$"
+          title: "工具使用 ID"
+          type: "string"
+        type:
+          const: "tool_search_tool_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "content"
+        - "tool_use_id"
+        - "type"
+      title: "请求工具搜索结果块"
+      type: "object"
+    RequestContainerUploadBlock:
+      additionalProperties: false
+      description: "表示要上传到容器的文件的内容块。\n通过此内容块上传的文件将在容器的输入目录中可用。"
+      properties:
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        file_id:
+          title: "文件 ID"
+          type: "string"
+        type:
+          const: "container_upload"
+          title: "类型"
+          type: "string"
+      required:
+        - "file_id"
+        - "type"
+      title: "请求容器上传块"
+      type: "object"
+    ThinkingDisplayMode:
+      enum:
+        - "summarized"
+        - "omitted"
+      title: "思考显示模式"
+      type: "string"
+    WebSearchToolResultErrorCode:
+      enum:
+        - "invalid_tool_input"
+        - "unavailable"
+        - "max_uses_exceeded"
+        - "too_many_requests"
+        - "query_too_long"
+        - "request_too_large"
+      title: "网页搜索工具结果错误码"
+      type: "string"
+    WebFetchToolResultErrorCode:
+      enum:
+        - "invalid_tool_input"
+        - "url_too_long"
+        - "url_not_allowed"
+        - "url_not_accessible"
+        - "unsupported_content_type"
+        - "too_many_requests"
+        - "max_uses_exceeded"
+        - "unavailable"
+      title: "网页获取工具结果错误码"
+      type: "string"
+    ResponseDocumentBlock:
+      properties:
+        citations:
+          anyOf:
+            -
+              "$ref": "#/components/schemas/ResponseCitationsConfig"
+            -
+              type: "null"
+          default: null
+          description: "文档引用配置。"
+        source:
+          discriminator:
+            mapping:
+              base64: "#/components/schemas/Base64PDFSource"
+              text: "#/components/schemas/PlainTextSource"
+            propertyName: "type"
+          oneOf:
+            -
+              "$ref": "#/components/schemas/Base64PDFSource"
+            -
+              "$ref": "#/components/schemas/PlainTextSource"
+          title: "来源"
+        title:
+          anyOf:
+            -
+              type: "string"
+            -
+              type: "null"
+          default: null
+          description: "文档标题。"
+          title: "标题"
+        type:
+          const: "document"
+          default: "document"
+          title: "类型"
+          type: "string"
+      required:
+        - "citations"
+        - "source"
+        - "title"
+        - "type"
+      title: "响应文档块"
+      type: "object"
+    CodeExecutionToolResultErrorCode:
+      enum:
+        - "invalid_tool_input"
+        - "unavailable"
+        - "too_many_requests"
+        - "execution_time_exceeded"
+      title: "代码执行工具结果错误码"
+      type: "string"
+    ResponseCodeExecutionOutputBlock:
+      properties:
+        file_id:
+          title: "文件 ID"
+          type: "string"
+        type:
+          const: "code_execution_output"
+          default: "code_execution_output"
+          title: "类型"
+          type: "string"
+      required:
+        - "file_id"
+        - "type"
+      title: "响应代码执行输出块"
+      type: "object"
+    BashCodeExecutionToolResultErrorCode:
+      enum:
+        - "invalid_tool_input"
+        - "unavailable"
+        - "too_many_requests"
+        - "execution_time_exceeded"
+        - "output_file_too_large"
+      title: "Bash 代码执行工具结果错误码"
+      type: "string"
+    ResponseBashCodeExecutionOutputBlock:
+      properties:
+        file_id:
+          title: "文件 ID"
+          type: "string"
+        type:
+          const: "bash_code_execution_output"
+          default: "bash_code_execution_output"
+          title: "类型"
+          type: "string"
+      required:
+        - "file_id"
+        - "type"
+      title: "响应 Bash 代码执行输出块"
+      type: "object"
+    TextEditorCodeExecutionToolResultErrorCode:
+      enum:
+        - "invalid_tool_input"
+        - "unavailable"
+        - "too_many_requests"
+        - "execution_time_exceeded"
+        - "file_not_found"
+      title: "文本编辑器代码执行工具结果错误码"
+      type: "string"
+    ToolSearchToolResultErrorCode:
+      enum:
+        - "invalid_tool_input"
+        - "unavailable"
+        - "too_many_requests"
+        - "execution_time_exceeded"
+      title: "工具搜索结果错误码"
+      type: "string"
+    ResponseToolReferenceBlock:
+      properties:
+        tool_name:
+          maxLength: 256
+          minLength: 1
+          pattern: "^[a-zA-Z0-9_-]{1,256}$"
+          title: "工具名称"
+          type: "string"
+        type:
+          const: "tool_reference"
+          default: "tool_reference"
+          title: "类型"
+          type: "string"
+      required:
+        - "tool_name"
+        - "type"
+      title: "响应工具引用块"
+      type: "object"
+    Base64ImageSource:
+      additionalProperties: false
+      properties:
+        data:
+          format: "byte"
+          title: "数据"
+          type: "string"
+        media_type:
+          enum:
+            - "image/jpeg"
+            - "image/png"
+            - "image/gif"
+            - "image/webp"
+          title: "媒体类型"
+          type: "string"
+        type:
+          const: "base64"
+          title: "类型"
+          type: "string"
+      required:
+        - "data"
+        - "media_type"
+        - "type"
+      title: "Base64 图片来源"
+      type: "object"
+    URLImageSource:
+      additionalProperties: false
+      properties:
+        type:
+          const: "url"
+          title: "类型"
+          type: "string"
+        url:
+          title: "URL"
+          type: "string"
+      required:
+        - "type"
+        - "url"
+      title: "URL 图片来源"
+      type: "object"
+    Base64PDFSource:
+      additionalProperties: false
+      properties:
+        data:
+          format: "byte"
+          title: "数据"
+          type: "string"
+        media_type:
+          const: "application/pdf"
+          title: "媒体类型"
+          type: "string"
+        type:
+          const: "base64"
+          title: "类型"
+          type: "string"
+      required:
+        - "data"
+        - "media_type"
+        - "type"
+      title: "Base64 PDF 来源"
+      type: "object"
+    PlainTextSource:
+      additionalProperties: false
+      properties:
+        data:
+          title: "数据"
+          type: "string"
+        media_type:
+          const: "text/plain"
+          title: "媒体类型"
+          type: "string"
+        type:
+          const: "text"
+          title: "类型"
+          type: "string"
+      required:
+        - "data"
+        - "media_type"
+        - "type"
+      title: "纯文本来源"
+      type: "object"
+    ContentBlockSource:
+      additionalProperties: false
+      properties:
+        content:
+          anyOf:
+            -
+              type: "string"
+            -
+              items:
+                discriminator:
+                  mapping:
+                    image: "#/components/schemas/RequestImageBlock"
+                    text: "#/components/schemas/RequestTextBlock"
+                  propertyName: "type"
+                oneOf:
+                  -
+                    "$ref": "#/components/schemas/RequestTextBlock"
+                  -
+                    "$ref": "#/components/schemas/RequestImageBlock"
+                x-stainless-naming:
+                  go:
+                    type_name: "ContentBlockSourceContentItem"
+                title: "内容块来源内容项"
+              type: "array"
+              title: "内容块来源内容"
+          title: "内容"
+        type:
+          const: "content"
+          title: "类型"
+          type: "string"
+      required:
+        - "content"
+        - "type"
+      title: "内容块来源"
+      type: "object"
+    URLPDFSource:
+      additionalProperties: false
+      properties:
+        type:
+          const: "url"
+          title: "类型"
+          type: "string"
+        url:
+          title: "URL"
+          type: "string"
+      required:
+        - "type"
+        - "url"
+      title: "URL PDF 来源"
+      type: "object"
+    RequestToolReferenceBlock:
+      additionalProperties: false
+      description: "可包含在 tool_result 内容中的工具引用块。"
+      properties:
+        cache_control:
+          anyOf:
+            -
+              discriminator:
+                mapping:
+                  ephemeral: "#/components/schemas/CacheControlEphemeral"
+                propertyName: "type"
+              oneOf:
+                -
+                  "$ref": "#/components/schemas/CacheControlEphemeral"
+            -
+              type: "null"
+          description: "在此内容块处创建缓存控制断点。"
+          title: "缓存控制"
+        tool_name:
+          maxLength: 256
+          minLength: 1
+          pattern: "^[a-zA-Z0-9_-]{1,256}$"
+          title: "工具名称"
+          type: "string"
+        type:
+          const: "tool_reference"
+          title: "类型"
+          type: "string"
+      required:
+        - "tool_name"
+        - "type"
+      title: "请求工具引用块"
+      type: "object"
+    RequestWebSearchResultBlock:
+      additionalProperties: false
+      properties:
+        encrypted_content:
+          title: "加密内容"
+          type: "string"
+        page_age:
+          anyOf:
+            -
+              type: "string"
+            -
+              type: "null"
+          title: "页面时间"
+        title:
+          title: "标题"
+          type: "string"
+        type:
+          const: "web_search_result"
+          title: "类型"
+          type: "string"
+        url:
+          title: "URL"
+          type: "string"
+      required:
+        - "encrypted_content"
+        - "title"
+        - "type"
+        - "url"
+      title: "请求网页搜索结果块"
+      type: "object"
+    RequestWebSearchToolResultError:
+      additionalProperties: false
+      properties:
+        error_code:
+          "$ref": "#/components/schemas/WebSearchToolResultErrorCode"
+        type:
+          const: "web_search_tool_result_error"
+          title: "类型"
+          type: "string"
+      required:
+        - "error_code"
+        - "type"
+      title: "请求网页搜索工具结果错误"
+      type: "object"
+    RequestWebFetchToolResultError:
+      additionalProperties: false
+      properties:
+        error_code:
+          "$ref": "#/components/schemas/WebFetchToolResultErrorCode"
+        type:
+          const: "web_fetch_tool_result_error"
+          title: "类型"
+          type: "string"
+      required:
+        - "error_code"
+        - "type"
+      title: "请求网页获取工具结果错误"
+      type: "object"
+    RequestWebFetchResultBlock:
+      additionalProperties: false
+      properties:
+        content:
+          "$ref": "#/components/schemas/RequestDocumentBlock"
+        retrieved_at:
+          anyOf:
+            -
+              type: "string"
+            -
+              type: "null"
+          description: "内容检索时间的 ISO 8601 时间戳。"
+          title: "检索时间"
+        type:
+          const: "web_fetch_result"
+          title: "类型"
+          type: "string"
+        url:
+          description: "已获取内容的 URL。"
+          title: "URL"
+          type: "string"
+      required:
+        - "content"
+        - "type"
+        - "url"
+      title: "请求网页获取结果块"
+      type: "object"
+    RequestCodeExecutionToolResultError:
+      additionalProperties: false
+      properties:
+        error_code:
+          "$ref": "#/components/schemas/CodeExecutionToolResultErrorCode"
+        type:
+          const: "code_execution_tool_result_error"
+          title: "类型"
+          type: "string"
+      required:
+        - "error_code"
+        - "type"
+      title: "请求代码执行工具结果错误"
+      type: "object"
+    RequestCodeExecutionResultBlock:
+      additionalProperties: false
+      properties:
+        content:
+          items:
+            "$ref": "#/components/schemas/RequestCodeExecutionOutputBlock"
+          title: "内容"
+          type: "array"
+        return_code:
+          title: "返回码"
+          type: "integer"
+        stderr:
+          title: "标准错误"
+          type: "string"
+        stdout:
+          title: "标准输出"
+          type: "string"
+        type:
+          const: "code_execution_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "content"
+        - "return_code"
+        - "stderr"
+        - "stdout"
+        - "type"
+      title: "请求代码执行结果块"
+      type: "object"
+    RequestEncryptedCodeExecutionResultBlock:
+      additionalProperties: false
+      description: "包含加密 stdout 的代码执行结果，用于 PFC + web_search 结果。"
+      properties:
+        content:
+          items:
+            "$ref": "#/components/schemas/RequestCodeExecutionOutputBlock"
+          title: "内容"
+          type: "array"
+        encrypted_stdout:
+          title: "加密标准输出"
+          type: "string"
+        return_code:
+          title: "返回码"
+          type: "integer"
+        stderr:
+          title: "标准错误"
+          type: "string"
+        type:
+          const: "encrypted_code_execution_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "content"
+        - "encrypted_stdout"
+        - "return_code"
+        - "stderr"
+        - "type"
+      title: "请求加密代码执行结果块"
+      type: "object"
+    RequestBashCodeExecutionToolResultError:
+      additionalProperties: false
+      properties:
+        error_code:
+          "$ref": "#/components/schemas/BashCodeExecutionToolResultErrorCode"
+        type:
+          const: "bash_code_execution_tool_result_error"
+          title: "类型"
+          type: "string"
+      required:
+        - "error_code"
+        - "type"
+      title: "请求 Bash 代码执行工具结果错误"
+      type: "object"
+    RequestBashCodeExecutionResultBlock:
+      additionalProperties: false
+      properties:
+        content:
+          items:
+            "$ref": "#/components/schemas/RequestBashCodeExecutionOutputBlock"
+          title: "内容"
+          type: "array"
+        return_code:
+          title: "返回码"
+          type: "integer"
+        stderr:
+          title: "标准错误"
+          type: "string"
+        stdout:
+          title: "标准输出"
+          type: "string"
+        type:
+          const: "bash_code_execution_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "content"
+        - "return_code"
+        - "stderr"
+        - "stdout"
+        - "type"
+      title: "请求 Bash 代码执行结果块"
+      type: "object"
+    RequestTextEditorCodeExecutionToolResultError:
+      additionalProperties: false
+      properties:
+        error_code:
+          "$ref": "#/components/schemas/TextEditorCodeExecutionToolResultErrorCode"
+        error_message:
+          anyOf:
+            -
+              type: "string"
+            -
+              type: "null"
+          title: "错误消息"
+        type:
+          const: "text_editor_code_execution_tool_result_error"
+          title: "类型"
+          type: "string"
+      required:
+        - "error_code"
+        - "type"
+      title: "请求文本编辑器代码执行工具结果错误"
+      type: "object"
+    RequestTextEditorCodeExecutionViewResultBlock:
+      additionalProperties: false
+      properties:
+        content:
+          title: "内容"
+          type: "string"
+        file_type:
+          enum:
+            - "text"
+            - "image"
+            - "pdf"
+          title: "文件类型"
+          type: "string"
+        num_lines:
+          anyOf:
+            -
+              type: "integer"
+            -
+              type: "null"
+          title: "行数"
+        start_line:
+          anyOf:
+            -
+              type: "integer"
+            -
+              type: "null"
+          title: "起始行"
+        total_lines:
+          anyOf:
+            -
+              type: "integer"
+            -
+              type: "null"
+          title: "总行数"
+        type:
+          const: "text_editor_code_execution_view_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "content"
+        - "file_type"
+        - "type"
+      title: "请求文本编辑器代码执行查看结果块"
+      type: "object"
+    RequestTextEditorCodeExecutionCreateResultBlock:
+      additionalProperties: false
+      properties:
+        is_file_update:
+          title: "是否文件更新"
+          type: "boolean"
+        type:
+          const: "text_editor_code_execution_create_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "is_file_update"
+        - "type"
+      title: "请求文本编辑器代码执行创建结果块"
+      type: "object"
+    RequestTextEditorCodeExecutionStrReplaceResultBlock:
+      additionalProperties: false
+      properties:
+        lines:
+          anyOf:
+            -
+              items:
+                type: "string"
+              type: "array"
+            -
+              type: "null"
+          title: "行"
+        new_lines:
+          anyOf:
+            -
+              type: "integer"
+            -
+              type: "null"
+          title: "新行"
+        new_start:
+          anyOf:
+            -
+              type: "integer"
+            -
+              type: "null"
+          title: "新起点"
+        old_lines:
+          anyOf:
+            -
+              type: "integer"
+            -
+              type: "null"
+          title: "旧行"
+        old_start:
+          anyOf:
+            -
+              type: "integer"
+            -
+              type: "null"
+          title: "旧起点"
+        type:
+          const: "text_editor_code_execution_str_replace_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "type"
+      title: "请求文本编辑器代码执行字符串替换结果块"
+      type: "object"
+    RequestToolSearchToolResultError:
+      additionalProperties: false
+      properties:
+        error_code:
+          "$ref": "#/components/schemas/ToolSearchToolResultErrorCode"
+        type:
+          const: "tool_search_tool_result_error"
+          title: "类型"
+          type: "string"
+      required:
+        - "error_code"
+        - "type"
+      title: "请求工具搜索结果错误"
+      type: "object"
+    RequestToolSearchToolSearchResultBlock:
+      additionalProperties: false
+      properties:
+        tool_references:
+          items:
+            "$ref": "#/components/schemas/RequestToolReferenceBlock"
+          title: "工具引用"
+          type: "array"
+        type:
+          const: "tool_search_tool_search_result"
+          title: "类型"
+          type: "string"
+      required:
+        - "tool_references"
+        - "type"
+      title: "请求工具搜索结果块"
+      type: "object"
+    ResponseCitationsConfig:
+      properties:
+        enabled:
+          default: false
+          title: "启用"
+          type: "boolean"
+      required:
+        - "enabled"
+      title: "响应引用配置"
+      type: "object"
+    RequestCodeExecutionOutputBlock:
+      additionalProperties: false
+      properties:
+        file_id:
+          title: "文件 ID"
+          type: "string"
+        type:
+          const: "code_execution_output"
+          title: "类型"
+          type: "string"
+      required:
+        - "file_id"
+        - "type"
+      title: "请求代码执行输出块"
+      type: "object"
+    RequestBashCodeExecutionOutputBlock:
+      additionalProperties: false
+      properties:
+        file_id:
+          title: "文件 ID"
+          type: "string"
+        type:
+          const: "bash_code_execution_output"
+          title: "类型"
+          type: "string"
+      required:
+        - "file_id"
+        - "type"
+      title: "请求 Bash 代码执行输出块"
+      type: "object"
+x-source-openapi: "https://storage.googleapis.com/stainless-sdk-openapi-specs/anthropic%2Fanthropic-6811827071199207cf69c4e64cae1b41e7e74cdb14048e9c748701e474c694a7.yml"
+x-filtered-paths:
+  - "/v1/messages"
+  - "/v1/messages/count_tokens"
+x-filtered-operation-count: 2
+x-filtered-schema-count: 151

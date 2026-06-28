@@ -1,0 +1,351 @@
+openapi: 3.1.0
+x-language: zh-CN
+info:
+  title: gpt-image-1接口文档
+  version: "1.0.0"
+  description: |
+    这是 ModelVerse 上 `gpt-image-1` 的图片接口文档，说明如何发起图片生成或编辑请求、填写参数、读取结果以及处理错误。
+    接口路径包括 `POST /v1/images/generations`、`POST /v1/images/edits`。
+servers:
+  - url: https://api.modelverse.cn
+    description: ModelVerse API endpoint shown in the source document.
+
+tags:
+  - name: GptImage1 Images
+    description: OpenAI-compatible image generation and multipart image edit APIs for `gpt-image-1`.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /v1/images/generations:
+    post:
+      tags:
+        - GptImage1 Images
+      operationId: createGptImage1ImageGeneration
+      summary: 使用 gpt-image-1 生成图像
+      description: |
+        发起图片生成请求。请求体包含模型、提示词和可选生成参数，响应返回图片 URL 或 Base64 图像数据。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GptImage1GenerateRequest"
+            examples:
+              flower_png:
+                summary: 生成 PNG 图像
+                value:
+                  model: gpt-image-1
+                  prompt: a beautiful flower
+                  size: 1024x1024
+                  quality: high
+                  output_format: png
+                  output_compression: 100
+      responses:
+        "200":
+          description: 图像生成响应。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GptImage1ImageResponse"
+              examples:
+                base64_image:
+                  summary: 返回 Base64 的生成图像
+                  value:
+                    created: 1750667997
+                    data:
+                      - b64_json: "{image_base64_string}"
+                    usage:
+                      total_tokens: 4169
+                      input_tokens: 9
+                      output_tokens: 4160
+                      input_tokens_details:
+                        text_tokens: 9
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        default:
+          $ref: "#/components/responses/Error"
+
+  /v1/images/edits:
+    post:
+      tags:
+        - GptImage1 Images
+      operationId: createGptImage1ImageEdit
+      summary: 使用 gpt-image-1 编辑图像
+      description: |
+        发起图片编辑请求。通过 multipart 上传图片和可选 mask，响应返回编辑后的图片结果。
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/GptImage1EditRequest"
+            encoding:
+              image:
+                contentType: image/png
+              mask:
+                contentType: image/png
+            examples:
+              add_beach_ball:
+                summary: 带可选遮罩编辑图像
+                value:
+                  image: /path/to/your/image.png
+                  mask: /path/to/your/mask.png
+                  model: gpt-image-1
+                  prompt: Add a beach ball in the center
+                  size: 1024x1024
+                  n: 1
+                  quality: high
+                  output_format: png
+                  output_compression: 100
+      responses:
+        "200":
+          description: 图像编辑响应。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GptImage1ImageResponse"
+              examples:
+                base64_image:
+                  summary: Edited图像returned as Base64
+                  value:
+                    created: 1750667997
+                    data:
+                      - b64_json: "{image_base64_string}"
+                    usage:
+                      total_tokens: 4169
+                      input_tokens: 9
+                      output_tokens: 4160
+                      input_tokens_details:
+                        text_tokens: 9
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        default:
+          $ref: "#/components/responses/Error"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  responses:
+    BadRequest:
+      description: |
+        发起图片编辑请求。通过 multipart 上传图片和可选 mask，响应返回编辑后的图片结果。
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            documented_error:
+              summary: 错误响应
+              value:
+                error:
+                  message: error_message
+                  type: error_type
+                  param: request_id
+                  code: error_code
+    Error:
+      description: |
+        发起图片编辑请求。通过 multipart 上传图片和可选 mask，响应返回编辑后的图片结果。
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            documented_error:
+              summary: 错误响应
+              value:
+                error:
+                  message: error_message
+                  type: error_type
+                  param: request_id
+                  code: error_code
+
+  schemas:
+    GptImage1GenerateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - model
+        - prompt
+      properties:
+        model:
+          type: string
+          const: gpt-image-1
+          description: Model name. This API is pinned to `gpt-image-1`.
+        prompt:
+          type: string
+          description: Prompt describing the image to generate.
+        n:
+          type: integer
+          minimum: 1
+          maximum: 4
+          default: 1
+          description: Number of images to generate.
+        size:
+          $ref: "#/components/schemas/GptImage1Size"
+        quality:
+          $ref: "#/components/schemas/GptImage1Quality"
+        output_format:
+          $ref: "#/components/schemas/GptImage1OutputFormat"
+        output_compression:
+          $ref: "#/components/schemas/GptImage1OutputCompression"
+
+    GptImage1EditRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - image
+        - model
+        - prompt
+      properties:
+        image:
+          type: string
+          format: binary
+          description: Image file to edit.
+        mask:
+          type: string
+          format: binary
+          description: Optional mask file used to limit the edited area.
+        model:
+          type: string
+          const: gpt-image-1
+          description: Model name. This API is pinned to `gpt-image-1`.
+        prompt:
+          type: string
+          description: Prompt describing the edit to apply.
+        n:
+          type: integer
+          minimum: 1
+          maximum: 4
+          default: 1
+          description: Number of edited images to generate.
+        size:
+          $ref: "#/components/schemas/GptImage1Size"
+        quality:
+          $ref: "#/components/schemas/GptImage1Quality"
+        output_format:
+          $ref: "#/components/schemas/GptImage1OutputFormat"
+        output_compression:
+          $ref: "#/components/schemas/GptImage1OutputCompression"
+
+    GptImage1Size:
+      type: string
+      enum:
+        - 1024x1024
+        - 1024x1536
+        - 1536x1024
+      default: 1024x1024
+      description: |
+        发起图片编辑请求。通过 multipart 上传图片和可选 mask，响应返回编辑后的图片结果。
+    GptImage1Quality:
+      type: string
+      enum:
+        - low
+        - medium
+        - high
+      description: |
+        发起图片编辑请求。通过 multipart 上传图片和可选 mask，响应返回编辑后的图片结果。
+    GptImage1OutputFormat:
+      type: string
+      enum:
+        - png
+        - jpeg
+      default: png
+      description: |
+        发起图片编辑请求。通过 multipart 上传图片和可选 mask，响应返回编辑后的图片结果。
+    GptImage1OutputCompression:
+      type: integer
+      minimum: 0
+      maximum: 100
+      default: 100
+      description: |
+        发起图片编辑请求。通过 multipart 上传图片和可选 mask，响应返回编辑后的图片结果。
+    GptImage1ImageResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - created
+        - data
+      properties:
+        created:
+          type: integer
+          format: int64
+          description: Unix timestamp, in seconds, when the request was created.
+        data:
+          type: array
+          description: Image results. The source document notes that `gpt-image-1` returns Base64 image data.
+          items:
+            $ref: "#/components/schemas/GptImage1ImageData"
+        usage:
+          $ref: "#/components/schemas/GptImage1Usage"
+        error:
+          $ref: "#/components/schemas/ErrorObject"
+
+    GptImage1ImageData:
+      type: object
+      additionalProperties: false
+      required:
+        - b64_json
+      properties:
+        b64_json:
+          type: string
+          contentEncoding: base64
+          description: Base64-encoded generated or edited image data.
+
+    GptImage1Usage:
+      type: object
+      additionalProperties: false
+      properties:
+        total_tokens:
+          type: integer
+          description: Total tokens used by the request.
+        input_tokens:
+          type: integer
+          description: Input tokens used by the request.
+        output_tokens:
+          type: integer
+          description: Output tokens used by the request.
+        input_tokens_details:
+          type: object
+          additionalProperties: false
+          properties:
+            text_tokens:
+              type: integer
+              description: Text input tokens used by the request.
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+      properties:
+        error:
+          $ref: "#/components/schemas/ErrorObject"
+
+    ErrorObject:
+      type: object
+      additionalProperties: false
+      required:
+        - message
+        - type
+      properties:
+        message:
+          type: string
+          description: 错误信息。
+        type:
+          type: string
+          description: 错误类型。
+        param:
+          type:
+            - string
+            - "null"
+          description: Request ID or parameter related to the error.
+        code:
+          type:
+            - string
+            - "null"
+          description: 机器可读的错误码。

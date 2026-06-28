@@ -1,0 +1,358 @@
+openapi: 3.1.0
+x-language: zh-CN
+info:
+  title: gpt-image-1.5接口文档
+  version: "1.0.0"
+  description: |
+    这是 ModelVerse 上 `gpt-image-1.5` 的图片接口文档，说明如何发起图片生成或编辑请求、填写参数、读取结果以及处理错误。
+    接口路径包括 `POST /v1/images/generations`、`POST /v1/images/edits`。
+servers:
+  - url: https://api.modelverse.cn
+    description: 该模型文档中使用的 ModelVerse API 端点。
+
+tags:
+  - name: gpt-image-1.5
+    description: Image generation and localized image editing with gpt-image-1.5.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /v1/images/generations:
+    post:
+      tags:
+        - gpt-image-1.5
+      operationId: createGptImage15ImageGeneration
+      summary: 使用 gpt-image-1.5 生成图像
+      description: |
+        发起图片生成请求。请求体包含模型、提示词和可选生成参数，响应返回图片 URL 或 Base64 图像数据。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GptImage15GenerationRequest"
+            examples:
+              flowerPng:
+                summary: 生成 PNG 图像
+                value:
+                  model: gpt-image-1.5
+                  prompt: a beautiful flower
+                  size: 1024x1024
+                  quality: high
+                  output_format: png
+                  output_compression: 100
+      responses:
+        "200":
+          description: 图像生成响应。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GptImage15ImagesResponse"
+              examples:
+                generatedImage:
+                  summary: 带 token 用量的生成图像
+                  value:
+                    created: 1750667997
+                    data:
+                      - b64_json: "{image_base64_string}"
+                    usage:
+                      total_tokens: 4169
+                      input_tokens: 9
+                      output_tokens: 4160
+                      input_tokens_details:
+                        text_tokens: 9
+        "400":
+          description: Invalid request parameters or generation error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GptImage15ErrorResponse"
+              examples:
+                documentedError:
+                  $ref: "#/components/examples/GptImage15Error"
+        default:
+          description: 错误响应。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GptImage15ErrorResponse"
+              examples:
+                documentedError:
+                  $ref: "#/components/examples/GptImage15Error"
+
+  /v1/images/edits:
+    post:
+      tags:
+        - gpt-image-1.5
+      operationId: createGptImage15ImageEdit
+      summary: 使用 gpt-image-1.5 编辑图像
+      description: |
+        发起图片编辑请求。通过 multipart 上传图片和可选 mask，响应返回编辑后的图片结果。
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/GptImage15EditRequest"
+            encoding:
+              image:
+                contentType: image/png
+              mask:
+                contentType: image/png
+            examples:
+              localizedEdit:
+                summary: 带可选遮罩的局部编辑
+                value:
+                  image: /path/to/your/image.png
+                  mask: /path/to/your/mask.png
+                  model: gpt-image-1.5
+                  prompt: Add a beach ball in the center
+                  size: 1024x1024
+                  n: 1
+                  quality: high
+                  output_format: png
+                  output_compression: 100
+      responses:
+        "200":
+          description: 图像编辑响应。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GptImage15ImagesResponse"
+              examples:
+                editedImage:
+                  summary: 带 token 用量的编辑图像
+                  value:
+                    created: 1750667997
+                    data:
+                      - b64_json: "{image_base64_string}"
+                    usage:
+                      total_tokens: 4169
+                      input_tokens: 9
+                      output_tokens: 4160
+                      input_tokens_details:
+                        text_tokens: 9
+        "400":
+          description: Invalid request parameters or edit error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GptImage15ErrorResponse"
+              examples:
+                documentedError:
+                  $ref: "#/components/examples/GptImage15Error"
+        default:
+          description: 错误响应。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GptImage15ErrorResponse"
+              examples:
+                documentedError:
+                  $ref: "#/components/examples/GptImage15Error"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+    GptImage15Model:
+      type: string
+      const: gpt-image-1.5
+      description: |
+        发起图片编辑请求。通过 multipart 上传图片和可选 mask，响应返回编辑后的图片结果。
+    GptImage15Prompt:
+      type: string
+      minLength: 1
+      description: |
+        发起图片编辑请求。通过 multipart 上传图片和可选 mask，响应返回编辑后的图片结果。
+    GptImage15ImageCount:
+      type: integer
+      minimum: 1
+      maximum: 4
+      default: 1
+      description: |
+        发起图片编辑请求。通过 multipart 上传图片和可选 mask，响应返回编辑后的图片结果。
+    GptImage15Size:
+      type: string
+      enum:
+        - 1024x1024
+        - 1024x1536
+        - 1536x1024
+      default: 1024x1024
+      description: |
+        发起图片编辑请求。通过 multipart 上传图片和可选 mask，响应返回编辑后的图片结果。
+    GptImage15Quality:
+      type: string
+      enum:
+        - low
+        - medium
+        - high
+      description: |
+        发起图片编辑请求。通过 multipart 上传图片和可选 mask，响应返回编辑后的图片结果。
+    GptImage15OutputFormat:
+      type: string
+      enum:
+        - png
+        - jpeg
+        - webp
+      default: png
+      description: |
+        发起图片编辑请求。通过 multipart 上传图片和可选 mask，响应返回编辑后的图片结果。
+    GptImage15OutputCompression:
+      type: integer
+      minimum: 0
+      maximum: 100
+      default: 100
+      description: |
+        发起图片编辑请求。通过 multipart 上传图片和可选 mask，响应返回编辑后的图片结果。
+    GptImage15GenerationRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - model
+        - prompt
+      properties:
+        model:
+          $ref: "#/components/schemas/GptImage15Model"
+        prompt:
+          $ref: "#/components/schemas/GptImage15Prompt"
+        n:
+          $ref: "#/components/schemas/GptImage15ImageCount"
+        size:
+          $ref: "#/components/schemas/GptImage15Size"
+        quality:
+          $ref: "#/components/schemas/GptImage15Quality"
+        output_format:
+          $ref: "#/components/schemas/GptImage15OutputFormat"
+        output_compression:
+          $ref: "#/components/schemas/GptImage15OutputCompression"
+
+    GptImage15EditRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - image
+        - model
+        - prompt
+      properties:
+        image:
+          type: string
+          format: binary
+          description: Image file to edit.
+        mask:
+          type: string
+          format: binary
+          description: Optional mask file that limits the edited region.
+        model:
+          $ref: "#/components/schemas/GptImage15Model"
+        prompt:
+          $ref: "#/components/schemas/GptImage15Prompt"
+        n:
+          $ref: "#/components/schemas/GptImage15ImageCount"
+        size:
+          $ref: "#/components/schemas/GptImage15Size"
+        quality:
+          $ref: "#/components/schemas/GptImage15Quality"
+        output_format:
+          $ref: "#/components/schemas/GptImage15OutputFormat"
+        output_compression:
+          $ref: "#/components/schemas/GptImage15OutputCompression"
+
+    GptImage15ImagesResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - created
+        - data
+      properties:
+        created:
+          type: integer
+          format: int64
+          description: Unix timestamp in seconds for when the request was created.
+        data:
+          type: array
+          minItems: 1
+          description: Generated image data. The documented gpt-image-1.5 response returns base64 image data.
+          items:
+            $ref: "#/components/schemas/GptImage15ImageData"
+        usage:
+          $ref: "#/components/schemas/GptImage15Usage"
+
+    GptImage15ImageData:
+      type: object
+      additionalProperties: false
+      required:
+        - b64_json
+      properties:
+        b64_json:
+          type: string
+          contentEncoding: base64
+          description: Base64 编码图像数据，可带 data URL 前缀。
+
+    GptImage15Usage:
+      type: object
+      additionalProperties: false
+      properties:
+        total_tokens:
+          type: integer
+          description: Total tokens used by the request.
+        input_tokens:
+          type: integer
+          description: Input tokens used by the request.
+        output_tokens:
+          type: integer
+          description: Output tokens used by the request.
+        input_tokens_details:
+          type: object
+          additionalProperties: false
+          properties:
+            text_tokens:
+              type: integer
+              description: Text input tokens used by the request.
+
+    GptImage15ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+      properties:
+        error:
+          $ref: "#/components/schemas/GptImage15Error"
+
+    GptImage15Error:
+      type: object
+      additionalProperties: false
+      required:
+        - message
+        - type
+      properties:
+        message:
+          type: string
+          description: 错误信息。
+        type:
+          type: string
+          description: 错误类型。
+        param:
+          type:
+            - string
+            - "null"
+          description: 请求 ID 或相关参数。
+        code:
+          type:
+            - string
+            - "null"
+          description: 错误码。
+
+  examples:
+    GptImage15Error:
+      summary: 文档中的错误响应
+      value:
+        error:
+          message: error_message
+          type: error_type
+          param: request_id
+          code: error_code

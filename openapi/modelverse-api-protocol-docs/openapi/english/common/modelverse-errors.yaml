@@ -1,0 +1,110 @@
+openapi: 3.1.0
+x-language: en-US
+info:
+  title: ModelVerse Error Components
+  version: "1.0.0"
+  description: Error schemas and common error responses.
+paths: {}
+components:
+  schemas:
+    ErrorObject:
+      type: object
+      additionalProperties: true
+      required:
+        - message
+        - type
+        - code
+      properties:
+        message:
+          type: string
+          examples:
+            - Invalid param
+        type:
+          type: string
+          enum:
+            - invalid_request_error
+            - timeout
+            - rate_limit_error
+            - internal_error
+          examples:
+            - invalid_request_error
+        code:
+          type: string
+          enum:
+            - param_error
+            - invalid_messages
+            - sensitive_check_error
+            - websearch_error
+            - model_error
+            - tokens_too_long
+            - auth_error
+            - timeout
+            - rate_limit
+            - internal_error
+            - model_server_error
+            - gateway_timeout_error
+        param:
+          type:
+            - string
+            - "null"
+          description: Request id or parameter name related to the error.
+    ErrorResponse:
+      type: object
+      additionalProperties: true
+      required:
+        - error
+      properties:
+        error:
+          $ref: "#/components/schemas/ErrorObject"
+      examples:
+        paramError:
+          value:
+            error:
+              message: Invalid param
+              type: invalid_request_error
+              code: param_error
+              param: req_abcdef
+        authError:
+          value:
+            error:
+              message: Validate Certification failed
+              type: invalid_request_error
+              code: auth_error
+              param: null
+  responses:
+    BadRequest:
+      description: Invalid parameters, unsupported route, sensitive content, missing permission, or prompt too long.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Invalid API key or failed authorization.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Timeout:
+      description: Request timeout.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    RateLimited:
+      description: Rate limit exceeded.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ServerError:
+      description: Internal service error or upstream model server error.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    GatewayTimeout:
+      description: Gateway timeout.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"

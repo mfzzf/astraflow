@@ -1,0 +1,388 @@
+openapi: 3.1.0
+x-language: en-US
+info:
+  title: ModelVerse MiniMax-Hailuo-2.3-Fast Video Task API
+  version: "1.0.0"
+  description: |
+    Self-contained OpenAPI 3.1 schema for the ModelVerse
+    MiniMax-Hailuo-2.3-Fast image-to-video asynchronous task API.
+
+servers:
+  - url: https://api.modelverse.cn
+    description: ModelVerse API endpoint documented for this model.
+
+tags:
+  - name: MiniMax-Hailuo-2.3-Fast
+    description: Image-to-video asynchronous task operations for MiniMax-Hailuo-2.3-Fast.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /v1/tasks/submit:
+    post:
+      tags:
+        - MiniMax-Hailuo-2.3-Fast
+      operationId: submitMiniMaxHailuo23FastTask
+      summary: Submit a MiniMax-Hailuo-2.3-Fast image-to-video task
+      description: |
+        Submit an asynchronous image-to-video generation task. The model
+        supports camera movement instructions in `input.prompt`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MiniMaxHailuo23FastSubmitRequest"
+            examples:
+              documented:
+                summary: Source image-to-video request
+                value:
+                  model: MiniMax-Hailuo-2.3-Fast
+                  input:
+                    prompt: "A beautiful sunset over the ocean with waves gently crashing on the shore. [推进, 跟随]"
+                    first_frame_image: https://umodelverse-inference.cn-wlcb.ufileos.com/ucloud-maxcot.jpg
+                  parameters:
+                    duration: 6
+                    resolution: 1080P
+                    prompt_optimizer: true
+                    fast_pretreatment: false
+                    aigc_watermark: false
+              base64FirstFrame:
+                summary: Submit with a Base64 data URL first frame
+                value:
+                  model: MiniMax-Hailuo-2.3-Fast
+                  input:
+                    prompt: "A red sports car drives along a coastal highway. [推进]"
+                    first_frame_image: data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...
+                  parameters:
+                    duration: 10
+                    resolution: 768P
+                    prompt_optimizer: true
+      responses:
+        "200":
+          description: Task submitted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MiniMaxHailuo23FastSubmitResponse"
+              examples:
+                submitted:
+                  summary: Submitted task
+                  value:
+                    output:
+                      task_id: "106916112212032"
+                    request_id: request_id
+        "400":
+          description: Invalid request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MiniMaxHailuo23FastErrorResponse"
+              examples:
+                paramError:
+                  $ref: "#/components/examples/MiniMaxHailuo23FastParamError"
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MiniMaxHailuo23FastErrorResponse"
+              examples:
+                error:
+                  $ref: "#/components/examples/MiniMaxHailuo23FastParamError"
+
+  /v1/tasks/status:
+    get:
+      tags:
+        - MiniMax-Hailuo-2.3-Fast
+      operationId: getMiniMaxHailuo23FastTaskStatus
+      summary: Query a MiniMax-Hailuo-2.3-Fast task status
+      description: Query the status and result URLs for an asynchronous image-to-video task.
+      parameters:
+        - name: task_id
+          in: query
+          required: true
+          description: Asynchronous task identifier returned by `/v1/tasks/submit`.
+          schema:
+            type: string
+          examples:
+            placeholder:
+              summary: Source documentation placeholder
+              value: task_id
+      responses:
+        "200":
+          description: Task status response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MiniMaxHailuo23FastStatusResponse"
+              examples:
+                success:
+                  summary: Successful task
+                  value:
+                    output:
+                      task_id: "176843862716480"
+                      task_status: Success
+                      urls:
+                        - https://xxxxx/xxxx.mp4
+                      submit_time: 1756959000
+                      finish_time: 1756959050
+                    usage:
+                      duration: 6
+                    request_id: ""
+                failure:
+                  summary: Failed task
+                  value:
+                    output:
+                      task_id: task_id
+                      task_status: Failure
+                      submit_time: 1756959000
+                      finish_time: 1756959019
+                      error_message: error_message
+                    usage:
+                      duration: 6
+                    request_id: ""
+        "400":
+          description: Invalid task identifier or request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MiniMaxHailuo23FastErrorResponse"
+              examples:
+                paramError:
+                  $ref: "#/components/examples/MiniMaxHailuo23FastParamError"
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MiniMaxHailuo23FastErrorResponse"
+              examples:
+                error:
+                  $ref: "#/components/examples/MiniMaxHailuo23FastParamError"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: "ModelVerse API key sent as `Authorization: Bearer <YOUR_API_KEY>`."
+
+  schemas:
+    MiniMaxHailuo23FastSubmitRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - model
+        - input
+      properties:
+        model:
+          type: string
+          const: MiniMax-Hailuo-2.3-Fast
+          description: Model name. This schema is pinned to `MiniMax-Hailuo-2.3-Fast`.
+        input:
+          $ref: "#/components/schemas/MiniMaxHailuo23FastInput"
+        parameters:
+          $ref: "#/components/schemas/MiniMaxHailuo23FastParameters"
+
+    MiniMaxHailuo23FastInput:
+      type: object
+      additionalProperties: false
+      required:
+        - first_frame_image
+        - prompt
+      properties:
+        first_frame_image:
+          type: string
+          description: |
+            Video first-frame image as a public URL or Base64-encoded data URL
+            in the form `data:image/jpeg;base64,...`. Supported formats are
+            JPG, JPEG, PNG, and WebP. The image must be no larger than 20 MB,
+            the short side must be greater than 300 px, and the aspect ratio
+            must be between 2:5 and 5:2.
+          examples:
+            - https://umodelverse-inference.cn-wlcb.ufileos.com/ucloud-maxcot.jpg
+            - data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...
+        prompt:
+          type: string
+          maxLength: 2000
+          description: |
+            Text prompt describing the desired generated video. Camera movement
+            directives can be embedded in square brackets, including left/right
+            movement, pan, push/pull, rise/fall, tilt, zoom, shake, follow, and
+            fixed-camera instructions.
+          examples:
+            - "A beautiful sunset over the ocean with waves gently crashing on the shore. [推进, 跟随]"
+
+    MiniMaxHailuo23FastParameters:
+      type: object
+      additionalProperties: false
+      properties:
+        duration:
+          type: integer
+          enum:
+            - 6
+            - 10
+          default: 6
+          description: |
+            Generated video duration in seconds. The model supports 6 seconds at
+            768P or 1080P and 10 seconds at 768P.
+        resolution:
+          type: string
+          enum:
+            - 768P
+            - 1080P
+          default: 768P
+          description: |
+            Generated video resolution. 768P is supported for 6-second and
+            10-second videos; 1080P is supported for 6-second videos only.
+        prompt_optimizer:
+          type: boolean
+          default: true
+          description: Whether to automatically optimize the text prompt.
+        fast_pretreatment:
+          type: boolean
+          default: false
+          description: Whether to shorten text optimization latency for MiniMax-Hailuo-2.3 models.
+        aigc_watermark:
+          type: boolean
+          default: false
+          description: Whether to add a watermark to the generated video.
+
+    MiniMaxHailuo23FastSubmitResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - output
+        - request_id
+      properties:
+        output:
+          $ref: "#/components/schemas/MiniMaxHailuo23FastSubmitOutput"
+        request_id:
+          type: string
+          description: Unique request identifier.
+
+    MiniMaxHailuo23FastSubmitOutput:
+      type: object
+      additionalProperties: false
+      required:
+        - task_id
+      properties:
+        task_id:
+          type: string
+          description: Unique identifier of the asynchronous task.
+
+    MiniMaxHailuo23FastStatusResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - output
+        - request_id
+      properties:
+        output:
+          $ref: "#/components/schemas/MiniMaxHailuo23FastStatusOutput"
+        usage:
+          $ref: "#/components/schemas/MiniMaxHailuo23FastUsage"
+        request_id:
+          type: string
+          description: Unique request identifier.
+
+    MiniMaxHailuo23FastStatusOutput:
+      type: object
+      additionalProperties: false
+      required:
+        - task_id
+        - task_status
+      properties:
+        task_id:
+          type: string
+          description: Unique identifier of the asynchronous task.
+        task_status:
+          $ref: "#/components/schemas/MiniMaxHailuo23FastTaskStatus"
+        urls:
+          type: array
+          description: Video result URL list.
+          items:
+            type: string
+            format: uri
+        submit_time:
+          type: integer
+          format: int64
+          description: Task submission timestamp.
+        finish_time:
+          type: integer
+          format: int64
+          description: Task completion timestamp.
+        error_message:
+          type: string
+          description: Error message returned when the task fails.
+
+    MiniMaxHailuo23FastTaskStatus:
+      type: string
+      enum:
+        - Pending
+        - Running
+        - Success
+        - Failure
+      description: Current asynchronous task status.
+
+    MiniMaxHailuo23FastUsage:
+      type: object
+      additionalProperties: false
+      properties:
+        duration:
+          type: integer
+          description: Video duration in seconds.
+
+    MiniMaxHailuo23FastErrorResponse:
+      type: object
+      additionalProperties: true
+      required:
+        - error
+      properties:
+        error:
+          $ref: "#/components/schemas/MiniMaxHailuo23FastErrorObject"
+        request_id:
+          type: string
+          description: Unique request identifier, if available.
+
+    MiniMaxHailuo23FastErrorObject:
+      type: object
+      additionalProperties: true
+      required:
+        - message
+        - type
+      properties:
+        message:
+          type: string
+          description: Error message.
+        type:
+          type: string
+          description: Error type.
+          examples:
+            - invalid_request_error
+        code:
+          type:
+            - string
+            - "null"
+          description: Error code.
+          examples:
+            - param_error
+        param:
+          type:
+            - string
+            - "null"
+          description: Related request parameter, if any.
+
+  examples:
+    MiniMaxHailuo23FastParamError:
+      summary: Invalid parameter error
+      value:
+        error:
+          message: Invalid param
+          type: invalid_request_error
+          code: param_error
+          param: input.first_frame_image
+        request_id: request_id

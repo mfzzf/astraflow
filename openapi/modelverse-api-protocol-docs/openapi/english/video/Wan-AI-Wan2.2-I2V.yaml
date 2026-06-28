@@ -1,0 +1,349 @@
+openapi: 3.1.0
+x-language: en-US
+info:
+  title: ModelVerse Wan-AI/Wan2.2-I2V API
+  version: "1.0.0"
+  description: |
+    Self-contained OpenAPI schema for the ModelVerse Wan-AI/Wan2.2-I2V
+    image-to-video async task API.
+
+servers:
+  - url: https://api.modelverse.cn
+    description: ModelVerse API endpoint documented for this model.
+
+tags:
+  - name: Wan-AI/Wan2.2-I2V
+    description: Image-to-video async task operations.
+
+paths:
+  /v1/tasks/submit:
+    post:
+      tags:
+        - Wan-AI/Wan2.2-I2V
+      operationId: submitWanAIWan22I2VTask
+      summary: Submit a Wan-AI/Wan2.2-I2V image-to-video task
+      description: Submit an asynchronous image-to-video generation task.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WanAIWan22I2VSubmitRequest"
+            examples:
+              imageToVideo:
+                summary: Submit an image-to-video task
+                value:
+                  model: Wan-AI/Wan2.2-I2V
+                  input:
+                    first_frame_url: https://umodelverse-inference.cn-wlcb.ufileos.com/ucloud-maxcot.jpg
+                    last_frame_url: https://umodelverse-inference.cn-wlcb.ufileos.com/ucloud-maxcot.jpg
+                    prompt: Convert to quick pencil sketch
+                  parameters:
+                    resolution: 720P
+      responses:
+        "200":
+          description: Task submitted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WanAIWan22I2VSubmitResponse"
+              examples:
+                submitted:
+                  summary: Submitted task
+                  value:
+                    output:
+                      task_id: task_id
+                    request_id: request_id
+        "400":
+          description: Invalid request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                paramError:
+                  summary: Parameter error
+                  value:
+                    error:
+                      message: Invalid param
+                      type: invalid_request_error
+                      code: param_error
+                      param: model
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                error:
+                  summary: Generic error
+                  value:
+                    error:
+                      message: Invalid param
+                      type: invalid_request_error
+                      code: param_error
+                      param: model
+
+  /v1/tasks/status:
+    get:
+      tags:
+        - Wan-AI/Wan2.2-I2V
+      operationId: getWanAIWan22I2VTaskStatus
+      summary: Query a Wan-AI/Wan2.2-I2V task status
+      description: Query the status and result URL for an asynchronous task.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: task_id
+          in: query
+          required: true
+          description: Unique identifier of the asynchronous task.
+          schema:
+            type: string
+          example: task_id
+      responses:
+        "200":
+          description: Task status response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WanAIWan22I2VStatusResponse"
+              examples:
+                success:
+                  summary: Successful task
+                  value:
+                    output:
+                      task_id: task_id
+                      task_status: Success
+                      urls:
+                        - https://xxxxx/xxxx.mp4
+                      submit_time: 1756959000
+                      finish_time: 1756959050
+                    usage:
+                      duration: 5
+                    request_id: ""
+                failure:
+                  summary: Failed task
+                  value:
+                    output:
+                      task_id: task_id
+                      task_status: Failure
+                      submit_time: 1756959000
+                      finish_time: 1756959019
+                      error_message: error_message
+                    usage:
+                      duration: 5
+                    request_id: ""
+        "400":
+          description: Invalid request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                paramError:
+                  summary: Parameter error
+                  value:
+                    error:
+                      message: Invalid param
+                      type: invalid_request_error
+                      code: param_error
+                      param: task_id
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                error:
+                  summary: Generic error
+                  value:
+                    error:
+                      message: Invalid param
+                      type: invalid_request_error
+                      code: param_error
+                      param: task_id
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: API key sent with the Authorization header.
+
+  schemas:
+    WanAIWan22I2VSubmitRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - model
+        - input
+      properties:
+        model:
+          type: string
+          const: Wan-AI/Wan2.2-I2V
+          description: Model name. This schema is pinned to Wan-AI/Wan2.2-I2V.
+        input:
+          $ref: "#/components/schemas/WanAIWan22I2VInput"
+        parameters:
+          $ref: "#/components/schemas/WanAIWan22I2VParameters"
+
+    WanAIWan22I2VInput:
+      type: object
+      additionalProperties: false
+      required:
+        - first_frame_url
+        - prompt
+      properties:
+        first_frame_url:
+          type: string
+          description: First-frame image URL. The documented API also accepts Base64 image data.
+        last_frame_url:
+          type: string
+          description: Optional last-frame image URL. The documented API also accepts Base64 image data.
+        prompt:
+          type: string
+          description: Prompt used to guide video generation.
+        negative_prompt:
+          type: string
+          description: Negative prompt used to limit undesired content.
+
+    WanAIWan22I2VParameters:
+      type: object
+      additionalProperties: false
+      properties:
+        resolution:
+          type: string
+          enum:
+            - 720P
+            - 480P
+          description: Generated video resolution tier.
+        duration:
+          type: integer
+          enum:
+            - 5
+            - 8
+          description: Generated video duration in seconds.
+        seed:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+          description: Random seed.
+
+    WanAIWan22I2VSubmitResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - output
+        - request_id
+      properties:
+        output:
+          type: object
+          additionalProperties: false
+          required:
+            - task_id
+          properties:
+            task_id:
+              type: string
+              description: Unique identifier of the asynchronous task.
+        request_id:
+          type: string
+          description: Unique request identifier.
+
+    WanAIWan22I2VStatusResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - output
+        - request_id
+      properties:
+        output:
+          type: object
+          additionalProperties: false
+          required:
+            - task_id
+            - task_status
+          properties:
+            task_id:
+              type: string
+              description: Unique identifier of the asynchronous task.
+            task_status:
+              $ref: "#/components/schemas/WanAIWan22I2VTaskStatus"
+            urls:
+              type: array
+              description: Video result URL list.
+              items:
+                type: string
+                format: uri
+            submit_time:
+              type: integer
+              format: int64
+              description: Task submission timestamp.
+            finish_time:
+              type: integer
+              format: int64
+              description: Task completion timestamp.
+            error_message:
+              type: string
+              description: Error message returned when the task fails.
+        usage:
+          type: object
+          additionalProperties: false
+          properties:
+            duration:
+              type: integer
+              description: Task execution duration in seconds.
+        request_id:
+          type: string
+          description: Unique request identifier.
+
+    WanAIWan22I2VTaskStatus:
+      type: string
+      enum:
+        - Pending
+        - Running
+        - Success
+        - Failure
+      description: Task status.
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+      properties:
+        error:
+          $ref: "#/components/schemas/ErrorObject"
+
+    ErrorObject:
+      type: object
+      additionalProperties: true
+      required:
+        - message
+        - type
+      properties:
+        message:
+          type: string
+          description: Error message.
+        type:
+          type: string
+          description: Error type.
+          examples:
+            - invalid_request_error
+        code:
+          type:
+            - string
+            - "null"
+          description: Error code.
+          examples:
+            - param_error
+        param:
+          type:
+            - string
+            - "null"
+          description: Related request parameter, if any.

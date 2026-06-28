@@ -1,0 +1,163 @@
+openapi: 3.1.0
+x-language: zh-CN
+info:
+  title: text-to-sound-v2接口文档
+  version: "1.0.0"
+  description: |
+    这是 ModelVerse 上 `text-to-sound-v2` 的音频生成接口文档，说明如何提交音乐或音效生成请求、读取结果以及处理错误。
+    接口路径包括 `POST /v1/audio/sound-generation`。
+servers:
+  - url: https://api.modelverse.cn
+    description: ModelVerse API endpoint shown in the source document.
+
+tags:
+  - name: Text To Sound V2
+    description: Sound effect generation for `text-to-sound-v2`.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /v1/audio/sound-generation:
+    post:
+      tags:
+        - Text To Sound V2
+      operationId: createTextToSoundV2SoundGeneration
+      summary: 生成sound effect根据text
+      description: |
+        根据文本生成音效。请求中描述目标声音，响应返回音频结果。
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TextToSoundV2SoundGenerationRequest"
+            examples:
+              movieTrailerBraam:
+                summary: 生成short MP3 trailer sound effect
+                value:
+                  model: text-to-sound-v2
+                  text: Spacious braam suitable for high-impact movie trailer moments
+                  duration_seconds: 5.0
+                  output_format: mp3_22050_32
+              loopableGameAmbience:
+                summary: 生成loopable game ambience sound effect
+                value:
+                  model: text-to-sound-v2
+                  text: Soft magical forest ambience with distant shimmering chimes
+                  loop: true
+                  duration_seconds: 8.0
+                  prompt_influence: 0.45
+                  output_format: mp3_22050_32
+      responses:
+        "200":
+          description: Binary audio stream containing the generated sound effect.
+          headers:
+            character-cost:
+              description: Character count consumed by this generation request.
+              schema:
+                type: string
+          content:
+            audio/mpeg:
+              schema:
+                $ref: "#/components/schemas/TextToSoundV2AudioBinary"
+              examples:
+                generatedMp3:
+                  summary: 生成的MP3 sound effect
+                  value: "<binary MP3 audio stream>"
+            application/octet-stream:
+              schema:
+                $ref: "#/components/schemas/TextToSoundV2AudioBinary"
+              examples:
+                generatedAudio:
+                  summary: 生成的audio in the请求ed output format
+                  value: "<binary audio stream>"
+        "400":
+          description: Invalid sound generation request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TextToSoundV2ErrorResponse"
+              examples:
+                invalidDuration:
+                  $ref: "#/components/examples/TextToSoundV2InvalidDurationError"
+        default:
+          description: 错误响应。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TextToSoundV2ErrorResponse"
+              examples:
+                error:
+                  $ref: "#/components/examples/TextToSoundV2InvalidDurationError"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: |
+        根据文本生成音效。请求中描述目标声音，响应返回音频结果。
+  schemas:
+    TextToSoundV2SoundGenerationRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - model
+        - text
+        - duration_seconds
+      properties:
+        model:
+          type: string
+          const: text-to-sound-v2
+          description: Sound generation model name. This schema is pinned to `text-to-sound-v2`.
+        text:
+          type: string
+          description: Text description of the sound effect to generate.
+        loop:
+          type: boolean
+          default: false
+          description: Whether to generate a loopable sound effect. Defaults to `false`.
+        duration_seconds:
+          type: number
+          format: double
+          minimum: 0.5
+          maximum: 30
+          description: Sound effect duration in seconds. The documented range is 0.5 to 30.
+        prompt_influence:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          default: 0.3
+          description: |
+            Prompt influence strength. Higher values make the generated result
+            closer to the text description while reducing variety. Defaults to
+            `0.3`.
+        output_format:
+          type: string
+          description: |
+            Output audio format. The source document gives `mp3_22050_32` as an
+            example, meaning MP3 at 22.05 kHz and 32 kbps. When omitted, the
+            endpoint defaults to MP3.
+          examples:
+            - mp3_22050_32
+
+    TextToSoundV2AudioBinary:
+      type: string
+      format: binary
+      description: |
+        根据文本生成音效。请求中描述目标声音，响应返回音频结果。
+    TextToSoundV2ErrorResponse:
+      type: object
+      additionalProperties: true
+      description: |
+        根据文本生成音效。请求中描述目标声音，响应返回音频结果。
+  examples:
+    TextToSoundV2InvalidDurationError:
+      summary: Invalid duration
+      value:
+        error: duration_seconds must be between 0.5 and 30

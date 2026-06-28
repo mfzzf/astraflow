@@ -1,0 +1,321 @@
+openapi: 3.1.0
+x-language: en-US
+info:
+  title: ModelVerse OpenAI/Sora2-T2V API
+  version: "1.0.0"
+  description: |
+    OpenAI/Sora2-T2V 文生视频模型接口。
+
+servers:
+  - url: https://api.modelverse.cn
+    description: ModelVerse API endpoint.
+
+tags:
+  - name: OpenAI Sora2 T2V
+    description: OpenAI/Sora2-T2V async text-to-video task APIs.
+
+paths:
+  /v1/tasks/submit:
+    post:
+      tags:
+        - OpenAI Sora2 T2V
+      operationId: submitOpenAISora2T2VTask
+      summary: Submit an OpenAI/Sora2-T2V text-to-video task
+      description: 异步提交 OpenAI/Sora2-T2V 文生视频任务。
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpenAISora2T2VTaskSubmitRequest"
+            examples:
+              default:
+                summary: Text-to-video task
+                value:
+                  model: openai/sora-2/text-to-video
+                  input:
+                    prompt: A beautiful girl is dancing
+                  parameters:
+                    size: 720x1280
+                    duration: 4
+      responses:
+        "200":
+          description: Task submitted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenAISora2T2VTaskSubmitResponse"
+              examples:
+                submitted:
+                  summary: Submitted task
+                  value:
+                    output:
+                      task_id: task_id
+                    request_id: request_id
+        "400":
+          description: Invalid request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                paramError:
+                  $ref: "#/components/examples/ParamError"
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                error:
+                  $ref: "#/components/examples/ParamError"
+
+  /v1/tasks/status:
+    get:
+      tags:
+        - OpenAI Sora2 T2V
+      operationId: getOpenAISora2T2VTaskStatus
+      summary: Get OpenAI/Sora2-T2V task status
+      description: 查询 OpenAI/Sora2-T2V 异步任务状态。
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: task_id
+          in: query
+          required: true
+          description: 异步任务的唯一标识。
+          schema:
+            type: string
+          example: task_id
+      responses:
+        "200":
+          description: Task status response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenAISora2T2VTaskStatusResponse"
+              examples:
+                success:
+                  summary: Successful task
+                  value:
+                    output:
+                      task_id: task_id
+                      task_status: Success
+                      urls:
+                        - https://xxxxx/xxxx.mp4
+                      submit_time: 1756959000
+                      finish_time: 1756959050
+                    usage:
+                      duration: 4
+                    request_id: ""
+                failure:
+                  summary: Failed task
+                  value:
+                    output:
+                      task_id: task_id
+                      task_status: Failure
+                      submit_time: 1756959000
+                      finish_time: 1756959019
+                      error_message: error_message
+                    usage:
+                      duration: 5
+                    request_id: ""
+        "400":
+          description: Invalid task_id or request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                paramError:
+                  $ref: "#/components/examples/ParamError"
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                error:
+                  $ref: "#/components/examples/ParamError"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+
+  schemas:
+    OpenAISora2T2VTaskSubmitRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - model
+        - input
+      properties:
+        model:
+          type: string
+          const: openai/sora-2/text-to-video
+          description: 模型名称，此处为 openai/sora-2/text-to-video。
+        input:
+          $ref: "#/components/schemas/OpenAISora2T2VInput"
+        parameters:
+          $ref: "#/components/schemas/OpenAISora2T2VParameters"
+
+    OpenAISora2T2VInput:
+      type: object
+      additionalProperties: false
+      required:
+        - prompt
+      properties:
+        prompt:
+          type: string
+          description: 提示词，用于指导视频生成。
+
+    OpenAISora2T2VParameters:
+      type: object
+      additionalProperties: false
+      properties:
+        size:
+          type: string
+          enum:
+            - 720x1280
+            - 1280x720
+          default: 720x1280
+          description: 生成视频的尺寸。
+        duration:
+          type: integer
+          enum:
+            - 4
+            - 8
+            - 12
+          default: 4
+          description: 视频生成时长，单位为秒。
+
+    OpenAISora2T2VTaskSubmitResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - output
+        - request_id
+      properties:
+        output:
+          $ref: "#/components/schemas/OpenAISora2T2VTaskSubmitOutput"
+        request_id:
+          type: string
+          description: 请求的唯一标识。
+
+    OpenAISora2T2VTaskSubmitOutput:
+      type: object
+      additionalProperties: false
+      required:
+        - task_id
+      properties:
+        task_id:
+          type: string
+          description: 异步任务的唯一标识。
+
+    OpenAISora2T2VTaskStatusResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - output
+        - request_id
+      properties:
+        output:
+          $ref: "#/components/schemas/OpenAISora2T2VTaskStatusOutput"
+        usage:
+          $ref: "#/components/schemas/OpenAISora2T2VTaskUsage"
+        request_id:
+          type: string
+          description: 请求的唯一标识。
+
+    OpenAISora2T2VTaskStatusOutput:
+      type: object
+      additionalProperties: false
+      required:
+        - task_id
+        - task_status
+      properties:
+        task_id:
+          type: string
+          description: 异步任务的唯一标识。
+        task_status:
+          $ref: "#/components/schemas/OpenAISora2T2VTaskStatus"
+        urls:
+          type: array
+          description: 视频结果的 URL 列表。
+          items:
+            type: string
+            format: uri
+        submit_time:
+          type: integer
+          format: int64
+          description: 任务提交时间戳。
+        finish_time:
+          type: integer
+          format: int64
+          description: 任务完成时间戳。
+        error_message:
+          type: string
+          description: 失败时返回的错误信息。
+
+    OpenAISora2T2VTaskStatus:
+      type: string
+      enum:
+        - Pending
+        - Running
+        - Success
+        - Failure
+      description: 任务状态。
+
+    OpenAISora2T2VTaskUsage:
+      type: object
+      additionalProperties: false
+      properties:
+        duration:
+          type: integer
+          description: 任务执行时长，单位为秒。
+
+    ErrorResponse:
+      type: object
+      additionalProperties: true
+      required:
+        - error
+      properties:
+        error:
+          $ref: "#/components/schemas/ErrorObject"
+
+    ErrorObject:
+      type: object
+      additionalProperties: true
+      required:
+        - message
+        - type
+      properties:
+        message:
+          type: string
+        type:
+          type: string
+        code:
+          type:
+            - string
+            - "null"
+        param:
+          type:
+            - string
+            - "null"
+
+  examples:
+    ParamError:
+      summary: Parameter error
+      value:
+        error:
+          message: Invalid param
+          type: invalid_request_error
+          code: param_error
+          param: null

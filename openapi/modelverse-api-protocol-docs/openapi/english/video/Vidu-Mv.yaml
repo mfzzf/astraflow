@@ -1,0 +1,413 @@
+openapi: 3.1.0
+x-language: en-US
+info:
+  title: ModelVerse Vidu MV Video Task API
+  version: "1.0.0"
+  description: |
+    Self-contained OpenAPI 3.1 schema for the ModelVerse Vidu one-click MV
+    asynchronous video task API.
+
+servers:
+  - url: https://api.modelverse.cn
+    description: ModelVerse API endpoint documented for this model.
+
+tags:
+  - name: Vidu MV
+    description: One-click music-video asynchronous task operations for Vidu MV.
+
+paths:
+  /v1/tasks/submit:
+    post:
+      tags:
+        - Vidu MV
+      operationId: submitViduMvTask
+      summary: Submit a Vidu MV task
+      description: Submit an asynchronous one-click music-video generation task.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ViduMvSubmitRequest"
+            examples:
+              documented:
+                summary: Source one-click MV request
+                value:
+                  model: vidu-mv
+                  input:
+                    images:
+                      - https://xxxxxxxxx/image2video.png
+                    prompt: A person from the image wanders along the road.
+                    audio_url: https://xxxxxxxxx/49ab8a8f-f564-4b96-80a2-b38cca527475.mp3
+                  parameters:
+                    vidu_type: one-click/mv
+                    aspect_ratio: "16:9"
+                    resolution: 540p
+                    add_subtitle: true
+                    language: en
+                    srt_url: https://xxxxxxxxx/mv_subtitle.srt
+              base64Media:
+                summary: Submit with Base64 image and audio data URIs
+                value:
+                  model: vidu-mv
+                  input:
+                    images:
+                      - data:image/png;base64,{base64_encode}
+                    audio_url: data:audio/mp3;base64,{base64_encode}
+                    prompt: Create a lively MV with quick cuts and stage lighting.
+                  parameters:
+                    vidu_type: one-click/mv
+                    aspect_ratio: "9:16"
+                    resolution: 720p
+                    add_subtitle: false
+      responses:
+        "200":
+          description: Task submitted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ViduMvSubmitResponse"
+              examples:
+                submitted:
+                  summary: Submitted task
+                  value:
+                    output:
+                      task_id: task_id
+                    request_id: request_id
+        "400":
+          description: Invalid request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ViduMvErrorResponse"
+              examples:
+                paramError:
+                  $ref: "#/components/examples/ViduMvParamError"
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ViduMvErrorResponse"
+              examples:
+                error:
+                  $ref: "#/components/examples/ViduMvParamError"
+
+  /v1/tasks/status:
+    get:
+      tags:
+        - Vidu MV
+      operationId: getViduMvTaskStatus
+      summary: Query a Vidu MV task status
+      description: Query the status and result URLs for an asynchronous one-click MV task.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: task_id
+          in: query
+          required: true
+          description: Asynchronous task identifier returned by `/v1/tasks/submit`.
+          schema:
+            type: string
+          example: task_id
+      responses:
+        "200":
+          description: Task status response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ViduMvStatusResponse"
+              examples:
+                success:
+                  summary: Successful task
+                  value:
+                    output:
+                      task_id: task_id
+                      task_status: Success
+                      urls:
+                        - https://xxxxx/xxxx-mv.mp4
+                      submit_time: 1756959000
+                      finish_time: 1756959050
+                    usage:
+                      duration: 30
+                    request_id: ""
+                failure:
+                  summary: Failed task
+                  value:
+                    output:
+                      task_id: task_id
+                      task_status: Failure
+                      submit_time: 1756959000
+                      finish_time: 1756959019
+                      error_message: error_message
+                    usage:
+                      duration: 5
+                    request_id: ""
+        "400":
+          description: Invalid task identifier or request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ViduMvErrorResponse"
+              examples:
+                paramError:
+                  $ref: "#/components/examples/ViduMvParamError"
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ViduMvErrorResponse"
+              examples:
+                error:
+                  $ref: "#/components/examples/ViduMvParamError"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: "ModelVerse API key sent as `Authorization: Bearer <MODELVERSE_API_KEY>`."
+
+  schemas:
+    ViduMvSubmitRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - model
+        - input
+        - parameters
+      properties:
+        model:
+          type: string
+          description: |
+            Model name for the Vidu one-click MV API. This schema is pinned to
+            the documented Vidu MV model aliases only: `vidu-mv` for China
+            mainland users and `vidu-one-click-mv` for overseas users.
+          enum:
+            - vidu-mv
+            - vidu-one-click-mv
+        input:
+          $ref: "#/components/schemas/ViduMvInput"
+        parameters:
+          $ref: "#/components/schemas/ViduMvParameters"
+
+    ViduMvInput:
+      type: object
+      additionalProperties: false
+      required:
+        - images
+        - audio_url
+      properties:
+        images:
+          type: array
+          minItems: 1
+          maxItems: 7
+          description: |
+            Model or style images used to generate the MV. Provide 1 to 7 image
+            URLs or Base64 image data URIs. Supported image formats are png,
+            jpeg, jpg, and webp. Each image must be no larger than 50 MB and
+            have an aspect ratio no more extreme than 1:4 or 4:1. For Base64,
+            include an appropriate data URI content type, such as
+            `data:image/png;base64,{base64_encode}`. The HTTP request body must
+            not exceed 20 MB.
+          items:
+            type: string
+            description: Publicly accessible image URL or Base64 image data URI.
+          examples:
+            - - https://xxxxxxxxx/image2video.png
+            - - data:image/png;base64,{base64_encode}
+        audio_url:
+          type: string
+          description: |
+            Audio input used to generate the MV. Provide one audio URL or Base64
+            audio data URI. Supported audio formats are mp3, wav, aac, and m4a.
+            Audio duration must be at least 10 seconds and at most 180 seconds.
+            For Base64, include an appropriate data URI content type, such as
+            `data:audio/mp3;base64,{base64_encode}`. The HTTP request body must
+            not exceed 20 MB.
+          examples:
+            - https://xxxxxxxxx/49ab8a8f-f564-4b96-80a2-b38cca527475.mp3
+            - data:audio/mp3;base64,{base64_encode}
+        prompt:
+          type: string
+          maxLength: 3000
+          description: Optional text description for MV generation.
+
+    ViduMvParameters:
+      type: object
+      additionalProperties: false
+      required:
+        - vidu_type
+      properties:
+        vidu_type:
+          type: string
+          const: one-click/mv
+          description: Vidu interface type. This schema is pinned to `one-click/mv`.
+        aspect_ratio:
+          type: string
+          enum:
+            - "1:1"
+            - "16:9"
+            - "9:16"
+            - "4:3"
+            - "3:4"
+          default: "16:9"
+          description: Output aspect ratio.
+        resolution:
+          type: string
+          enum:
+            - 540p
+            - 720p
+            - 1080p
+          default: 720p
+          description: Output video resolution.
+        add_subtitle:
+          type: boolean
+          default: false
+          description: Whether subtitles are required.
+        language:
+          type: string
+          enum:
+            - en
+            - zh
+          description: Audio language type. Omit this field to use automatic language detection.
+        srt_url:
+          type: string
+          format: uri
+          description: Subtitle file URL.
+
+    ViduMvSubmitResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - output
+        - request_id
+      properties:
+        output:
+          $ref: "#/components/schemas/ViduMvSubmitOutput"
+        request_id:
+          type: string
+          description: Unique request identifier.
+
+    ViduMvSubmitOutput:
+      type: object
+      additionalProperties: false
+      required:
+        - task_id
+      properties:
+        task_id:
+          type: string
+          description: Unique identifier of the asynchronous task.
+
+    ViduMvStatusResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - output
+        - request_id
+      properties:
+        output:
+          $ref: "#/components/schemas/ViduMvStatusOutput"
+        usage:
+          $ref: "#/components/schemas/ViduMvUsage"
+        request_id:
+          type: string
+          description: Unique request identifier.
+
+    ViduMvStatusOutput:
+      type: object
+      additionalProperties: false
+      required:
+        - task_id
+        - task_status
+      properties:
+        task_id:
+          type: string
+          description: Unique identifier of the asynchronous task.
+        task_status:
+          $ref: "#/components/schemas/ViduMvTaskStatus"
+        urls:
+          type: array
+          description: Video result URL list.
+          items:
+            type: string
+            format: uri
+        submit_time:
+          type: integer
+          format: int64
+          description: Task submission timestamp.
+        finish_time:
+          type: integer
+          format: int64
+          description: Task completion timestamp.
+        error_message:
+          type: string
+          description: Error message returned when the task fails.
+
+    ViduMvTaskStatus:
+      type: string
+      enum:
+        - Pending
+        - Running
+        - Success
+        - Failure
+      description: Current asynchronous task status.
+
+    ViduMvUsage:
+      type: object
+      additionalProperties: false
+      properties:
+        duration:
+          type: integer
+          description: Video duration in seconds.
+
+    ViduMvErrorResponse:
+      type: object
+      additionalProperties: true
+      required:
+        - error
+      properties:
+        error:
+          $ref: "#/components/schemas/ViduMvErrorObject"
+        request_id:
+          type: string
+          description: Unique request identifier, if available.
+
+    ViduMvErrorObject:
+      type: object
+      additionalProperties: true
+      required:
+        - message
+        - type
+      properties:
+        message:
+          type: string
+          description: Error message.
+        type:
+          type: string
+          description: Error type.
+        code:
+          type:
+            - string
+            - "null"
+          description: Error code.
+        param:
+          type:
+            - string
+            - "null"
+          description: Request parameter related to the error.
+
+  examples:
+    ViduMvParamError:
+      summary: Invalid parameter error
+      value:
+        error:
+          message: Invalid param
+          type: invalid_request_error
+          code: param_error
+          param: input.audio_url
+        request_id: request_id

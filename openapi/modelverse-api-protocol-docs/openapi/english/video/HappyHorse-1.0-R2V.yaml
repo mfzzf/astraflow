@@ -1,0 +1,411 @@
+openapi: 3.1.0
+x-language: en-US
+info:
+  title: ModelVerse HappyHorse-1.0-R2V Video Task API
+  version: "1.0.0"
+  description: |
+    Self-contained OpenAPI 3.1 schema for the ModelVerse HappyHorse-1.0-R2V
+    reference-image-to-video asynchronous task API.
+
+servers:
+  - url: https://api.modelverse.cn
+    description: ModelVerse API endpoint documented for this model.
+
+tags:
+  - name: HappyHorse-1.0-R2V
+    description: Reference-image-to-video asynchronous task operations for HappyHorse-1.0-R2V.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /v1/tasks/submit:
+    post:
+      tags:
+        - HappyHorse-1.0-R2V
+      operationId: submitHappyHorse10R2VTask
+      summary: Submit a HappyHorse-1.0-R2V reference-image-to-video task
+      description: Submit an asynchronous reference-image-to-video generation task.
+      parameters:
+        - name: X-DashScope-Async
+          in: header
+          required: true
+          description: Enables asynchronous task submission as shown in the source request example.
+          schema:
+            type: string
+            const: enable
+          example: enable
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HappyHorse10R2VSubmitRequest"
+            examples:
+              documented:
+                summary: Source reference-image-to-video request
+                value:
+                  model: happyhorse-1.0-r2v
+                  input:
+                    prompt: character1 手持 character2，在镜头前展示产品细节。
+                    images:
+                      - https://example.com/person.jpg
+                      - https://example.com/product.jpg
+                  parameters:
+                    resolution: 720P
+                    ratio: "16:9"
+                    duration: 5
+              withOptionalControls:
+                summary: Reference-image-to-video request with optional controls
+                value:
+                  model: happyhorse-1.0-r2v
+                  input:
+                    prompt: character1 站在城市天台上展示 character2，镜头缓慢推进。
+                    images:
+                      - https://example.com/character.jpg
+                      - https://example.com/object.png
+                  parameters:
+                    resolution: 1080P
+                    ratio: "9:16"
+                    duration: 8
+                    watermark: false
+                    seed: 12345
+      responses:
+        "200":
+          description: Task submitted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HappyHorse10R2VSubmitResponse"
+              examples:
+                submitted:
+                  summary: Submitted task
+                  value:
+                    output:
+                      task_id: task_id
+                    request_id: request_id
+        "400":
+          description: Invalid request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HappyHorse10R2VErrorResponse"
+              examples:
+                paramError:
+                  $ref: "#/components/examples/HappyHorse10R2VParamError"
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HappyHorse10R2VErrorResponse"
+              examples:
+                error:
+                  $ref: "#/components/examples/HappyHorse10R2VParamError"
+
+  /v1/tasks/status:
+    get:
+      tags:
+        - HappyHorse-1.0-R2V
+      operationId: getHappyHorse10R2VTaskStatus
+      summary: Query HappyHorse-1.0-R2V task status
+      description: Query the status and result URLs for an asynchronous reference-image-to-video task.
+      parameters:
+        - name: task_id
+          in: query
+          required: true
+          description: Asynchronous task identifier returned by `/v1/tasks/submit`.
+          schema:
+            type: string
+          example: task_id
+      responses:
+        "200":
+          description: Task status response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HappyHorse10R2VStatusResponse"
+              examples:
+                success:
+                  summary: Successful task
+                  value:
+                    output:
+                      task_id: task_id
+                      task_status: Success
+                      urls:
+                        - https://xxxxx/xxxx.mp4
+                      submit_time: 1756959000
+                      finish_time: 1756959050
+                    usage:
+                      duration: 5
+                      output_video_duration: 5
+                      video_count: 1
+                      SR: 720
+                      ratio: "16:9"
+                    request_id: request_id
+                running:
+                  summary: Running task
+                  value:
+                    output:
+                      task_id: task_id
+                      task_status: Running
+                      submit_time: 1756959000
+                    request_id: request_id
+                failure:
+                  summary: Failed task
+                  value:
+                    output:
+                      task_id: task_id
+                      task_status: Failure
+                      submit_time: 1756959000
+                      finish_time: 1756959019
+                      error_message: error_message
+                    usage:
+                      duration: 5
+                      output_video_duration: 0
+                      video_count: 0
+                      SR: 720
+                      ratio: "16:9"
+                    request_id: request_id
+        "400":
+          description: Invalid task identifier or request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HappyHorse10R2VErrorResponse"
+              examples:
+                paramError:
+                  $ref: "#/components/examples/HappyHorse10R2VParamError"
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HappyHorse10R2VErrorResponse"
+              examples:
+                error:
+                  $ref: "#/components/examples/HappyHorse10R2VParamError"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: "ModelVerse API key sent as `Authorization: Bearer <YOUR_API_KEY>`."
+
+  schemas:
+    HappyHorse10R2VSubmitRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - model
+        - input
+      properties:
+        model:
+          type: string
+          const: happyhorse-1.0-r2v
+          description: Model name. This schema is pinned to `happyhorse-1.0-r2v`.
+        input:
+          $ref: "#/components/schemas/HappyHorse10R2VInput"
+        parameters:
+          $ref: "#/components/schemas/HappyHorse10R2VParameters"
+
+    HappyHorse10R2VInput:
+      type: object
+      additionalProperties: false
+      required:
+        - prompt
+        - images
+      properties:
+        prompt:
+          type: string
+          minLength: 1
+          description: Text prompt. Use `character1`, `character2`, and so on to refer to the corresponding reference image order in `input.images`.
+        images:
+          type: array
+          minItems: 1
+          maxItems: 9
+          description: Reference image URL list. The source document supports 1 to 9 images.
+          items:
+            type: string
+            format: uri
+
+    HappyHorse10R2VParameters:
+      type: object
+      additionalProperties: false
+      properties:
+        resolution:
+          type: string
+          enum:
+            - 720P
+            - 1080P
+          default: 1080P
+          description: Generated video resolution tier.
+        ratio:
+          type: string
+          enum:
+            - "16:9"
+            - "9:16"
+            - "1:1"
+          default: "16:9"
+          description: Generated video aspect ratio.
+        duration:
+          type: integer
+          minimum: 3
+          maximum: 15
+          default: 5
+          description: Generated video duration in seconds.
+        watermark:
+          type: boolean
+          default: true
+          description: Whether to add a watermark to the generated video.
+        seed:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+          description: Random seed.
+
+    HappyHorse10R2VSubmitResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - output
+        - request_id
+      properties:
+        output:
+          $ref: "#/components/schemas/HappyHorse10R2VSubmitOutput"
+        request_id:
+          type: string
+          description: Unique request identifier.
+
+    HappyHorse10R2VSubmitOutput:
+      type: object
+      additionalProperties: false
+      required:
+        - task_id
+      properties:
+        task_id:
+          type: string
+          description: Unique identifier of the asynchronous task.
+
+    HappyHorse10R2VStatusResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - output
+        - request_id
+      properties:
+        output:
+          $ref: "#/components/schemas/HappyHorse10R2VStatusOutput"
+        usage:
+          $ref: "#/components/schemas/HappyHorse10R2VUsage"
+        request_id:
+          type: string
+          description: Unique request identifier.
+
+    HappyHorse10R2VStatusOutput:
+      type: object
+      additionalProperties: false
+      required:
+        - task_id
+        - task_status
+      properties:
+        task_id:
+          type: string
+          description: Unique identifier of the asynchronous task.
+        task_status:
+          $ref: "#/components/schemas/HappyHorse10R2VTaskStatus"
+        urls:
+          type: array
+          description: Video result URL list.
+          items:
+            type: string
+            format: uri
+        submit_time:
+          type: integer
+          format: int64
+          description: Task submission timestamp.
+        finish_time:
+          type: integer
+          format: int64
+          description: Task completion timestamp.
+        error_message:
+          type: string
+          description: Error message returned when the task fails.
+
+    HappyHorse10R2VTaskStatus:
+      type: string
+      enum:
+        - Pending
+        - Running
+        - Success
+        - Failure
+      description: Current asynchronous task status.
+
+    HappyHorse10R2VUsage:
+      type: object
+      additionalProperties: false
+      properties:
+        duration:
+          type: integer
+          description: Billed video duration in seconds.
+        output_video_duration:
+          type: number
+          description: Output video duration in seconds.
+        video_count:
+          type: integer
+          description: Number of output videos.
+        SR:
+          type: integer
+          description: Output video resolution height, for example `720` or `1080`.
+        ratio:
+          type: string
+          description: Output video aspect ratio.
+
+    HappyHorse10R2VErrorResponse:
+      type: object
+      additionalProperties: true
+      required:
+        - error
+      properties:
+        error:
+          $ref: "#/components/schemas/HappyHorse10R2VErrorObject"
+        request_id:
+          type: string
+          description: Unique request identifier, if available.
+
+    HappyHorse10R2VErrorObject:
+      type: object
+      additionalProperties: true
+      required:
+        - message
+        - type
+      properties:
+        message:
+          type: string
+          description: Error message.
+        type:
+          type: string
+          description: Error type.
+        code:
+          type:
+            - string
+            - "null"
+          description: Error code.
+        param:
+          type:
+            - string
+            - "null"
+          description: Related request parameter, if any.
+
+  examples:
+    HappyHorse10R2VParamError:
+      summary: Invalid parameter error
+      value:
+        error:
+          message: Invalid param
+          type: invalid_request_error
+          code: param_error
+          param: input.images
+        request_id: request_id

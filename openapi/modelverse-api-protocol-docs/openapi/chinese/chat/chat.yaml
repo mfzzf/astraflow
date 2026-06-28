@@ -1,0 +1,2493 @@
+openapi: 3.1.0
+info:
+  # 原 title: Modelverse OpenAI Chat Completions接口
+  title: Modelverse Chat Completions 兼容接口
+  version: "1.0.0"
+  # 原 description: |
+  #   Modelverse OpenAI Chat Completions接口
+  description: |
+    Modelverse Chat Completions 兼容接口
+
+servers:
+  # 原说明：ModelVerse OpenAI 兼容 API 节点；按地理位置和数据驻留需求选择。
+  # ModelVerse 兼容 API 节点；按地理位置和数据驻留需求选择。
+  - url: https://api.modelverse.cn
+    description: 中国大陆节点，国内用户推荐，访问延迟低。
+  - url: https://api-sg.umodelverse.ai
+    description: 新加坡节点，东南亚用户推荐，访问更快。
+  - url: https://api-us-ca.umodelverse.ai
+    description: 美国洛杉矶节点，海外用户推荐，数据不回国。
+  - url: https://api-ge-fra.umodelverse.ai
+    description: 法兰克福节点，欧洲用户推荐，访问更快。
+
+tags:
+  - name: Chat Completions
+    # 原 description: OpenAI-compatible chat completion request.
+    description: Compatible chat completion request.
+
+paths:
+  /v1/chat/completions:
+    post:
+      tags:
+        - Chat Completions
+      operationId: createChatCompletion
+      summary: Create a chat completion
+      description: |
+        创建一次 Chat Completions 兼容对话请求。
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatCompletionRequest"
+            examples:
+              minimal:
+                summary: Minimal text request
+                value:
+                  model: model-name
+                  messages:
+                    - role: user
+                      content: 你好
+              multimodal:
+                summary: Multimodal user message
+                value:
+                  model: model-name
+                  messages:
+                    - role: user
+                      content:
+                        - type: text
+                          text: Describe this image.
+                        - type: image_url
+                          image_url:
+                            url: https://example.com/image.png
+                            detail: auto
+      responses:
+        "200":
+          description: Chat completion response. Response details can be described by responses_body.jsonc.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatCompletionResponse"
+        "400":
+          description: Bad request. Usually caused by unsupported fields, invalid message shape, or model-specific limits.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+
+  schemas:
+    ChatCompletionRequest:
+      type: object
+      additionalProperties: true
+      required:
+        - model
+        - messages
+      properties:
+        # messages：按对话顺序传入的上下文；不同模型支持的 role 和内容块不同。
+        messages:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/ChatCompletionMessage"
+          description: |
+            对话消息列表，按历史顺序排列。
+            role 可取 developer、system、user、assistant、tool、function。
+            function message 已属于旧版兼容；tool message 需要 tool_call_id。
+
+        # model：所有厂商都需要指定模型名或模型 ID。
+        model:
+          type: string
+          description: 模型名称或模型 ID，例如 gpt-5.5、glm-5.2、claude-sonnet-4-6 等。
+
+        # function_call：旧版函数调用控制；新请求优先使用 tool_choice。
+        function_call:
+          $ref: "#/components/schemas/FunctionCallOption"
+          description: 已弃用，使用 tool_choice 替代。可控制旧版 function 是否被调用。
+          deprecated: true
+
+        # modalities：请求模型输出文本、音频或二者。
+        modalities:
+          type: array
+          items:
+            type: string
+            enum: [text, audio]
+          description: 输出模态列表。默认通常为 ["text"]；请求音频输出时通常还需要 audio 参数。
+
+        # audio：请求级音频输出配置；modalities 包含 audio 时使用。
+        # audio:
+        #   $ref: "#/components/schemas/ChatCompletionAudioParam"
+
+        # frequency_penalty：按已出现频率惩罚重复 token。
+        frequency_penalty:
+          type:
+            - number
+            - "null"
+          minimum: -2
+          maximum: 2
+          description: 正值会降低已频繁出现 token 再次出现的概率，减少重复表达。
+
+        # logit_bias：按 token ID 调整采样前 logits。
+        logit_bias:
+          type: object
+          additionalProperties:
+            type: number
+            minimum: -100
+            maximum: 100
+          description: |
+            JSON 对象，key 是 tokenizer token ID（JSON 中表现为字符串），value 是 -100 到 100 的偏置。
+            -100 通常近似禁止某 token，100 通常强烈倾向选择某 token。
+
+        # logprobs：是否返回输出 token 的对数概率。
+        logprobs:
+          type: boolean
+          description: 是否返回每个输出 token 的 log probability。
+
+        # max_completion_tokens：新字段，限制可生成 token 总数，含可见输出和 reasoning token。
+        max_completion_tokens:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          description: 模型可生成的最大 token 数，包含可见输出 token 和推理 token。
+
+        # max_tokens：旧字段；OpenAI o-series 不兼容，优先使用 max_completion_tokens。
+        max_tokens:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          deprecated: true
+          description: 已逐步由 max_completion_tokens 替代；用于限制文本生成 token 数。
+
+        # metadata：附加结构化元数据。
+        # metadata:
+        #   type: object
+        #   maxProperties: 16
+        #   additionalProperties:
+        #     type: string
+        #     maxLength: 512
+        #   propertyNames:
+        #     maxLength: 64
+        #   description: 最多 16 个键值对；key 最长 64，value 最长 512。
+
+        # moderation：OpenAI 请求级审核配置。
+        # moderation:
+        #   type: object
+        #   additionalProperties: true
+        #   properties:
+        #     model:
+        #       type: string
+        #       description: 审核模型，例如 omni-moderation-latest。
+        #   description: 配置对请求输入和生成输出的审核。
+        #   x-provider-support: [OpenAI]
+
+        # n：为同一输入生成几个候选；n 越大计费 token 越多。
+        n:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 128
+          default: 1
+          description: 每条输入生成的 completion choices 数量；建议保持 1 以控制成本。
+        #   x-provider-support: [OpenAI, 阿里云, Kimi, 金山云, PPIO, 腾讯 TokenHub]
+
+        # parallel_tool_calls：是否允许并行调用多个工具。
+        parallel_tool_calls:
+          type: boolean
+          description: 是否开启并行工具调用。
+          # x-provider-support: [OpenAI, OpenRouter, 阿里云, 百度, 金山云, 腾讯 TokenHub, 火山引擎]
+
+        # prediction：静态预测输出，适合“重写已有文件局部内容”一类场景。
+        prediction:
+          $ref: "#/components/schemas/PredictionContent"
+          # x-provider-support: [OpenAI]
+
+        # presence_penalty：按是否出现过惩罚 token，鼓励新话题。
+        presence_penalty:
+          type:
+            - number
+            - "null"
+          minimum: -2
+          maximum: 2
+          description: 正值会惩罚已经出现过的 token，使模型更倾向引入新内容。
+          # x-provider-support: [OpenAI, OpenRouter, 阿里云, 百度, Kimi, 金山云, PPIO, 腾讯 TokenHub, 火山引擎]
+
+        # 原说明：prompt_cache_key：OpenAI 新缓存 key；替代 user 用于缓存优化。
+        # prompt_cache_key：缓存 key，用于请求缓存优化。
+        prompt_cache_key:
+          type: string
+          # 原 description: 用于相似请求缓存命中优化；OpenAI 标准字段中替代 user 字段。
+          description: 用于相似请求缓存命中优化。
+          # x-provider-support: [OpenAI, Kimi]
+
+        # prompt_cache_retention：prompt cache 保留策略。 azure不支持 已删除
+        # prompt_cache_retention:
+        #   type: string
+        #   enum: [in_memory, 24h]
+        #   description: prompt cache 保留策略；部分新模型只支持 24h。
+        #   x-provider-support: [OpenAI]
+
+        # reasoning_effort：推理强度；各厂商支持值不同。
+        reasoning_effort:
+          type: string
+          enum: [none, minimal, low, medium, high, xhigh, max]
+          description: |
+            控制推理模型的推理强度。
+            gpt模型常见值为 none/minimal/low/medium/high/xhigh；
+            glm-5.2 支持max；
+
+        # response_format：约束模型输出格式。
+        response_format:
+          $ref: "#/components/schemas/ResponseFormat"
+
+        # safety_identifier：稳定的安全识别符，建议哈希后传入。
+        # safety_identifier:
+        #   type: string
+        #   description: 稳定用户安全识别符，建议不要传入明文敏感信息。
+        #   x-provider-support: [OpenAI, Kimi]
+
+        # seed：尽量复现实验输出；不同模型不保证完全确定。
+        seed:
+          type:
+            - integer
+            - "null"
+          description: 随机种子，用于提高可复现性，但不保证跨模型或跨版本完全一致。
+
+        # service_tier：服务层级或时延/吞吐偏好。
+        # service_tier:
+        #   type:
+        #     - string
+        #     - "null"
+        #   description: 服务层级；火山引擎可取 fast/auto/default，OpenAI/OpenRouter/MiniMax 也有类似字段。
+        #   x-provider-support: [OpenAI, OpenRouter, MiniMax, 火山引擎]
+
+        # stop：停止词；智谱当前只支持单个停止词数组。
+        stop:
+          anyOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+            - type: "null"
+          # 原 description: 命中停止词时停止生成。不同厂商和模型对数量限制不同。
+          description: 命中停止词时停止生成。不同模型对数量限制不同。
+          # x-provider-support: [OpenAI, OpenRouter, 阿里云, 百度, Kimi, 金山云, PPIO, 腾讯 TokenHub, 火山引擎, 智谱]
+
+        # 原说明：store：是否存储输出，OpenAI/金山云文档提及。
+        # store：是否允许平台存储输出。
+        store:
+          type:
+            - boolean
+            - "null"
+          description: 是否允许平台存储请求/输出用于后续产品能力。
+
+        # stream：是否启用 SSE 流式返回。
+        stream:
+          type:
+            - boolean
+            - "null"
+          default: false
+          description: 是否以流式方式返回响应。
+
+        # stream_options：仅 stream=true 时设置。
+        # stream_options:
+        #   $ref: "#/components/schemas/StreamOptions"
+
+        # temperature：采样温度。
+        temperature:
+          type:
+            - number
+            - "null"
+          description: 采样温度，值越高越随机；建议不要和 top_p 同时大幅调整。
+
+        # tool_choice：控制是否调用工具以及调用哪个工具。
+        tool_choice:
+          $ref: "#/components/schemas/ToolChoice"
+          # x-provider-support: [OpenAI, OpenRouter, 阿里云, 百度, 金山云, 腾讯 TokenHub, 火山引擎, 智谱]
+
+        # tools：模型可调用工具列表。
+        tools:
+          type: array
+          items:
+            $ref: "#/components/schemas/ToolDefinition"
+          description: 工具定义列表。
+
+        # top_logprobs：返回每个位置概率最高的若干 token；通常需 logprobs=true。
+        top_logprobs:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+          maximum: 20
+          description: 返回每个输出位置 top N token 的 log probabilities，通常需要 logprobs=true。
+
+        # top_p：核采样概率阈值。
+        top_p:
+          type:
+            - number
+            - "null"
+          minimum: 0
+          maximum: 1
+          # 原 description: nucleus sampling 参数；智谱要求 [0.01,1] 且最多两位小数。
+          description: nucleus sampling 参数；部分模型可能限制取值范围和小数位数。
+
+        # user:
+        #   type: string
+        #   description: 终端用户标识；建议传哈希值，不要传明文敏感信息。
+        #   x-provider-support: [OpenAI, OpenRouter, 百度, 腾讯 TokenHub]
+
+        # verbosity：输出详细程度。
+        # verbosity:
+        #   type:
+        #     - string
+        #     - "null"
+        #   enum: [low, medium, high, null]
+        #   description: 控制输出简略或详细，默认通常为 medium。
+        #   x-provider-support: [OpenAI, 金山云]
+
+        # truncation：金山云 tokenizer 截断策略。
+        # truncation:
+        #   type:
+        #     - string
+        #     - "null"
+        #   description: 配置 tokenizer 截断策略，金山云默认 disabled。
+        #   x-provider-support: [金山云]
+
+        # chat_template_kwargs：金山云对话模板扩展参数。
+        # chat_template_kwargs:
+        #   type: object
+        #   additionalProperties: true
+        #   description: 金山云扩展对象，用于控制对话行为和模型思考方式。
+        #   x-provider-support: [金山云]
+
+        # web_search_options：OpenAI 网页搜索上下文配置。
+        # web_search_options:
+        #   $ref: "#/components/schemas/WebSearchOptions"
+        #   x-provider-support: [OpenAI]
+
+        # cache_control：OpenRouter 请求级 prompt cache 控制。
+        cache_control:
+          $ref: "#/components/schemas/CacheControl"
+          description: 仅支持 Anthropic Claude 模型。
+          # x-provider-support: [OpenRouter]
+
+        # debug：OpenRouter 调试扩展。
+        # debug:
+        #   type: object
+        #   additionalProperties: true
+        #   properties:
+        #     echo_upstream_body:
+        #       type: boolean
+        #       description: 仅 stream=true 时生效，回显上游请求体。
+        #   description: OpenRouter 调试参数。
+        #   x-provider-support: [OpenRouter]
+
+        # image_config：OpenRouter 图片生成/多模态相关扩展。
+        # image_config:
+        #   $ref: "#/components/schemas/AnyJson"
+        #   description: OpenRouter image_config，具体结构由模型/provider 决定。
+        #   x-provider-support: [OpenRouter]
+
+        # models：OpenRouter 多模型 fallback 列表。
+        # models:
+        #   type: array
+        #   items:
+        #     type: string
+        #   description: OpenRouter 多模型列表，用于指定 fallback 或备选模型。
+          # x-provider-support: [OpenRouter]
+
+        # min_p：最小概率采样阈值。
+        # min_p:
+        #   type:
+        #     - number
+        #     - "null"
+        #   minimum: 0
+        #   maximum: 1
+        #   description: min-p sampling 参数；PPIO 范围 0 <= x <= 1。
+        #   x-provider-support: [OpenRouter, PPIO]
+
+        # plugins：OpenRouter 插件配置。
+        # plugins:
+        #   type: array
+        #   items:
+        #     $ref: "#/components/schemas/OpenRouterPlugin"
+        #   description: 启用 OpenRouter 插件，如 web、file-parser、moderation、context-compression 等。
+        #   x-provider-support: [OpenRouter]
+
+        # provider：OpenRouter 多 provider 路由偏好。
+        # provider:
+        #   $ref: "#/components/schemas/OpenRouterProviderPreferences"
+        #   x-provider-support: [OpenRouter]
+
+        # route：OpenRouter 路由策略。
+        # route:
+        #   $ref: "#/components/schemas/AnyJson"
+        #   description: OpenRouter 路由策略或路由相关配置，schema 未展开。
+        #   x-provider-support: [OpenRouter]
+
+        # # session_id：OpenRouter 会话 ID，最长 256 字符。
+        # session_id:
+        #   type: string
+        #   maxLength: 256
+        #   description: OpenRouter session id，可辅助缓存或会话路由。
+        #   x-provider-support: [OpenRouter]
+
+        # # stop_server_tools_when：OpenRouter server-tool agent loop 停止条件。
+        # stop_server_tools_when:
+        #   type: array
+        #   items:
+        #     $ref: "#/components/schemas/StopServerToolCondition"
+        #   description: 满足任一条件时停止 OpenRouter server-tool 循环。
+        #   x-provider-support: [OpenRouter]
+
+        # # top_a：OpenRouter 采样扩展，并非所有 provider 支持。
+        # top_a:
+        #   type:
+        #     - number
+        #     - "null"
+        #   description: OpenRouter top-a sampling 参数。
+        #   x-provider-support: [OpenRouter]
+
+        # trace：OpenRouter observability/tracing 配置。
+        # trace:
+        #   type: object
+        #   additionalProperties:
+        #     type: string
+        #   description: OpenRouter trace 配置，如 trace_id、trace_name、span_name、generation_name。
+        #   x-provider-support: [OpenRouter]
+
+        # top_k：候选 token 数量；值越小越确定。
+        # top_k:
+        #   type:
+        #     - integer
+        #     - "null"
+        #   description: top-k sampling 参数；PPIO 范围 1 < x < 128，阿里云部分模型不支持。
+        #   x-provider-support: [阿里云, OpenRouter, PPIO]
+
+        # repetition_penalty：重复惩罚，1.0 通常表示无惩罚。
+        # repetition_penalty:
+        #   type:
+        #     - number
+        #     - "null"
+        #   description: 重复惩罚；PPIO 范围 0 < x < 2。
+        #   x-provider-support: [阿里云, 百度, OpenRouter, PPIO]
+
+        # thinking：统一思考模式配置；开启时使用 {"type":"enabled"}。
+        thinking:
+          $ref: "#/components/schemas/ThinkingConfig"
+
+        # reasoning_split：MiniMax 输出拆分开关，不负责开启/关闭 thinking。
+        # reasoning_split:
+        #   type: boolean
+        #   description: MiniMax reasoning 输出拆分；仅控制输出形态。
+        #   x-provider-support: [MiniMax]
+
+        # preserve_thinking：阿里云保留 thinking 历史；智谱使用 thinking.clear_thinking=false。
+        # preserve_thinking:
+        #   type: boolean
+        #   description: 阿里云是否保留 thinking 内容。
+        #   x-provider-support: [阿里云]
+
+        # thinking_budget：思考 token 预算。
+        # thinking_budget:
+        #   type: integer
+        #   minimum: 1
+        #   description: 思考 token 预算；阿里云和百度文档提及。
+        #   x-provider-support: [阿里云, 百度]
+
+        # tool_stream：工具调用增量流式输出。
+        # tool_stream:
+        #   type: boolean
+        #   description: 工具调用是否使用流式输出；智谱仅部分 GLM 系列支持。
+        #   x-provider-support: [阿里云, 智谱]
+
+        # enable_code_interpreter：阿里云代码解释器开关。
+        # enable_code_interpreter:
+        #   type: boolean
+        #   description: 阿里云 code interpreter 能力开关。
+        #   x-provider-support: [阿里云]
+
+        # enable_search：阿里云联网搜索开关。
+        # enable_search:
+        #   type: boolean
+        #   description: 阿里云是否启用联网搜索。
+        #   x-provider-support: [阿里云]
+
+        # search_options：阿里云联网搜索策略。
+        # search_options:
+        #   type: object
+        #   additionalProperties: true
+        #   properties:
+        #     forced_search:
+        #       type: boolean
+        #       description: 是否强制联网搜索。
+        #   description: 阿里云搜索选项；OpenAI/百度/智谱使用其它字段表达搜索。
+        #   x-provider-support: [阿里云]
+
+        # skill：阿里云 qwen-doc-turbo 生成技能。
+        # skill:
+        #   type: array
+        #   items:
+        #     $ref: "#/components/schemas/AliyunSkill"
+        #   description: 阿里云 skill 扩展；使用 skill 时 stream 必须为 true。
+        #   x-provider-support: [阿里云]
+
+        # penalty_score：百度重复惩罚字段。
+        # penalty_score:
+        #   type: number
+        #   description: 百度千帆 penalty_score，控制重复惩罚。
+        #   x-provider-support: [百度]
+
+        # web_search：百度实时搜索配置。
+        # web_search:
+        #   $ref: "#/components/schemas/BaiduWebSearch"
+        #   x-provider-support: [百度]
+
+    ChatCompletionMessage:
+      oneOf:
+        - $ref: "#/components/schemas/DeveloperMessage"
+        - $ref: "#/components/schemas/SystemMessage"
+        - $ref: "#/components/schemas/UserMessage"
+        - $ref: "#/components/schemas/AssistantMessage"
+        - $ref: "#/components/schemas/ToolMessage"
+        - $ref: "#/components/schemas/FunctionMessage"
+      discriminator:
+        propertyName: role
+
+    DeveloperMessage:
+      type: object
+      additionalProperties: true
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          const: developer
+          description: developer 指令；o1 及更新模型优先使用 developer 而不是 system。
+        name:
+          type: string
+          description: 可选参与者名称，用于区分同 role 参与者。
+        content:
+          $ref: "#/components/schemas/TextOnlyMessageContent"
+
+    SystemMessage:
+      type: object
+      additionalProperties: true
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          const: system
+          description: 系统消息；部分推理/视觉模型不支持或不生效。
+        name:
+          type: string
+        content:
+          $ref: "#/components/schemas/TextOnlyMessageContent"
+
+    UserMessage:
+      type: object
+      additionalProperties: true
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          const: user
+        name:
+          type: string
+        # user.content 可为纯文本、字符串数组或内容块数组。
+        content:
+          $ref: "#/components/schemas/UserMessageContent"
+
+    AssistantMessage:
+      type: object
+      additionalProperties: true
+      required: [role]
+      properties:
+        role:
+          type: string
+          const: assistant
+        name:
+          type: string
+        audio:
+          $ref: "#/components/schemas/AssistantAudio"
+        # 当存在 tool_calls 或 function_call 时，assistant.content 可为空或省略；否则通常必填。
+        content:
+          $ref: "#/components/schemas/AssistantMessageContent"
+        reasoning_content:
+          type: string
+          # 原 description: 思考内容片段；智谱 clear_thinking=false 时历史 reasoning_content 需完整透传。
+          description: 思考内容片段；透传历史思考内容时需保持完整未修改。
+        encrypted_content:
+          type: string
+          # 原 description: 火山引擎加密思考内容。
+          description: 加密思考内容。
+        refusal:
+          type: string
+          description: 助手拒绝回答的文本。
+        partial:
+          type: boolean
+          default: false
+          # 原 description: 前缀续写开关；阿里云/Kimi 文档提及。
+          description: 前缀续写开关；具体支持取决于模型。
+        tool_calls:
+          type: array
+          items:
+            $ref: "#/components/schemas/ToolCall"
+          description: 上一轮模型返回的工具调用；多轮对话时需回传。
+        function_call:
+          $ref: "#/components/schemas/FunctionCall"
+          deprecated: true
+
+    ToolMessage:
+      type: object
+      additionalProperties: true
+      required: [role, tool_call_id, content]
+      properties:
+        role:
+          type: string
+          const: tool
+        tool_call_id:
+          type: string
+          description: 对应上一轮 assistant.tool_calls[$index].id。
+        content:
+          $ref: "#/components/schemas/ToolMessageContent"
+
+    FunctionMessage:
+      type: object
+      additionalProperties: true
+      required: [role, name, content]
+      deprecated: true
+      properties:
+        role:
+          type: string
+          const: function
+          description: 旧版 function message；新接口优先使用 role=tool。
+        name:
+          type: string
+        content:
+          type: string
+          description: 仅支持字符串；结构化结果需先 JSON 序列化。
+
+    TextOnlyMessageContent:
+      anyOf:
+        - type: string
+        - type: array
+          items:
+            $ref: "#/components/schemas/TextContentPart"
+      description: 文本内容；数组形式只支持 text 内容块。
+
+    UserMessageContent:
+      anyOf:
+        - type: string
+        - type: array
+          items:
+            anyOf:
+              - type: string
+              - $ref: "#/components/schemas/ChatContentPart"
+      # 原 description: |
+      #   user 消息内容。可以是字符串、百度文档提及的 string[]，
+      #   或多模态内容块数组。具体内容块是否支持取决于厂商和模型。
+      description: |
+        user 消息内容。可以是字符串、字符串数组或多模态内容块数组。
+        具体内容块是否支持取决于模型。
+
+    AssistantMessageContent:
+      anyOf:
+        - type: string
+        - type: "null"
+        - type: array
+          items:
+            $ref: "#/components/schemas/AssistantContentPart"
+      description: assistant 内容；可为 string、null、文本块数组或单个 refusal 块。
+
+    ToolMessageContent:
+      anyOf:
+        - type: string
+        - type: array
+          items:
+            $ref: "#/components/schemas/TextContentPart"
+      # 原 description: 工具输出内容；多数厂商要求 string，结构化数据需 JSON 序列化。
+      description: 工具输出内容；结构化数据需 JSON 序列化为字符串。
+
+    ChatContentPart:
+      oneOf:
+        - $ref: "#/components/schemas/TextContentPart"
+        - $ref: "#/components/schemas/ImageUrlContentPart"
+        - $ref: "#/components/schemas/InputAudioContentPart"
+        - $ref: "#/components/schemas/FileContentPart"
+        - $ref: "#/components/schemas/FileUrlContentPart"
+        - $ref: "#/components/schemas/VideoFramesContentPart"
+        - $ref: "#/components/schemas/VideoUrlContentPart"
+      discriminator:
+        propertyName: type
+
+    AssistantContentPart:
+      oneOf:
+        - $ref: "#/components/schemas/TextContentPart"
+        - $ref: "#/components/schemas/RefusalContentPart"
+      discriminator:
+        propertyName: type
+
+    TextContentPart:
+      type: object
+      additionalProperties: true
+      required: [type, text]
+      properties:
+        type:
+          type: string
+          const: text
+        text:
+          type: string
+        # 原说明：OpenRouter/阿里云内容块缓存控制；其它厂商未必支持。
+        # 内容块缓存控制；具体支持取决于模型。
+        cache_control:
+          $ref: "#/components/schemas/CacheControl"
+
+    ImageUrlContentPart:
+      type: object
+      additionalProperties: true
+      required: [type, image_url]
+      properties:
+        type:
+          type: string
+          const: image_url
+        image_url:
+          type: object
+          additionalProperties: true
+          required: [url]
+          properties:
+            url:
+              type: string
+              # 原 description: 图片 URL、Base64 data URL 或厂商文件引用。
+              description: 图片 URL、Base64 data URL 或文件引用。
+            detail:
+              type: string
+              enum: [auto, low, high, default, xhigh]
+              # 原 description: 图片细节等级；不同厂商枚举不同。
+              description: 图片细节等级；具体枚举取决于模型。
+            max_long_side_pixel:
+              type: integer
+              # 原 description: 部分厂商支持的最长边限制。
+              description: 最长边限制；具体支持取决于模型。
+            image_pixel_limit:
+              $ref: "#/components/schemas/ImagePixelLimit"
+
+    ImagePixelLimit:
+      type: object
+      additionalProperties: false
+      properties:
+        min_pixels:
+          type: integer
+        max_pixels:
+          type: integer
+      # 原 description: 火山引擎图片像素限制，优先级高于 detail。
+      description: 图片像素限制，优先级高于 detail。
+
+    InputAudioContentPart:
+      type: object
+      additionalProperties: true
+      required: [type, input_audio]
+      properties:
+        type:
+          type: string
+          const: input_audio
+        input_audio:
+          type: object
+          additionalProperties: true
+          properties:
+            data:
+              type: string
+              # 原 description: Base64 音频数据；部分厂商也允许 URL 字符串。
+              description: Base64 音频数据；部分模型也允许 URL 字符串。
+            url:
+              type: string
+              # 原 description: 火山等厂商支持的音频 URL。
+              description: 音频 URL。
+            file_id:
+              type: string
+              # 原 description: 火山等厂商支持的文件 ID。
+              description: 文件 ID。
+            format:
+              type: string
+              # 原 description: OpenAI/智谱常见 wav/mp3；火山使用 MIME 类型如 audio/wav。
+              description: 音频格式，例如 wav、mp3 或 MIME 类型。
+
+    FileContentPart:
+      type: object
+      additionalProperties: true
+      required: [type, file]
+      properties:
+        type:
+          type: string
+          const: file
+        file:
+          type: object
+          additionalProperties: true
+          properties:
+            file_id:
+              type: string
+            file_data:
+              type: string
+              description: Base64 文件数据或 data URL。
+            file_url:
+              type: string
+            filename:
+              type: string
+              # 原 description: 使用 file_data 时部分厂商要求必填。
+              description: 文件名；部分模型在使用 file_data 时可能要求必填。
+
+    FileUrlContentPart:
+      type: object
+      additionalProperties: true
+      required: [type, file_url]
+      properties:
+        type:
+          type: string
+          const: file_url
+        file_url:
+          type: object
+          additionalProperties: false
+          required: [url]
+          properties:
+            url:
+              type: string
+              # 原 description: 智谱 file_url；不支持 Base64。
+              description: 文件 URL；此内容块不使用 Base64。
+
+    VideoFramesContentPart:
+      type: object
+      additionalProperties: true
+      required: [type, video]
+      properties:
+        type:
+          type: string
+          const: video
+        video:
+          type: array
+          items:
+            type: string
+          # 原 description: 阿里云视频图片帧列表。
+          description: 视频图片帧列表。
+        fps:
+          type: number
+        min_pixels:
+          type: integer
+        max_pixels:
+          type: integer
+        total_pixels:
+          type: integer
+
+    VideoUrlContentPart:
+      type: object
+      additionalProperties: true
+      required: [type, video_url]
+      properties:
+        type:
+          type: string
+          const: video_url
+        video_url:
+          type: object
+          additionalProperties: true
+          required: [url]
+          properties:
+            url:
+              type: string
+              # 原 description: 视频 URL、Base64 data URL 或厂商文件引用。
+              description: 视频 URL、Base64 data URL 或文件引用。
+            file_id:
+              type: string
+            detail:
+              type: string
+              enum: [low, default, high]
+            fps:
+              type: number
+              minimum: 0.2
+              maximum: 5
+            max_long_side_pixel:
+              type: integer
+        fps:
+          type: number
+        min_pixels:
+          type: integer
+        max_pixels:
+          type: integer
+        total_pixels:
+          type: integer
+
+    RefusalContentPart:
+      type: object
+      additionalProperties: false
+      required: [type, refusal]
+      properties:
+        type:
+          type: string
+          const: refusal
+        refusal:
+          type: string
+
+    AssistantAudio:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+          description: 模型先前音频响应 ID；多轮语音对话可回传。
+
+    ChatCompletionAudioParam:
+      type: object
+      additionalProperties: false
+      required: [format, voice]
+      properties:
+        format:
+          type: string
+          enum: [wav, aac, mp3, flac, opus, pcm16]
+          description: 输出音频格式。
+        voice:
+          anyOf:
+            - type: string
+              enum: [alloy, ash, ballad, coral, echo, fable, nova, onyx, sage, shimmer, verse, marin, cedar]
+            - type: string
+              # 原 description: 其它厂商或未来模型支持的声音名称。
+              description: 其它模型支持的声音名称。
+            - $ref: "#/components/schemas/CustomVoice"
+          description: 内置声音名或自定义 voice object。
+
+    CustomVoice:
+      type: object
+      additionalProperties: false
+      required: [id]
+      properties:
+        id:
+          type: string
+          description: 自定义声音 ID，例如 voice_1234。
+
+    FunctionCallOption:
+      anyOf:
+        - type: string
+          enum: [none, auto]
+        - type: object
+          additionalProperties: false
+          required: [name]
+          properties:
+            name:
+              type: string
+              description: 强制调用的函数名。
+
+    FunctionCall:
+      type: object
+      additionalProperties: false
+      required: [name, arguments]
+      properties:
+        name:
+          type: string
+        arguments:
+          type: string
+          description: 模型生成的 JSON 字符串，使用前必须校验。
+
+    ToolCall:
+      oneOf:
+        - $ref: "#/components/schemas/FunctionToolCall"
+        - $ref: "#/components/schemas/CustomToolCall"
+        - $ref: "#/components/schemas/ProviderToolCall"
+
+    FunctionToolCall:
+      type: object
+      additionalProperties: true
+      required: [id, type, function]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          const: function
+        function:
+          type: object
+          additionalProperties: true
+          required: [name, arguments]
+          properties:
+            index:
+              type: integer
+              # 原 description: 阿里云 tool_calls 数组索引。
+              description: tool_calls 数组索引。
+            name:
+              type: string
+            arguments:
+              type: string
+              description: JSON 字符串，执行工具前应解析并校验。
+
+    CustomToolCall:
+      type: object
+      additionalProperties: true
+      required: [id, type, custom]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          const: custom
+        custom:
+          type: object
+          additionalProperties: true
+          required: [name, input]
+          properties:
+            name:
+              type: string
+            input:
+              type: string
+
+    ProviderToolCall:
+      type: object
+      additionalProperties: true
+      required: [id, type]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [web_search, retrieval, mcp]
+        web_search:
+          $ref: "#/components/schemas/AnyJson"
+        retrieval:
+          $ref: "#/components/schemas/AnyJson"
+        mcp:
+          $ref: "#/components/schemas/AnyJson"
+      # 原 description: 智谱等厂商响应/历史消息中可能出现的内置工具调用。
+      description: 响应或历史消息中可能出现的内置工具调用。
+
+    ToolDefinition:
+      oneOf:
+        - $ref: "#/components/schemas/FunctionToolDefinition"
+        - $ref: "#/components/schemas/CustomToolDefinition"
+        - $ref: "#/components/schemas/WebSearchToolDefinition"
+        - $ref: "#/components/schemas/RetrievalToolDefinition"
+        - $ref: "#/components/schemas/McpToolDefinition"
+        # 原 $ref: "#/components/schemas/OpenRouterServerToolDefinition"
+        - $ref: "#/components/schemas/ServerToolDefinition"
+
+    FunctionToolDefinition:
+      type: object
+      additionalProperties: true
+      required: [type, function]
+      properties:
+        type:
+          type: string
+          const: function
+        function:
+          type: object
+          additionalProperties: true
+          required: [name]
+          properties:
+            name:
+              type: string
+              maxLength: 64
+              pattern: "^[a-zA-Z0-9_-]+$"
+            description:
+              type:
+                - string
+                - "null"
+            parameters:
+              type: object
+              additionalProperties: true
+              # 原 description: JSON Schema object；部分厂商要求必填。
+              description: JSON Schema object；部分模型可能要求必填。
+            strict:
+              type: boolean
+              # 原 description: 是否启用严格 schema 遵循；并非所有厂商支持。
+              description: 是否启用严格 schema 遵循；具体支持取决于模型。
+
+    CustomToolDefinition:
+      type: object
+      additionalProperties: true
+      required: [type, custom]
+      properties:
+        type:
+          type: string
+          const: custom
+        custom:
+          type: object
+          additionalProperties: true
+          required: [name]
+          properties:
+            name:
+              type: string
+            description:
+              type: string
+            format:
+              oneOf:
+                - $ref: "#/components/schemas/CustomToolTextFormat"
+                - $ref: "#/components/schemas/CustomToolGrammarFormat"
+
+    CustomToolTextFormat:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type:
+          type: string
+          const: text
+
+    CustomToolGrammarFormat:
+      type: object
+      additionalProperties: false
+      required: [type, grammar]
+      properties:
+        type:
+          type: string
+          const: grammar
+        grammar:
+          type: object
+          additionalProperties: false
+          required: [definition, syntax]
+          properties:
+            definition:
+              type: string
+            syntax:
+              type: string
+              enum: [lark, regex]
+
+    WebSearchToolDefinition:
+      type: object
+      additionalProperties: true
+      required: [type]
+      properties:
+        type:
+          type: string
+          const: web_search
+        web_search:
+          type: object
+          additionalProperties: true
+          properties:
+            enable:
+              type: boolean
+            search_engine:
+              type: string
+            search_query:
+              type: string
+            search_intent:
+              type: string
+            count:
+              type: integer
+            search_domain_filter:
+              type: string
+            search_recency_filter:
+              type: string
+            content_size:
+              type: string
+            result_sequence:
+              type: string
+            search_result:
+              type: boolean
+            require_search:
+              type: boolean
+            search_prompt:
+              type: string
+      # 原 description: 智谱 web_search 工具配置。
+      description: web_search 工具配置。
+
+    RetrievalToolDefinition:
+      type: object
+      additionalProperties: true
+      required: [type, retrieval]
+      properties:
+        type:
+          type: string
+          const: retrieval
+        retrieval:
+          type: object
+          additionalProperties: true
+          properties:
+            knowledge_id:
+              type: string
+            prompt_template:
+              type: string
+
+    McpToolDefinition:
+      type: object
+      additionalProperties: true
+      required: [type, mcp]
+      properties:
+        type:
+          type: string
+          const: mcp
+        mcp:
+          type: object
+          additionalProperties: true
+          properties:
+            server_label:
+              type: string
+            server_url:
+              type: string
+            transport_type:
+              type: string
+            allowed_tools:
+              type: array
+              items:
+                type: string
+            headers:
+              type: object
+              additionalProperties:
+                type: string
+
+    # 原组件名：OpenRouterServerToolDefinition
+    ServerToolDefinition:
+      type: object
+      additionalProperties: true
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum:
+            # 原枚举值:
+            # - openrouter:web_search
+            # - openrouter:web_fetch
+            # - openrouter:bash
+            # - openrouter:subagent
+            # - openrouter:advisor
+            # - openrouter:image_generation
+            - server:web_search
+            - server:web_fetch
+            - server:bash
+            - server:subagent
+            - server:advisor
+            - server:image_generation
+      # 原 description: OpenRouter server tools。
+      description: server tools。
+
+    ToolChoice:
+      anyOf:
+        - type: string
+          enum: [none, auto, required]
+        - $ref: "#/components/schemas/FunctionToolChoice"
+        - $ref: "#/components/schemas/CustomToolChoice"
+        - $ref: "#/components/schemas/AllowedToolsChoice"
+        # 原 $ref: "#/components/schemas/OpenRouterServerToolChoice"
+        - $ref: "#/components/schemas/ServerToolChoice"
+      description: 没有 tools 时默认 none；有 tools 时通常默认 auto。
+
+    FunctionToolChoice:
+      type: object
+      additionalProperties: false
+      required: [type, function]
+      properties:
+        type:
+          type: string
+          const: function
+        function:
+          type: object
+          additionalProperties: false
+          required: [name]
+          properties:
+            name:
+              type: string
+
+    CustomToolChoice:
+      type: object
+      additionalProperties: false
+      required: [type, custom]
+      properties:
+        type:
+          type: string
+          const: custom
+        custom:
+          type: object
+          additionalProperties: false
+          required: [name]
+          properties:
+            name:
+              type: string
+
+    AllowedToolsChoice:
+      type: object
+      additionalProperties: false
+      required: [type, allowed_tools]
+      properties:
+        type:
+          type: string
+          const: allowed_tools
+        allowed_tools:
+          type: object
+          additionalProperties: false
+          required: [mode, tools]
+          properties:
+            mode:
+              type: string
+              enum: [auto, required]
+            tools:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+
+    # 原组件名：OpenRouterServerToolChoice
+    ServerToolChoice:
+      type: object
+      additionalProperties: true
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum:
+            # 原枚举值:
+            # - openrouter:web_search
+            # - openrouter:web_fetch
+            # - openrouter:bash
+            # - openrouter:subagent
+            # - openrouter:advisor
+            # - openrouter:image_generation
+            - server:web_search
+            - server:web_fetch
+            - server:bash
+            - server:subagent
+            - server:advisor
+            - server:image_generation
+
+    ResponseFormat:
+      oneOf:
+        - $ref: "#/components/schemas/ResponseFormatText"
+        - $ref: "#/components/schemas/ResponseFormatJsonObject"
+        - $ref: "#/components/schemas/ResponseFormatJsonSchema"
+        - $ref: "#/components/schemas/ResponseFormatGrammar"
+        - $ref: "#/components/schemas/ResponseFormatPython"
+
+    ResponseFormatText:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type:
+          type: string
+          const: text
+
+    ResponseFormatJsonObject:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type:
+          type: string
+          const: json_object
+      description: 旧 JSON mode；通常仍需在 system/user 消息中明确要求输出 JSON。
+
+    ResponseFormatJsonSchema:
+      type: object
+      additionalProperties: false
+      required: [type, json_schema]
+      properties:
+        type:
+          type: string
+          const: json_schema
+        json_schema:
+          type: object
+          additionalProperties: false
+          required: [name]
+          properties:
+            name:
+              type: string
+              maxLength: 64
+              pattern: "^[a-zA-Z0-9_-]+$"
+            description:
+              type: string
+            schema:
+              type: object
+              additionalProperties: true
+            strict:
+              type: boolean
+      description: 结构化输出；strict=true 时通常只支持 JSON Schema 子集。
+
+    ResponseFormatGrammar:
+      type: object
+      additionalProperties: true
+      required: [type, grammar]
+      properties:
+        type:
+          type: string
+          const: grammar
+        grammar:
+          type: string
+      # 原 description: OpenRouter 扩展 response_format。
+      description: 扩展 response_format。
+
+    ResponseFormatPython:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type:
+          type: string
+          const: python
+      # 原 description: OpenRouter 扩展 response_format。
+      description: 扩展 response_format。
+
+    StreamOptions:
+      type: object
+      additionalProperties: true
+      properties:
+        include_obfuscation:
+          type: boolean
+          description: 如果信任网络链路，可设为 false 减少带宽。
+        include_usage:
+          type: boolean
+          description: 在 [DONE] 前额外返回 usage chunk；流中断时可能收不到。
+        # chunk_include_usage:
+        #   type: boolean
+        #   # 原 description: 百度/火山提及：每个 chunk 返回截至当前累计 usage。
+        #   description: 每个 chunk 返回截至当前累计 usage。
+
+    PredictionContent:
+      type: object
+      additionalProperties: false
+      required: [type, content]
+      properties:
+        type:
+          type: string
+          const: content
+        content:
+          anyOf:
+            - type: string
+            - type: array
+              items:
+                $ref: "#/components/schemas/TextContentPart"
+          description: 期望匹配的静态预测内容。
+
+    WebSearchOptions:
+      type: object
+      additionalProperties: true
+      properties:
+        search_context_size:
+          type: string
+          enum: [low, medium, high]
+          default: medium
+        user_location:
+          type: object
+          additionalProperties: true
+          properties:
+            approximate:
+              type: object
+              additionalProperties: false
+              required: [type]
+              properties:
+                type:
+                  type: string
+                  const: approximate
+                city:
+                  type: string
+                country:
+                  type: string
+                  minLength: 2
+                  maxLength: 2
+                region:
+                  type: string
+                timezone:
+                  type: string
+
+    CacheControl:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type:
+          type: string
+          const: ephemeral
+        ttl:
+          type: string
+          enum: [5m, 1h]
+          # 原 description: OpenRouter 内容块缓存 TTL。
+          description: 内容块缓存 TTL。
+
+#     OpenRouterPlugin:
+#       type: object
+#       additionalProperties: true
+#       required: [id]
+#       properties:
+#         id:
+#           type: string
+#           enum:
+#             - auto-router
+#             - context-compression
+#             - file-parser
+#             - fusion
+#             - moderation
+#             - pareto-router
+#             - response-healing
+#             - web
+#             - web-fetch
+#         enabled:
+#           type: boolean
+#         engine:
+#           type: string
+#         max_results:
+#           type: integer
+# 
+#     OpenRouterProviderPreferences:
+#       type: object
+#       additionalProperties: true
+#       properties:
+#         allow_fallbacks:
+#           type:
+#             - boolean
+#             - "null"
+#           default: true
+#         data_collection:
+#           type:
+#             - string
+#             - "null"
+#           enum: [allow, deny, null]
+#         order:
+#           type:
+#             - array
+#             - "null"
+#           items:
+#             type: string
+#         only:
+#           type:
+#             - array
+#             - "null"
+#           items:
+#             type: string
+#         ignore:
+#           type:
+#             - array
+#             - "null"
+#           items:
+#             type: string
+#         require_parameters:
+#           type:
+#             - boolean
+#             - "null"
+#         sort:
+#           anyOf:
+#             - type: string
+#               enum: [price, throughput, latency, exacto]
+#             - type: object
+#               additionalProperties: true
+#             - type: "null"
+#         quantizations:
+#           type: array
+#           items:
+#             type: string
+#             enum: [int4, int8, fp4, fp6, fp8, fp16, bf16, fp32, unknown]
+#         zdr:
+#           type:
+#             - boolean
+#             - "null"
+#         max_price:
+#           type: object
+#           additionalProperties: true
+#           properties:
+#             prompt:
+#               type: string
+#             completion:
+#               type: string
+# 
+    StopServerToolCondition:
+      type: object
+      additionalProperties: true
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [finish_reason_is, has_tool_call, max_cost, max_tokens_used, step_count_is]
+        finish_reason:
+          type: string
+        tool_name:
+          type: string
+        max_cost:
+          type: number
+        max_tokens_used:
+          type: integer
+        step_count:
+          type: integer
+
+    ThinkingConfig:
+      type: object
+      additionalProperties: true
+      properties:
+        type:
+          type: string
+          enum: [enabled, disabled, auto, adaptive]
+          description: |
+            统一开启思考模式时使用 enabled，关闭时使用 disabled。
+            仅部分模型支持 auto 或 adaptive，表示由模型根据对话内容自动判断是否启用思考模式。
+        # keep:
+        #   type:
+        #     - string
+        #     - "null"
+        #   enum: [all, null]
+        #   # 原 description: Kimi 保留历史 reasoning_content 的控制字段。
+        #   description: 保留历史 reasoning_content 的控制字段。
+        # clear_thinking:
+        #   type: boolean
+        #   # 原 description: 智谱字段；false 时需完整未修改透传历史 reasoning_content。
+        #   description: false 时需完整未修改透传历史 reasoning_content。
+
+#     AliyunSkill:
+#       type: object
+#       additionalProperties: true
+#       required: [type]
+#       properties:
+#         type:
+#           type: string
+#           enum: [ppt]
+#         mode:
+#           type: string
+#           enum: [general, creative]
+#         template_id:
+#           type: string
+#           enum: [news_01, summary_01, internet_01, thesis_01]
+#       description: 阿里云 qwen-doc-turbo 生成技能；使用时 stream 必须为 true。
+# 
+#     BaiduWebSearch:
+#       type: object
+#       additionalProperties: true
+#       properties:
+#         enable:
+#           type: boolean
+#           description: 是否开启实时搜索。
+#         enable_citation:
+#           type: boolean
+#           description: 搜索开启时，是否在响应内容附角标。
+#         enable_trace:
+#           type: boolean
+#           description: 搜索开启时，是否返回 search_results 溯源。
+#         enable_status:
+#           type: boolean
+#           description: 搜索开启时，是否通过 delta_tag=search_status 返回信号包。
+#         search_mode:
+#           type: string
+#           enum: [auto, required]
+#         search_number:
+#           type: integer
+#           minimum: 1
+#           maximum: 28
+#         reference_number:
+#           type: integer
+#           minimum: 1
+#           maximum: 28
+# 
+    AnyJson:
+      description: 任意 JSON 值。
+      anyOf:
+        - type: object
+          additionalProperties: true
+        - type: array
+          items: {}
+        - type: string
+        - type: number
+        - type: integer
+        - type: boolean
+        - type: "null"
+
+    ChatCompletionResponse:
+      oneOf:
+        - $ref: "#/components/schemas/ChatCompletionObject"
+        - $ref: "#/components/schemas/ChatCompletionChunk"
+      description: 聊天补全响应体；非流式返回完整对象，流式返回 chunk 对象。
+
+    ChatCompletionObject:
+      type: object
+      additionalProperties: true
+      required: [id, choices, created, model, object]
+      properties:
+        id:
+          type: string
+          description: 聊天补全响应的唯一标识符。
+        u_trace_id:
+          type: string
+          description: 请求 ID。
+        choices:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatCompletionChoice"
+        created:
+          type: integer
+          description: 聊天补全创建时的 Unix 秒级时间戳。
+        model:
+          type: string
+          description: 用于生成此聊天补全的模型。
+        object:
+          type: string
+          enum: [chat.completion, chat.completion.chunk]
+          description: 对象类型；非流式通常为 chat.completion，流式通常为 chat.completion.chunk。
+        # moderation:
+        #   $ref: "#/components/schemas/ModerationEnvelope"
+        service_tier:
+          type:
+            - string
+            - "null"
+          enum: [auto, default, flex, scale, priority, fast, null]
+          description: 服务层级或时延/吞吐偏好。
+        # system_fingerprint:
+        #   type:
+        #     - string
+        #     - "null"
+        #   description: 模型后端配置指纹。
+        # 原字段名：openrouter_metadata
+        # routing_metadata:
+        #   $ref: "#/components/schemas/RoutingMetadata"
+        usage:
+          $ref: "#/components/schemas/CompletionUsage"
+        # video_result:
+        #   type: array
+        #   description: 视频生成结果。
+        #   items:
+        #     $ref: "#/components/schemas/VideoResult"
+        # web_search:
+        #   type: array
+        #   description: 网页搜索来源信息。
+        #   items:
+        #     $ref: "#/components/schemas/WebSearchResult"
+        content_filter:
+          type: array
+          description: 内容过滤结果。
+          items:
+            $ref: "#/components/schemas/ContentFilterResult"
+        metadata:
+          type: object
+          additionalProperties: true
+          description: 响应附加元数据。
+        # input_sensitive:
+        #   type: boolean
+        #   description: 输入是否命中敏感检测。
+        # output_sensitive:
+        #   type: boolean
+        #   description: 输出是否命中敏感检测。
+        # input_sensitive_type:
+        #   type: integer
+        #   description: 输入敏感检测类型。
+        # output_sensitive_type:
+        #   type: integer
+        #   description: 输出敏感检测类型。
+        # output_sensitive_int:
+        #   type: integer
+        #   description: 输出敏感检测补充类型。
+        # base_resp:
+        #   $ref: "#/components/schemas/BaseResponse"
+        # # 原字段名：openrouter_error_example
+        # routing_error_example:
+        #   $ref: "#/components/schemas/ErrorResponse"
+        # # 原字段名：zhipu_error_example
+        # provider_error_example:
+        #   $ref: "#/components/schemas/ErrorResponse"
+        # # 原字段名：aliyun_stream_chunk_example
+        # stream_chunk_example:
+        #   $ref: "#/components/schemas/ChatCompletionChunk"
+        # # 原字段名：aliyun_stream_usage_chunk_example
+        # stream_usage_chunk_example:
+        #   $ref: "#/components/schemas/ChatCompletionChunk"
+
+    ChatCompletionChunk:
+      type: object
+      additionalProperties: true
+      required: [id, choices, created, model, object]
+      properties:
+        id:
+          type: string
+          description: 与同一次流式响应相关的唯一标识符。
+        choices:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatCompletionChunkChoice"
+        created:
+          type: integer
+          description: chunk 创建时的 Unix 秒级时间戳。
+        model:
+          type: string
+          description: 生成此 chunk 的模型。
+        object:
+          type: string
+          const: chat.completion.chunk
+        service_tier:
+          type:
+            - string
+            - "null"
+          enum: [auto, default, flex, scale, priority, fast, null]
+        system_fingerprint:
+          type:
+            - string
+            - "null"
+        usage:
+          anyOf:
+            - $ref: "#/components/schemas/CompletionUsage"
+            - type: "null"
+
+    ChatCompletionChoice:
+      type: object
+      additionalProperties: true
+      required: [index, message]
+      properties:
+        finish_reason:
+          $ref: "#/components/schemas/FinishReason"
+        index:
+          type: integer
+          description: 此选项在 choices 数组中的索引。
+        logprobs:
+          anyOf:
+            - $ref: "#/components/schemas/ChoiceLogprobs"
+            - type: "null"
+        matched_stop:
+          anyOf:
+            - type: integer
+            - type: string
+            - type: "null"
+          description: 命中的停止条件。
+        message:
+          $ref: "#/components/schemas/ChatCompletionResponseMessage"
+        moderation_hit_type:
+          type:
+            - string
+            - "null"
+          enum: [severe_violation, violence, null]
+          description: 内容护栏命中类型。
+
+    ChatCompletionChunkChoice:
+      type: object
+      additionalProperties: true
+      required: [index, delta]
+      properties:
+        delta:
+          $ref: "#/components/schemas/ChatCompletionResponseDelta"
+        finish_reason:
+          $ref: "#/components/schemas/FinishReason"
+        index:
+          type: integer
+        logprobs:
+          anyOf:
+            - $ref: "#/components/schemas/ChoiceLogprobs"
+            - type: "null"
+
+    FinishReason:
+      type:
+        - string
+        - "null"
+      enum:
+        - stop
+        - length
+        - tool_calls
+        - content_filter
+        - function_call
+        - abort
+        - error
+        - sensitive
+        - network_error
+        - model_context_window_exceeded
+        - null
+      description: 生成停止原因；null 常见于流式响应尚未结束时。
+
+    ChatCompletionResponseMessage:
+      type: object
+      additionalProperties: true
+      required: [role]
+      properties:
+        role:
+          type: string
+          const: assistant
+        name:
+          type: string
+        reasoning:
+          type:
+            - string
+            - "null"
+          description: 推理输出文本。
+        reasoning_content:
+          type: string
+          description: 思考内容片段。
+        encrypted_content:
+          type: string
+          description: 加密思考内容。
+        reasoning_details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReasoningDetail"
+        content:
+          anyOf:
+            - type: string
+            - type: "null"
+            - type: array
+              items:
+                $ref: "#/components/schemas/TextContentPart"
+        audio_content:
+          type: string
+          description: 音频内容字符串。
+        refusal:
+          type:
+            - string
+            - "null"
+          description: 模型拒绝回答的文本。
+        images:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResponseImage"
+        annotations:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResponseAnnotation"
+        audio:
+          $ref: "#/components/schemas/ResponseAudio"
+        function_call:
+          $ref: "#/components/schemas/FunctionCall"
+          deprecated: true
+        tool_calls:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResponseToolCall"
+
+    ChatCompletionResponseDelta:
+      type: object
+      additionalProperties: true
+      properties:
+        role:
+          type: string
+          const: assistant
+        content:
+          type:
+            - string
+            - "null"
+        reasoning_content:
+          type: string
+        encrypted_content:
+          type: string
+        function_call:
+          anyOf:
+            - $ref: "#/components/schemas/FunctionCall"
+            - type: "null"
+          deprecated: true
+        audio:
+          $ref: "#/components/schemas/ResponseAudio"
+        refusal:
+          type:
+            - string
+            - "null"
+        tool_calls:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResponseToolCall"
+
+    ReasoningDetail:
+      type: object
+      additionalProperties: true
+      properties:
+        type:
+          type: string
+          description: 结构化思考片段类型。
+        id:
+          type: string
+        format:
+          type: string
+        index:
+          type: integer
+        text:
+          type: string
+
+    ResponseImage:
+      type: object
+      additionalProperties: true
+      properties:
+        image_url:
+          type: object
+          additionalProperties: true
+          properties:
+            url:
+              type: string
+
+    ResponseAnnotation:
+      type: object
+      additionalProperties: true
+      required: [type]
+      properties:
+        type:
+          type: string
+          const: url_citation
+        url_citation:
+          type: object
+          additionalProperties: true
+          properties:
+            start_index:
+              type: integer
+            end_index:
+              type: integer
+            title:
+              type: string
+            url:
+              type: string
+
+    ResponseAudio:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+          description: 音频响应的唯一标识符。
+        data:
+          type: string
+          description: Base64 音频字节或流式音频片段。
+        expires_at:
+          type: integer
+          description: Unix 秒级过期时间戳。
+        transcript:
+          type: string
+          description: 生成音频的转录文本。
+
+    ResponseToolCall:
+      oneOf:
+        - $ref: "#/components/schemas/ResponseFunctionToolCall"
+        - $ref: "#/components/schemas/ResponseCustomToolCall"
+        - $ref: "#/components/schemas/ResponseMcpToolCall"
+
+    ResponseFunctionToolCall:
+      type: object
+      additionalProperties: true
+      required: [id, type, function]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          const: function
+        index:
+          type: integer
+        function:
+          type: object
+          additionalProperties: true
+          required: [name, arguments]
+          properties:
+            name:
+              type: string
+            arguments:
+              type: string
+              description: 模型生成的 JSON 字符串，调用前需要校验。
+
+    ResponseCustomToolCall:
+      type: object
+      additionalProperties: true
+      required: [id, type, custom]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          const: custom
+        custom:
+          type: object
+          additionalProperties: true
+          required: [name, input]
+          properties:
+            name:
+              type: string
+            input:
+              type: string
+
+    ResponseMcpToolCall:
+      type: object
+      additionalProperties: true
+      required: [id, type, mcp]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          const: mcp
+        mcp:
+          type: object
+          additionalProperties: true
+          properties:
+            id:
+              type: string
+            type:
+              type: string
+            server_label:
+              type: string
+            name:
+              type: string
+            arguments:
+              type: string
+            output:
+              $ref: "#/components/schemas/AnyJson"
+            error:
+              $ref: "#/components/schemas/AnyJson"
+            tools:
+              type: array
+              items:
+                $ref: "#/components/schemas/AnyJson"
+
+    ChoiceLogprobs:
+      type: object
+      additionalProperties: true
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/TokenLogprob"
+        refusal:
+          type: array
+          items:
+            $ref: "#/components/schemas/TokenLogprob"
+
+    TokenLogprob:
+      type: object
+      additionalProperties: true
+      required: [token, logprob]
+      properties:
+        token:
+          type: string
+        bytes:
+          anyOf:
+            - type: array
+              items:
+                type: integer
+            - type: "null"
+          description: token 的 UTF-8 字节表示。
+        logprob:
+          type: number
+        top_logprobs:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopLogprob"
+
+    TopLogprob:
+      type: object
+      additionalProperties: true
+      required: [token, logprob]
+      properties:
+        token:
+          type: string
+        bytes:
+          anyOf:
+            - type: array
+              items:
+                type: integer
+            - type: "null"
+        logprob:
+          type: number
+
+    ModerationEnvelope:
+      type: object
+      additionalProperties: true
+      properties:
+        input:
+          oneOf:
+            - $ref: "#/components/schemas/ModerationResults"
+            - $ref: "#/components/schemas/ModerationError"
+        output:
+          oneOf:
+            - $ref: "#/components/schemas/ModerationResults"
+            - $ref: "#/components/schemas/ModerationError"
+
+    ModerationResults:
+      type: object
+      additionalProperties: true
+      properties:
+        type:
+          type: string
+          const: moderation_results
+        model:
+          type: string
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/ModerationResult"
+
+    ModerationResult:
+      type: object
+      additionalProperties: true
+      properties:
+        type:
+          type: string
+          const: moderation_result
+        model:
+          type: string
+        flagged:
+          type: boolean
+        categories:
+          type: object
+          additionalProperties:
+            type: boolean
+        category_scores:
+          type: object
+          additionalProperties:
+            type: number
+        category_applied_input_types:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+    ModerationError:
+      type: object
+      additionalProperties: true
+      properties:
+        type:
+          type: string
+          const: error
+        code:
+          type: string
+        message:
+          type: string
+
+    RoutingMetadata:
+      type: object
+      additionalProperties: true
+      properties:
+        attempt:
+          type: integer
+        attempts:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoutingAttempt"
+        endpoints:
+          type: object
+          additionalProperties: true
+          properties:
+            available:
+              type: array
+              items:
+                $ref: "#/components/schemas/RoutingEndpoint"
+            total:
+              type: integer
+        is_byok:
+          type: boolean
+        params:
+          type: object
+          additionalProperties: true
+          properties:
+            quality_floor:
+              type: number
+            throughput_floor:
+              type: number
+            version_group:
+              type: string
+        pipeline:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoutingPipelineStep"
+        region:
+          anyOf:
+            - type: string
+            - type: "null"
+        requested:
+          type: string
+        strategy:
+          type: string
+          enum: [direct, auto, free, latest, alias, fallback, pareto, bodybuilder, fusion]
+        summary:
+          type: string
+
+    RoutingAttempt:
+      type: object
+      additionalProperties: true
+      properties:
+        model:
+          type: string
+        provider:
+          type: string
+        status:
+          type: integer
+
+    RoutingEndpoint:
+      type: object
+      additionalProperties: true
+      properties:
+        model:
+          type: string
+        provider:
+          type: string
+        selected:
+          type: boolean
+
+    RoutingPipelineStep:
+      type: object
+      additionalProperties: true
+      properties:
+        type:
+          type: string
+        name:
+          type: string
+        summary:
+          type: string
+        cost_usd:
+          type: number
+        data:
+          $ref: "#/components/schemas/AnyJson"
+
+    CompletionUsage:
+      type: object
+      additionalProperties: true
+      properties:
+        completion_tokens:
+          type: integer
+          description: 生成内容使用的 token 数。
+        prompt_tokens:
+          type: integer
+          description: 提示词使用的 token 数。
+        reasoning_tokens:
+          type: integer
+          description: 思考内容消耗的 token 数。
+        total_tokens:
+          type: integer
+          description: 请求总 token 数。
+        # total_characters:
+        #   type: integer
+        #   description: 请求或响应字符统计。
+        # cost:
+        #   type: number
+        #   description: 估算成本。
+        # is_byok:
+        #   type: boolean
+        #   description: 是否使用自带密钥路径。
+        # cost_details:
+        #   type: object
+        #   additionalProperties: true
+        #   properties:
+        #     upstream_inference_prompt_cost:
+        #       type: number
+        #     upstream_inference_completions_cost:
+        #       type: number
+        #     upstream_inference_cost:
+        #       type: number
+        completion_tokens_details:
+          $ref: "#/components/schemas/CompletionTokensDetails"
+        prompt_tokens_details:
+          $ref: "#/components/schemas/PromptTokensDetails"
+
+    CompletionTokensDetails:
+      type: object
+      additionalProperties: true
+      properties:
+        accepted_prediction_tokens:
+          type: integer
+        audio_tokens:
+          type: integer
+        reasoning_tokens:
+          type: integer
+        text_tokens:
+          type: integer
+        rejected_prediction_tokens:
+          type: integer
+
+    PromptTokensDetails:
+      type: object
+      additionalProperties: true
+      properties:
+        audio_tokens:
+          type: integer
+        audio_cached_tokens:
+          type: integer
+        text_tokens:
+          type: integer
+        video_tokens:
+          type: integer
+        image_tokens:
+          type: integer
+        cache_write_tokens:
+          type: integer
+        cached_tokens:
+          type: integer
+        cache_creation:
+          type: object
+          additionalProperties: true
+          properties:
+            ephemeral_5m_input_tokens:
+              type: integer
+            cache_creation_input_tokens:
+              type: integer
+            cache_type:
+              type: string
+              const: ephemeral
+
+    # VideoResult:
+    #   type: object
+    #   additionalProperties: true
+    #   properties:
+    #     url:
+    #       type: string
+    #     cover_image_url:
+    #       type: string
+
+    # WebSearchResult:
+    #   type: object
+    #   additionalProperties: true
+    #   properties:
+    #     icon:
+    #       type: string
+    #     title:
+    #       type: string
+    #     link:
+    #       type: string
+    #     media:
+    #       type: string
+    #     publish_date:
+    #       type: string
+    #     content:
+    #       type: string
+    #     refer:
+    #       type: string
+
+    ContentFilterResult:
+      type: object
+      additionalProperties: true
+      properties:
+        role:
+          type: string
+          enum: [assistant, user, history]
+        level:
+          type: integer
+          minimum: 0
+          maximum: 3
+
+    BaseResponse:
+      type: object
+      additionalProperties: true
+      properties:
+        status_code:
+          type: integer
+          description: 业务状态码。
+        status_msg:
+          type: string
+          description: 错误详情或状态说明。
+
+    ErrorResponse:
+      type: object
+      additionalProperties: true
+      properties:
+        error:
+          type: object
+          additionalProperties: true
+          properties:
+            message:
+              type: string
+            type:
+              type: string
+            code:
+              anyOf:
+                - type: string
+                - type: integer
+                - type: "null"
+            metadata:
+              anyOf:
+                - type: object
+                  additionalProperties: true
+                - type: "null"
+        # 原字段名：openrouter_metadata
+        # routing_metadata:
+        #   anyOf:
+        #     - $ref: "#/components/schemas/RoutingMetadata"
+        #     - type: "null"
+        # user_id:
+        #   type:
+        #     - string
+        #     - "null"

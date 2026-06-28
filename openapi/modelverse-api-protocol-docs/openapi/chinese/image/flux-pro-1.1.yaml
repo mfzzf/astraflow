@@ -1,0 +1,249 @@
+openapi: 3.1.0
+x-language: zh-CN
+info:
+  title: flux-pro-1.1接口文档
+  version: "1.0.0"
+  description: |
+    这是 ModelVerse 上 `flux-pro-1.1` 的图片接口文档，说明如何发起图片生成或编辑请求、填写参数、读取结果以及处理错误。
+    接口路径包括 `POST /v1/flux-pro-1.1`。
+
+servers:
+  - url: https://api.modelverse.cn
+    description: 该模型文档中使用的 ModelVerse API 端点。
+
+tags:
+  - name: flux-pro-1.1
+    description: Image generation with flux-pro-1.1.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /v1/flux-pro-1.1:
+    post:
+      tags:
+        - flux-pro-1.1
+      operationId: createFluxPro11ImageGeneration
+      summary: 使用 flux-pro-1.1 生成图像
+      description: |
+        调用该模型的图片接口。请求中填写提示词、图片输入和控制参数，响应返回生成或编辑后的图片结果。
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FluxPro11ImageRequest"
+            examples:
+              documentedTextToImage:
+                summary: 源文档文生图请求
+                value:
+                  prompt: A photograph of a red fox in an autumn forest
+                  width: 1024
+                  height: 1024
+              imagePromptWithWebhook:
+                summary: Image prompt请求带webhook settings
+                value:
+                  prompt: A polished studio product photo with soft side lighting
+                  image_prompt: "{base64_image_string}"
+                  width: 1024
+                  height: 768
+                  prompt_upsampling: true
+                  seed: 123456
+                  safety_tolerance: 2
+                  output_format: png
+                  webhook_url: https://example.com/modelverse/webhook
+                  webhook_secret: webhook_secret_value
+      responses:
+        "200":
+          description: 图像生成响应。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FluxPro11ImageResponse"
+              examples:
+                generatedImage:
+                  summary: 返回 Base64 的生成图像
+                  value:
+                    createed: 1761283200
+                    data:
+                      - b64_json: "{image_base64_string}"
+                webhookImage:
+                  summary: 生成的image响应for a 启用 webhook 请求
+                  value:
+                    createed: 1761283260
+                    data:
+                      - b64_json: "{image_base64_string}"
+        "400":
+          description: 请求参数无效或图像生成失败。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FluxPro11ErrorResponse"
+              examples:
+                invalidWidth:
+                  summary: 无效 width 参数
+                  value:
+                    error:
+                      message: "width must be between 256 and 1440 and a multiple of 32"
+                      type: invalid_request_error
+                      param: width
+                      code: param_error
+        default:
+          description: 错误响应。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FluxPro11ErrorResponse"
+              examples:
+                requestError:
+                  summary: 请求错误
+                  value:
+                    error:
+                      message: error_message
+                      type: error_type
+                      param: request_id
+                      code: error_code
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: |
+        调用该模型的图片接口。请求中填写提示词、图片输入和控制参数，响应返回生成或编辑后的图片结果。
+  schemas:
+    FluxPro11ImageRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - prompt
+      properties:
+        prompt:
+          type: string
+          minLength: 1
+          description: 文本提示词。
+        image_prompt:
+          $ref: "#/components/schemas/FluxPro11Base64Image"
+        width:
+          type: integer
+          minimum: 256
+          maximum: 1440
+          multipleOf: 32
+          description: |
+            Image width in pixels. The documented constraint is
+            `256 <= x <= 1440`, and the value must be a multiple of 32.
+        height:
+          type: integer
+          minimum: 256
+          maximum: 1440
+          multipleOf: 32
+          description: |
+            Image height in pixels. The documented constraint is
+            `256 <= x <= 1440`, and the value must be a multiple of 32.
+        prompt_upsampling:
+          type: boolean
+          default: false
+          description: |
+            Whether to upsample the prompt. When enabled, the prompt is
+            automatically modified for more creative generation.
+        seed:
+          type: integer
+          format: int64
+          description: Optional seed for reproducible generation.
+        safety_tolerance:
+          type: integer
+          enum:
+            - 0
+            - 1
+            - 2
+            - 3
+            - 4
+            - 5
+            - 6
+          default: 2
+          description: |
+            Tolerance level for input and output moderation. The source
+            describes values from 1 to 6 and also states that `0` is the
+            strictest and `6` is the least strict.
+        output_format:
+          type: string
+          enum:
+            - png
+            - jpg
+            - jpeg
+          default: png
+          description: |
+            Output image format. The source type column lists `jpeg/png`, and
+            the source description lists `png,jpg`.
+        webhook_url:
+          type: string
+          format: uri
+          description: Webhook URL used to receive generation results.
+        webhook_secret:
+          type: string
+          description: Webhook secret used to verify webhook requests.
+
+    FluxPro11Base64Image:
+      type: string
+      contentEncoding: base64
+      description: |
+        调用该模型的图片接口。请求中填写提示词、图片输入和控制参数，响应返回生成或编辑后的图片结果。
+    FluxPro11ImageResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - createed
+        - data
+      properties:
+        createed:
+          type: integer
+          format: int64
+          description: Creation time field as documented in the source response table.
+        data:
+          type: array
+          description: Generated image data.
+          items:
+            $ref: "#/components/schemas/FluxPro11ImageData"
+
+    FluxPro11ImageData:
+      type: object
+      additionalProperties: false
+      required:
+        - b64_json
+      properties:
+        b64_json:
+          type: string
+          contentEncoding: base64
+          description: Base64-encoded generated image data.
+
+    FluxPro11ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+      properties:
+        error:
+          $ref: "#/components/schemas/FluxPro11Error"
+
+    FluxPro11Error:
+      type: object
+      additionalProperties: false
+      required:
+        - message
+        - code
+      properties:
+        message:
+          type: string
+          description: 错误信息。
+        type:
+          type: string
+          description: 错误类型。
+        param:
+          type: string
+          description: Request parameter related to the error, when available.
+        code:
+          type: string
+          description: 错误码。

@@ -1,0 +1,482 @@
+openapi: 3.1.0
+x-language: en-US
+info:
+  title: ModelVerse Kling/O1 Video Task API
+  version: "1.0.0"
+  description: |
+    Self-contained OpenAPI 3.1 schema for the ModelVerse Kling/O1 asynchronous
+    video task API.
+
+servers:
+  - url: https://api.modelverse.cn
+    description: ModelVerse API endpoint documented for this model.
+
+tags:
+  - name: Kling/O1
+    description: Asynchronous video generation and task status operations for Kling/O1.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /v1/tasks/submit:
+    post:
+      tags:
+        - Kling/O1
+      operationId: submitKlingO1VideoTask
+      summary: Submit a Kling/O1 video task
+      description: Submit an asynchronous `kling-video-o1` video generation task.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KlingO1TaskSubmitRequest"
+            examples:
+              firstFrame:
+                summary: Generate a video from a prompt and first-frame image
+                value:
+                  model: kling-video-o1
+                  input:
+                    prompt: A beautiful sunset over the ocean with waves gently crashing
+                  parameters:
+                    mode: pro
+                    aspect_ratio: "16:9"
+                    duration: 5
+                    image_list:
+                      - image_url: https://example.com/first_frame.jpg
+                        type: first_frame
+              textToVideo:
+                summary: Generate a text-to-video task
+                value:
+                  model: kling-video-o1
+                  input:
+                    prompt: A cinematic shot of a glass train crossing a snowy mountain bridge at sunrise
+                  parameters:
+                    mode: pro
+                    aspect_ratio: "9:16"
+                    duration: 10
+              videoEdit:
+                summary: Edit a base video while keeping original sound
+                value:
+                  model: kling-video-o1
+                  input:
+                    prompt: Replace the background with a neon city street at night
+                  parameters:
+                    mode: pro
+                    video_list:
+                      - video_url: https://example.com/base-video.mp4
+                        refer_type: base
+                        keep_original_sound: "yes"
+      responses:
+        "200":
+          description: Task submitted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KlingO1TaskSubmitResponse"
+              examples:
+                submitted:
+                  summary: Submitted task
+                  value:
+                    output:
+                      task_id: task_id
+                    request_id: request_id
+        "400":
+          description: Invalid request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KlingO1ErrorResponse"
+              examples:
+                invalidParameter:
+                  $ref: "#/components/examples/KlingO1InvalidParameterError"
+        "401":
+          description: Invalid or missing bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KlingO1ErrorResponse"
+              examples:
+                authError:
+                  $ref: "#/components/examples/KlingO1AuthError"
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KlingO1ErrorResponse"
+              examples:
+                error:
+                  $ref: "#/components/examples/KlingO1InvalidParameterError"
+
+  /v1/tasks/status:
+    get:
+      tags:
+        - Kling/O1
+      operationId: getKlingO1VideoTaskStatus
+      summary: Query Kling/O1 task status
+      description: Query the status and result URLs for an asynchronous `kling-video-o1` task.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: task_id
+          in: query
+          required: true
+          description: Asynchronous task identifier returned by `/v1/tasks/submit`.
+          schema:
+            type: string
+          examples:
+            taskId:
+              value: task_id
+      responses:
+        "200":
+          description: Task status response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KlingO1TaskStatusResponse"
+              examples:
+                success:
+                  summary: Successful task
+                  value:
+                    output:
+                      task_id: task_id
+                      task_status: Success
+                      urls:
+                        - https://xxxxx/xxxx.mp4
+                      submit_time: 1756959000
+                      finish_time: 1756959050
+                    usage:
+                      duration: 5
+                    request_id: ""
+                failure:
+                  summary: Failed task
+                  value:
+                    output:
+                      task_id: task_id
+                      task_status: Failure
+                      submit_time: 1756959000
+                      finish_time: 1756959019
+                      error_message: error_message
+                    usage:
+                      duration: 5
+                    request_id: ""
+        "400":
+          description: Invalid task identifier or request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KlingO1ErrorResponse"
+              examples:
+                invalidParameter:
+                  $ref: "#/components/examples/KlingO1InvalidParameterError"
+        "401":
+          description: Invalid or missing bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KlingO1ErrorResponse"
+              examples:
+                authError:
+                  $ref: "#/components/examples/KlingO1AuthError"
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KlingO1ErrorResponse"
+              examples:
+                error:
+                  $ref: "#/components/examples/KlingO1InvalidParameterError"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: "ModelVerse API key sent as `Authorization: Bearer <MODELVERSE_API_KEY>`."
+
+  schemas:
+    KlingO1TaskSubmitRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - model
+        - input
+      properties:
+        model:
+          type: string
+          const: kling-video-o1
+          description: Model name. Fixed to `kling-video-o1` for this API document.
+        input:
+          $ref: "#/components/schemas/KlingO1Input"
+        parameters:
+          $ref: "#/components/schemas/KlingO1Parameters"
+
+    KlingO1Input:
+      type: object
+      additionalProperties: false
+      required:
+        - prompt
+      properties:
+        prompt:
+          type: string
+          minLength: 1
+          description: Prompt used to guide video generation.
+
+    KlingO1Parameters:
+      type: object
+      additionalProperties: false
+      description: |
+        Optional Kling/O1 generation controls. The source document states that O1 does
+        not support custom subject functionality through `element_list`, so this
+        model-pinned schema intentionally does not accept `element_list`.
+      properties:
+        mode:
+          type: string
+          description: |
+            Generation mode. The source document lists `std` and `pro`, but states that
+            Kling/O1 currently supports only `pro`.
+          enum:
+            - pro
+          default: pro
+        aspect_ratio:
+          type: string
+          description: Generated video aspect ratio.
+          enum:
+            - "16:9"
+            - "9:16"
+            - "1:1"
+        duration:
+          type: integer
+          description: |
+            Generated video duration in seconds. For text-to-video and first-frame
+            image-to-video, only 5 and 10 seconds are supported. For video editing
+            requests where a `video_list` item has `refer_type: base`, the output
+            follows the input video duration and this parameter is ignored.
+          enum:
+            - 3
+            - 4
+            - 5
+            - 6
+            - 7
+            - 8
+            - 9
+            - 10
+          default: 5
+        image_list:
+          type: array
+          description: Image references used to specify the first or final frame.
+          items:
+            $ref: "#/components/schemas/KlingO1ImageReference"
+        video_list:
+          type: array
+          description: Video references used for feature reference or video editing.
+          items:
+            $ref: "#/components/schemas/KlingO1VideoReference"
+
+    KlingO1ImageReference:
+      type: object
+      additionalProperties: false
+      required:
+        - image_url
+        - type
+      properties:
+        image_url:
+          type: string
+          minLength: 1
+          description: Image URL or Base64-encoded image data.
+        type:
+          type: string
+          description: Image role in the generated video.
+          enum:
+            - first_frame
+            - end_frame
+
+    KlingO1VideoReference:
+      type: object
+      additionalProperties: false
+      required:
+        - video_url
+        - refer_type
+        - keep_original_sound
+      properties:
+        video_url:
+          type: string
+          format: uri
+          description: Video URL.
+        refer_type:
+          type: string
+          description: Video reference type.
+          enum:
+            - feature
+            - base
+        keep_original_sound:
+          type: string
+          description: Whether to keep the original audio from the referenced video.
+          enum:
+            - "yes"
+            - "no"
+
+    KlingO1TaskSubmitResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - output
+        - request_id
+      properties:
+        output:
+          $ref: "#/components/schemas/KlingO1TaskSubmitOutput"
+        request_id:
+          type: string
+          description: Unique request identifier.
+
+    KlingO1TaskSubmitOutput:
+      type: object
+      additionalProperties: false
+      required:
+        - task_id
+      properties:
+        task_id:
+          type: string
+          description: Unique asynchronous task identifier.
+
+    KlingO1TaskStatusResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - output
+        - request_id
+      properties:
+        output:
+          $ref: "#/components/schemas/KlingO1TaskStatusOutput"
+        usage:
+          $ref: "#/components/schemas/KlingO1Usage"
+        request_id:
+          type: string
+          description: Unique request identifier.
+
+    KlingO1TaskStatusOutput:
+      type: object
+      additionalProperties: false
+      required:
+        - task_id
+        - task_status
+      properties:
+        task_id:
+          type: string
+          description: Unique asynchronous task identifier.
+        task_status:
+          $ref: "#/components/schemas/KlingO1TaskStatus"
+        urls:
+          type: array
+          description: Video result URL list.
+          items:
+            type: string
+            format: uri
+        submit_time:
+          type: integer
+          format: int64
+          description: Task submission Unix timestamp in seconds.
+        finish_time:
+          type: integer
+          format: int64
+          description: Task completion Unix timestamp in seconds.
+        error_message:
+          type: string
+          description: Error message returned when the task fails.
+
+    KlingO1TaskStatus:
+      type: string
+      description: Current asynchronous task status.
+      enum:
+        - Pending
+        - Running
+        - Success
+        - Failure
+
+    KlingO1Usage:
+      type: object
+      additionalProperties: false
+      properties:
+        duration:
+          type: integer
+          description: Video duration in seconds.
+
+    KlingO1ErrorResponse:
+      type: object
+      additionalProperties: true
+      required:
+        - error
+      properties:
+        error:
+          $ref: "#/components/schemas/KlingO1ErrorObject"
+        request_id:
+          type: string
+          description: Unique request identifier, if available.
+
+    KlingO1ErrorObject:
+      type: object
+      additionalProperties: true
+      required:
+        - message
+        - type
+      properties:
+        message:
+          type: string
+          description: Error message.
+        type:
+          type: string
+          description: Error type.
+          enum:
+            - invalid_request_error
+            - timeout
+            - rate_limit_error
+            - internal_error
+        code:
+          type:
+            - string
+            - "null"
+          description: Machine-readable error code.
+          enum:
+            - param_error
+            - invalid_messages
+            - sensitive_check_error
+            - model_error
+            - tokens_too_long
+            - auth_error
+            - timeout
+            - rate_limit
+            - internal_error
+            - model_server_error
+            - gateway_timeout_error
+            - null
+        param:
+          type:
+            - string
+            - "null"
+          description: Request parameter related to the error.
+
+  examples:
+    KlingO1InvalidParameterError:
+      summary: Invalid parameter error
+      value:
+        error:
+          message: Invalid param
+          type: invalid_request_error
+          code: param_error
+          param: parameters.duration
+        request_id: request_id
+    KlingO1AuthError:
+      summary: Bearer authentication error
+      value:
+        error:
+          message: Validate Certification failed
+          type: invalid_request_error
+          code: auth_error
+          param: null
+        request_id: request_id

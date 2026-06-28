@@ -1,0 +1,118 @@
+openapi: 3.1.0
+x-language: zh-CN
+info:
+  title: media-common接口文档
+  version: "1.0.0"
+  description: |
+    这是 ModelVerse OpenAPI 的媒体字段通用文档，定义图片、视频、音频等接口可复用的请求和响应字段。
+    具体模型接口文档可以复用这些通用组件。
+paths: {}
+components:
+  schemas:
+    Base64Data:
+      type: string
+      description: Base64-encoded media. Unless a model document says otherwise, omit data URL prefixes.
+      contentEncoding: base64
+    ImageUrl:
+      type: string
+      format: uri
+      description: Publicly reachable image URL.
+    VideoUrl:
+      type: string
+      format: uri
+      description: Publicly reachable video URL.
+    AudioUrl:
+      type: string
+      format: uri
+      description: Publicly reachable audio URL.
+    ImageSize:
+      type: string
+      description: Image size such as `1024x1024`, `1536x1024`, or `auto`.
+      examples:
+        - 1024x1024
+        - 1536x1024
+        - auto
+    VideoSize:
+      type: string
+      description: Video resolution such as `720x1280` or `1280x720`.
+      examples:
+        - 720x1280
+        - 1280x720
+    AspectRatio:
+      type: string
+      examples:
+        - "16:9"
+        - "9:16"
+        - "1:1"
+    ImageData:
+      type: object
+      additionalProperties: true
+      properties:
+        url:
+          type: string
+          format: uri
+        b64_json:
+          $ref: "#/components/schemas/Base64Data"
+      description: Generated or edited image result. Some models return URLs, others return Base64.
+      examples:
+        url:
+          value:
+            url: https://example.com/generated-image.png
+        base64:
+          value:
+            b64_json: iVBORw0KGgoAAAANSUhEUgAA...
+    ImageResponse:
+      type: object
+      additionalProperties: true
+      properties:
+        created:
+          type: integer
+          format: int64
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImageData"
+        usage:
+          type: object
+          additionalProperties: true
+        error:
+          type: object
+          additionalProperties: true
+      examples:
+        imageResponse:
+          value:
+            created: 1781600000
+            data:
+              - b64_json: iVBORw0KGgoAAAANSUhEUgAA...
+            usage:
+              total_tokens: 4169
+    FileUpload:
+      type: string
+      format: binary
+    OutputUrls:
+      type: array
+      items:
+        type: string
+        format: uri
+    AudioObject:
+      type: object
+      additionalProperties: true
+      properties:
+        url:
+          type: string
+          format: uri
+        data:
+          type: string
+          description: Base64 audio data when returned by streaming or provider-specific APIs.
+        id:
+          type: string
+        expires_at:
+          type: integer
+          format: int64
+      examples:
+        audioUrl:
+          value:
+            url: https://example.com/output.wav
+            data: ""
+            id: audio_req_abcdef
+            expires_at: 1781686400

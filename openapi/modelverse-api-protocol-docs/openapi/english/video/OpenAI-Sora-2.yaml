@@ -1,0 +1,387 @@
+openapi: 3.1.0
+x-language: en-US
+info:
+  title: ModelVerse OpenAI Sora-2 Video API
+  version: "1.0.0"
+  description: |
+    OpenAI-style ModelVerse video API for the `sora-2` model, converted from
+
+servers:
+  - url: https://api.modelverse.cn
+    description: ModelVerse API endpoint shown in the source document.
+
+tags:
+  - name: OpenAI Sora-2 Videos
+    description: OpenAI-style asynchronous video generation, status, content download, and remix APIs.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /v1/videos:
+    post:
+      tags:
+        - OpenAI Sora-2 Videos
+      operationId: createOpenAISora2Video
+      summary: Create a Sora-2 video task
+      description: |
+        Submit an asynchronous `sora-2` video generation task. The source
+        document's request example uses multipart form data and an optional
+        first-frame image file.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/CreateOpenAISora2VideoMultipartRequest"
+            encoding:
+              input_reference:
+                contentType: image/jpeg
+            examples:
+              image_reference:
+                summary: Generate a video from a prompt and first-frame image
+                value:
+                  prompt: She turns around and smiles, then slowly walks out of the frame.
+                  model: sora-2
+                  size: 1280x720
+                  seconds: "8"
+                  input_reference: sample_720p.jpeg
+      responses:
+        "200":
+          description: Video task accepted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenAISora2Video"
+              examples:
+                queued:
+                  summary: Queued Sora-2 video task
+                  value:
+                    id: video_456
+                    object: video
+                    model: sora-2
+                    status: queued
+                    progress: 0
+                    created_at: 1712698600
+                    size: 720x1280
+                    seconds: "8"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        default:
+          $ref: "#/components/responses/Error"
+
+  /v1/videos/{task_id}:
+    get:
+      tags:
+        - OpenAI Sora-2 Videos
+      operationId: getOpenAISora2Video
+      summary: Get a Sora-2 video task
+      description: Query the status and metadata for an asynchronous `sora-2` video task.
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: Video task status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenAISora2Video"
+              examples:
+                queued:
+                  summary: Queued Sora-2 video task
+                  value:
+                    id: video_456
+                    object: video
+                    model: sora-2
+                    status: queued
+                    progress: 0
+                    created_at: 1712698600
+                    size: 720x1280
+                    seconds: "8"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                invalid_request:
+                  summary: Invalid request error
+                  value:
+                    error:
+                      message: error
+                      type: invalid_request_error
+                      param: null
+                      code: null
+        default:
+          $ref: "#/components/responses/Error"
+
+  /v1/videos/{task_id}/content:
+    get:
+      tags:
+        - OpenAI Sora-2 Videos
+      operationId: downloadOpenAISora2VideoContent
+      summary: Download Sora-2 video content
+      description: Download the completed video task as a binary stream.
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: Binary video stream.
+          content:
+            video/mp4:
+              schema:
+                type: string
+                format: binary
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Video task is not ready or the request is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                task_not_completed:
+                  summary: Task is not completed yet
+                  value:
+                    error:
+                      message: "task is not completed yet, current status: Pending"
+                      type: invalid_request_error
+        default:
+          $ref: "#/components/responses/Error"
+
+  /v1/videos/{task_id}/remix:
+    post:
+      tags:
+        - OpenAI Sora-2 Videos
+      operationId: remixOpenAISora2Video
+      summary: Remix a Sora-2 video task
+      description: Create a new `sora-2` task by remixing an existing video task.
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RemixOpenAISora2VideoRequest"
+            examples:
+              cyberpunk_style:
+                summary: Remix with a new style prompt
+                value:
+                  prompt: 赛博朋克风格
+      responses:
+        "200":
+          description: Remix video task accepted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenAISora2Video"
+              examples:
+                queued_remix:
+                  summary: Queued remix task
+                  value:
+                    id: video_456
+                    object: video
+                    model: sora-2
+                    status: queued
+                    progress: 0
+                    created_at: 1712698600
+                    size: 720x1280
+                    seconds: "8"
+                    remixed_from_video_id: video_123
+        "400":
+          description: Invalid remix request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                prompt_required:
+                  summary: Prompt is required
+                  value:
+                    error:
+                      message: "Invalid param: prompt is required"
+                      type: invalid_request_error
+                      param: 6217f8ed-396d-434a-9b78-96775c0d2f99
+                      code: param_error
+        default:
+          $ref: "#/components/responses/Error"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  parameters:
+    TaskId:
+      name: task_id
+      in: path
+      required: true
+      description: Asynchronous video task identifier.
+      schema:
+        type: string
+      example: video_6982fa1cd4f081908b619dc53cfc2435
+
+  responses:
+    BadRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            invalid_request:
+              summary: Invalid request error
+              value:
+                error:
+                  message: error
+                  type: invalid_request_error
+                  param: null
+                  code: null
+    Error:
+      description: Error response.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+    CreateOpenAISora2VideoMultipartRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - model
+        - prompt
+      properties:
+        model:
+          type: string
+          const: sora-2
+          description: Model name. This API is pinned to `sora-2`.
+        prompt:
+          type: string
+          description: Prompt used to guide video generation.
+        size:
+          type: string
+          enum:
+            - 720x1280
+            - 1280x720
+          description: Output video resolution.
+        seconds:
+          type: string
+          enum:
+            - "4"
+            - "8"
+            - "12"
+          description: |
+            Video duration in seconds. The source parameter table labels this
+            field as `duration`, while its request and response examples use
+            `seconds`.
+        input_reference:
+          type: string
+          format: binary
+          description: Optional first-frame image file.
+
+    RemixOpenAISora2VideoRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - prompt
+      properties:
+        prompt:
+          type: string
+          description: Prompt for remixing the existing video task.
+
+    OpenAISora2Video:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - object
+        - model
+        - status
+        - progress
+        - created_at
+        - size
+        - seconds
+      properties:
+        id:
+          type: string
+          description: Unique asynchronous task identifier.
+        object:
+          type: string
+          const: video
+          description: Object type.
+        model:
+          type: string
+          const: sora-2
+          description: Model name. This API is pinned to `sora-2`.
+        status:
+          type: string
+          enum:
+            - queued
+            - in_progress
+            - completed
+            - failed
+          description: Task status.
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Task progress.
+        created_at:
+          type: integer
+          description: Unix timestamp when the task was created.
+        size:
+          type: string
+          enum:
+            - 720x1280
+            - 1280x720
+          description: Video resolution.
+        seconds:
+          type: string
+          enum:
+            - "4"
+            - "8"
+            - "12"
+          description: Video duration in seconds.
+        remixed_from_video_id:
+          type: string
+          description: Source task ID for remix responses.
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+      properties:
+        error:
+          $ref: "#/components/schemas/ErrorObject"
+
+    ErrorObject:
+      type: object
+      additionalProperties: false
+      required:
+        - message
+        - type
+      properties:
+        message:
+          type: string
+          description: Error message.
+        type:
+          type: string
+          description: Error type.
+        param:
+          type:
+            - string
+            - "null"
+          description: Parameter related to the error, when provided.
+        code:
+          type:
+            - string
+            - "null"
+          description: Machine-readable error code, when provided.

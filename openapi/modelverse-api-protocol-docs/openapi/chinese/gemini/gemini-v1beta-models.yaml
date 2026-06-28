@@ -1,0 +1,2233 @@
+openapi: "3.1.0"
+info:
+  title: "gemini-v1beta-models接口文档"
+  version: "v1beta"
+  description: "本文档说明 ModelVerse 上兼容 Gemini v1beta 的 models.generateContent 和 models.streamGenerateContent 接口，覆盖请求体、响应体、工具调用、媒体 Part、流式生成以及错误响应等内容。"
+servers:
+  # 原说明：ModelVerse OpenAI 兼容 API 节点；按地理位置和数据驻留需求选择。
+  # ModelVerse 兼容 API 节点；按地理位置和数据驻留需求选择。
+  -
+    url: "https://api.modelverse.cn"
+    description: "中国大陆节点，国内用户推荐，访问延迟低。"
+  -
+    url: "https://api-sg.umodelverse.ai"
+    description: "新加坡节点，东南亚用户推荐，访问更快。"
+  -
+    url: "https://api-us-ca.umodelverse.ai"
+    description: "美国洛杉矶节点，海外用户推荐，数据不回国。"
+  -
+    url: "https://api-ge-fra.umodelverse.ai"
+    description: "法兰克福节点，欧洲用户推荐，访问更快。"
+tags:
+  -
+    name: "models"
+    description: "Gemini 模型内容生成相关操作。"
+security:
+  -
+    xGoogApiKey: []
+paths:
+  "/v1beta/models/{modelsId}:streamGenerateContent":
+    post:
+      tags:
+        - "models"
+      operationId: "generativelanguage.models.streamGenerateContent"
+      summary: "流式生成内容"
+      description: "根据输入的 `GenerateContentRequest`，让模型以流式方式生成响应。"
+      parameters:
+        -
+          name: "modelsId"
+          in: "path"
+          required: true
+          description: "必填。用于生成补全内容的 `Model` 名称。格式：`models/{model}`。\n\n原始 Discovery 参数：`model`。"
+          schema:
+            type: "string"
+            pattern: "^models/[^/]+$"
+          x-original-parameter:
+            name: "model"
+            required: true
+            type: "string"
+            pattern: "^models/[^/]+$"
+            description: "必填。用于生成补全内容的 `Model` 名称。格式：`models/{model}`。"
+            location: "path"
+        -
+          name: "callback"
+          in: "query"
+          required: false
+          description: "JSONP"
+          schema:
+            type: "string"
+        -
+          name: "fields"
+          in: "query"
+          required: false
+          description: "字段选择器，用于指定部分响应中包含哪些字段。"
+          schema:
+            type: "string"
+        -
+          name: "prettyPrint"
+          in: "query"
+          required: false
+          description: "返回带缩进和换行的响应。"
+          schema:
+            type: "boolean"
+            default: "true"
+        -
+          name: "quotaUser"
+          in: "query"
+          required: false
+          description: "服务端应用可用于配额统计。可以是分配给用户的任意字符串，但不应超过 40 个字符。"
+          schema:
+            type: "string"
+        -
+          name: "$.xgafv"
+          in: "query"
+          required: false
+          description: "V1 错误格式。"
+          schema:
+            type: "string"
+            enum:
+              - "1"
+              - "2"
+            x-enumDescriptions:
+              - "v1 错误格式"
+              - "v2 错误格式"
+        -
+          name: "alt"
+          in: "query"
+          required: false
+          description: "响应的数据格式。"
+          schema:
+            type: "string"
+            default: "json"
+            enum:
+              - "json"
+              - "media"
+              - "proto"
+            x-enumDescriptions:
+              - "Content-Type 为 application/json 的响应"
+              - "媒体下载，Content-Type 取决于上下文"
+              - "Content-Type 为 application/x-protobuf 的响应"
+        -
+          name: "upload_protocol"
+          in: "query"
+          required: false
+          description: "媒体上传协议，例如 \"raw\"、\"multipart\"。"
+          schema:
+            type: "string"
+        -
+          name: "uploadType"
+          in: "query"
+          required: false
+          description: "旧版媒体上传协议，例如 \"media\"、\"multipart\"。"
+          schema:
+            type: "string"
+      security:
+        -
+          xGoogApiKey: []
+      x-discovery-method: "generativelanguage.models.streamGenerateContent"
+      x-original-path: "v1beta/{+model}:streamGenerateContent"
+      x-flat-path: "v1beta/models/{modelsId}:streamGenerateContent"
+      x-parameterOrder:
+        - "model"
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/GenerateContentRequest"
+            example:
+              contents:
+                -
+                  role: "user"
+                  parts:
+                    -
+                      text: "用一句话介绍 ModelVerse。"
+      responses:
+        "200":
+          description: "请求成功的响应。"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/GenerateContentResponse"
+              example:
+                candidates:
+                  -
+                    content:
+                      role: "model"
+                      parts:
+                        -
+                          text: "ModelVerse 是一个模型服务平台。"
+                    finishReason: "STOP"
+                usageMetadata:
+                  promptTokenCount: 8
+                  candidatesTokenCount: 12
+                  totalTokenCount: 20
+        "4XX":
+          description: "客户端错误响应。"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Status"
+        default:
+          description: "错误响应。"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Status"
+  "/v1beta/models/{modelsId}:generateContent":
+    post:
+      tags:
+        - "models"
+      operationId: "generativelanguage.models.generateContent"
+      summary: "生成内容"
+      description: "根据输入的 `GenerateContentRequest` 生成模型响应。不同模型（包括微调模型）支持的输入能力可能不同。"
+      parameters:
+        -
+          name: "modelsId"
+          in: "path"
+          required: true
+          description: "必填。用于生成补全内容的 `Model` 名称。格式：`models/{model}`。\n\n原始 Discovery 参数：`model`。"
+          schema:
+            type: "string"
+            pattern: "^models/[^/]+$"
+          x-original-parameter:
+            name: "model"
+            type: "string"
+            required: true
+            description: "必填。用于生成补全内容的 `Model` 名称。格式：`models/{model}`。"
+            location: "path"
+            pattern: "^models/[^/]+$"
+        -
+          name: "callback"
+          in: "query"
+          required: false
+          description: "JSONP"
+          schema:
+            type: "string"
+        -
+          name: "fields"
+          in: "query"
+          required: false
+          description: "字段选择器，用于指定部分响应中包含哪些字段。"
+          schema:
+            type: "string"
+        -
+          name: "prettyPrint"
+          in: "query"
+          required: false
+          description: "返回带缩进和换行的响应。"
+          schema:
+            type: "boolean"
+            default: "true"
+        -
+          name: "quotaUser"
+          in: "query"
+          required: false
+          description: "服务端应用可用于配额统计。可以是分配给用户的任意字符串，但不应超过 40 个字符。"
+          schema:
+            type: "string"
+        -
+          name: "$.xgafv"
+          in: "query"
+          required: false
+          description: "V1 错误格式。"
+          schema:
+            type: "string"
+            enum:
+              - "1"
+              - "2"
+            x-enumDescriptions:
+              - "v1 错误格式"
+              - "v2 错误格式"
+        -
+          name: "alt"
+          in: "query"
+          required: false
+          description: "响应的数据格式。"
+          schema:
+            type: "string"
+            default: "json"
+            enum:
+              - "json"
+              - "media"
+              - "proto"
+            x-enumDescriptions:
+              - "Content-Type 为 application/json 的响应"
+              - "媒体下载，Content-Type 取决于上下文"
+              - "Content-Type 为 application/x-protobuf 的响应"
+        -
+          name: "upload_protocol"
+          in: "query"
+          required: false
+          description: "媒体上传协议，例如 \"raw\"、\"multipart\"。"
+          schema:
+            type: "string"
+        -
+          name: "uploadType"
+          in: "query"
+          required: false
+          description: "旧版媒体上传协议，例如 \"media\"、\"multipart\"。"
+          schema:
+            type: "string"
+      security:
+        -
+          xGoogApiKey: []
+      x-discovery-method: "generativelanguage.models.generateContent"
+      x-original-path: "v1beta/{+model}:generateContent"
+      x-flat-path: "v1beta/models/{modelsId}:generateContent"
+      x-parameterOrder:
+        - "model"
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/GenerateContentRequest"
+            example:
+              contents:
+                -
+                  role: "user"
+                  parts:
+                    -
+                      text: "用一句话介绍 ModelVerse。"
+      responses:
+        "200":
+          description: "请求成功的响应。"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/GenerateContentResponse"
+              example:
+                candidates:
+                  -
+                    content:
+                      role: "model"
+                      parts:
+                        -
+                          text: "ModelVerse 是一个模型服务平台。"
+                    finishReason: "STOP"
+                usageMetadata:
+                  promptTokenCount: 8
+                  candidatesTokenCount: 12
+                  totalTokenCount: 20
+        "4XX":
+          description: "客户端错误响应。"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Status"
+        default:
+          description: "错误响应。"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Status"
+components:
+  securitySchemes:
+    xGoogApiKey:
+      type: "apiKey"
+      in: "header"
+      name: "x-goog-api-key"
+      description: "Gemini 兼容 API Key 请求头。"
+  schemas:
+    AttributionSourceId:
+      description: "此归因来源的标识符。"
+      x-discovery-id: "AttributionSourceId"
+      type: "object"
+      properties:
+        groundingPassage:
+          "$ref": "#/components/schemas/GroundingPassageId"
+        semanticRetrieverChunk:
+          "$ref": "#/components/schemas/SemanticRetrieverChunk"
+    AudioResponseFormat:
+      description: "音频输出格式配置。"
+      x-discovery-id: "AudioResponseFormat"
+      type: "object"
+      properties:
+        mimeType:
+          description: "可选。音频输出的 MIME 类型。"
+          type: "string"
+          enum:
+            - "MIME_TYPE_UNSPECIFIED"
+            - "AUDIO_MP3"
+            - "AUDIO_OGG_OPUS"
+            - "AUDIO_L16"
+            - "AUDIO_WAV"
+            - "AUDIO_ALAW"
+            - "AUDIO_MULAW"
+          x-enumDescriptions:
+            - "默认值。此值不使用。"
+            - "MP3 音频格式。"
+            - "OGG Opus 音频格式。"
+            - "原始 PCM（L16）音频格式。"
+            - "WAV 音频格式。"
+            - "A-law 音频格式。"
+            - "Mu-law 音频格式。"
+        delivery:
+          description: "可选。音频输出的交付方式。"
+          type: "string"
+          enum:
+            - "DELIVERY_UNSPECIFIED"
+            - "INLINE"
+            - "URI"
+          x-enumDescriptions:
+            - "默认值。此值不使用。"
+            - "音频数据以内联方式随响应返回。"
+            - "音频数据以 URI 形式返回。"
+        sampleRate:
+          description: "可选。采样率，单位为 Hz。"
+          type: "integer"
+          format: "int32"
+        bitRate:
+          description: "可选。比特率，单位为 bps。仅适用于 MP3、Opus 等压缩格式。"
+          type: "integer"
+          format: "int32"
+    Blob:
+      description: "原始媒体字节。文本不应作为原始字节发送，请使用 `text` 字段。"
+      x-discovery-id: "Blob"
+      type: "object"
+      properties:
+        mimeType:
+          description: "源数据的 IANA 标准 MIME 类型。支持的类型示例：图片 image/png、image/jpeg、image/jpg、image/webp、image/heic、image/heif、image/gif、image/avif；音频 audio/*、video/audio/s16le、video/audio/wav；视频 video/*；文本 text/plain、text/html、text/css、text/javascript、text/x-typescript、text/csv、text/markdown、text/x-python、text/xml、text/rtf、video/text/timestamp；应用 application/x-javascript、application/x-typescript、application/x-python-code、application/json、application/x-ipynb+json、application/rtf、application/pdf。更多上下文请参见 [Supported file formats](https://ai.google.dev/gemini-api/docs/file-input-methods#supported-content-types)。//"
+          type: "string"
+        data:
+          description: "媒体格式的原始字节。"
+          type: "string"
+          format: "byte"
+    Candidate:
+      description: "模型生成的一个候选响应。"
+      x-discovery-id: "Candidate"
+      type: "object"
+      properties:
+        citationMetadata:
+          "$ref": "#/components/schemas/CitationMetadata"
+        finishReason:
+          description: "可选。仅输出。模型停止生成 token 的原因。如果为空，表示模型尚未停止生成 token。"
+          readOnly: true
+          type: "string"
+          enum:
+            - "FINISH_REASON_UNSPECIFIED"
+            - "STOP"
+            - "MAX_TOKENS"
+            - "SAFETY"
+            - "RECITATION"
+            - "LANGUAGE"
+            - "OTHER"
+            - "BLOCKLIST"
+            - "PROHIBITED_CONTENT"
+            - "SPII"
+            - "MALFORMED_FUNCTION_CALL"
+            - "IMAGE_SAFETY"
+            - "IMAGE_PROHIBITED_CONTENT"
+            - "IMAGE_OTHER"
+            - "NO_IMAGE"
+            - "IMAGE_RECITATION"
+            - "UNEXPECTED_TOOL_CALL"
+            - "TOO_MANY_TOOL_CALLS"
+            - "MISSING_THOUGHT_SIGNATURE"
+            - "MALFORMED_RESPONSE"
+            - "ESCALATION"
+          x-enumDescriptions:
+            - "默认值。此值不使用。"
+            - "模型到达自然停止点，或遇到提供的停止序列。"
+            - "已达到请求中指定的最大 token 数。"
+            - "候选响应内容因安全原因被标记。"
+            - "候选响应内容因复述原因被标记。"
+            - "候选响应内容因使用不支持的语言被标记。"
+            - "未知原因。"
+            - "由于内容包含禁用词，token 生成已停止。"
+            - "由于可能包含违禁内容，token 生成已停止。"
+            - "由于内容可能包含敏感个人身份信息（SPII），token 生成已停止。"
+            - "模型生成的函数调用无效。"
+            - "由于生成的图片存在安全违规，token 生成已停止。"
+            - "由于生成的图片包含其他违禁内容，图片生成已停止。"
+            - "由于其他杂项问题，图片生成已停止。"
+            - "预期模型生成图片，但没有生成任何图片。"
+            - "由于复述原因，图片生成已停止。"
+            - "模型生成了工具调用，但请求中未启用任何工具。"
+            - "模型连续调用工具次数过多，因此系统退出执行。"
+            - "请求中至少缺少一个思考签名。"
+            - "由于响应格式错误而结束。"
+            - "请求被升级规则过滤。"
+        groundingMetadata:
+          "$ref": "#/components/schemas/GroundingMetadata"
+        logprobsResult:
+          "$ref": "#/components/schemas/LogprobsResult"
+        safetyRatings:
+          description: "响应候选内容的安全评分列表。每个类别最多有一个评分。"
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/SafetyRating"
+        content:
+          "$ref": "#/components/schemas/Content"
+        tokenCount:
+          description: "仅输出。此候选响应的 token 数。"
+          readOnly: true
+          type: "integer"
+          format: "int32"
+        index:
+          description: "仅输出。此候选项在响应候选列表中的索引。"
+          readOnly: true
+          type: "integer"
+          format: "int32"
+        avgLogprobs:
+          description: "仅输出。此候选项的平均对数概率分数。"
+          readOnly: true
+          type: "number"
+          format: "double"
+        finishMessage:
+          description: "可选。仅输出。模型停止生成 token 的详细原因。仅在设置了 `finish_reason` 时填充。"
+          readOnly: true
+          type: "string"
+        groundingAttributions:
+          description: "仅输出。对有依据回答作出贡献的来源归因信息。此字段会在 `GenerateAnswer` 调用中填充。"
+          readOnly: true
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/GroundingAttribution"
+        urlContextMetadata:
+          "$ref": "#/components/schemas/UrlContextMetadata"
+    CitationMetadata:
+      description: "一段内容的来源归因集合。"
+      x-discovery-id: "CitationMetadata"
+      type: "object"
+      properties:
+        citationSources:
+          description: "特定响应的来源引用。"
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/CitationSource"
+    CitationSource:
+      description: "特定响应中某一部分的来源引用。"
+      x-discovery-id: "CitationSource"
+      type: "object"
+      properties:
+        startIndex:
+          description: "可选。归因到此来源的响应片段起始位置。索引表示片段起点，按字节计。"
+          type: "integer"
+          format: "int32"
+        uri:
+          description: "可选。作为部分文本来源的 URI。"
+          type: "string"
+        license:
+          description: "可选。作为片段来源的 GitHub 项目的许可证。代码引用需要许可证信息。"
+          type: "string"
+        endIndex:
+          description: "可选。归因片段的结束位置，不包含该位置。"
+          type: "integer"
+          format: "int32"
+    CodeExecution:
+      description: "执行模型生成代码的工具，并自动将结果返回给模型。另见 `ExecutableCode` 和 `CodeExecutionResult`，它们只会在使用此工具时生成。"
+      x-discovery-id: "CodeExecution"
+      type: "object"
+      properties: {}
+    CodeExecutionResult:
+      description: "执行 `ExecutableCode` 的结果。仅在使用 `CodeExecution` 工具时生成。"
+      x-discovery-id: "CodeExecutionResult"
+      type: "object"
+      properties:
+        outcome:
+          description: "必填。代码执行结果。"
+          type: "string"
+          enum:
+            - "OUTCOME_UNSPECIFIED"
+            - "OUTCOME_OK"
+            - "OUTCOME_FAILED"
+            - "OUTCOME_DEADLINE_EXCEEDED"
+          x-enumDescriptions:
+            - "未指定状态。不应使用此值。"
+            - "代码执行成功完成。若有标准输出，则包含在 `output` 中。"
+            - "代码执行失败。若有标准错误或标准输出，则包含在 `output` 中。"
+            - "代码执行时间过长，已被取消。可能包含部分 `output`，也可能没有。"
+        id:
+          description: "可选。此结果对应的 `ExecutableCode` part 标识符。仅当对应的 `ExecutableCode` 有 id 时填充。"
+          type: "string"
+        output:
+          description: "可选。代码执行成功时包含 stdout；否则包含 stderr 或其他说明。"
+          type: "string"
+    ComputerUse:
+      description: "Computer Use 工具类型。"
+      x-discovery-id: "ComputerUse"
+      type: "object"
+      properties:
+        enablePromptInjectionDetection:
+          description: "可选。是否对 computer-use 请求启用提示注入检测。"
+          type: "boolean"
+        environment:
+          description: "必填。正在操作的环境。"
+          type: "string"
+          enum:
+            - "ENVIRONMENT_UNSPECIFIED"
+            - "ENVIRONMENT_BROWSER"
+            - "ENVIRONMENT_MOBILE"
+            - "ENVIRONMENT_DESKTOP"
+          x-enumDescriptions:
+            - "默认为浏览器。"
+            - "在 Web 浏览器中操作。"
+            - "在移动环境中操作。"
+            - "在桌面环境中操作。"
+        excludedPredefinedFunctions:
+          description: "可选。默认情况下，预定义函数会包含在最终模型调用中。可以显式排除其中一些函数，使其不被自动包含。这有两个用途：1. 使用更受限或不同的动作空间；2. 改进预定义函数的定义或指令。"
+          type: "array"
+          items:
+            type: "string"
+    Content:
+      description: "消息多 part 内容的基础结构化数据类型。`Content` 包含用于标识内容生产者的 `role` 字段，以及包含本轮消息内容多 part 数据的 `parts` 字段。"
+      x-discovery-id: "Content"
+      type: "object"
+      properties:
+        parts:
+          description: "组成单条消息的有序 `Parts`。不同 part 可以具有不同的 MIME 类型。"
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/Part"
+        role:
+          description: "可选。内容生产者，必须是 `user` 或 `model`。多轮对话中建议设置；否则可留空或不设置。"
+          type: "string"
+    DynamicRetrievalConfig:
+      description: "描述自定义动态检索的选项。"
+      x-discovery-id: "DynamicRetrievalConfig"
+      type: "object"
+      properties:
+        mode:
+          description: "动态检索使用的预测器模式。"
+          type: "string"
+          enum:
+            - "MODE_UNSPECIFIED"
+            - "MODE_DYNAMIC"
+          x-enumDescriptions:
+            - "始终触发检索。"
+            - "仅当系统判断必要时运行检索。"
+        dynamicThreshold:
+          description: "动态检索使用的阈值。未设置时使用系统默认值。"
+          type: "number"
+          format: "float"
+    ExecutableCode:
+      description: "模型生成并准备执行的代码，执行结果会返回给模型。仅在使用 `CodeExecution` 工具时生成；此时代码会自动执行，并生成对应的 `CodeExecutionResult`。"
+      x-discovery-id: "ExecutableCode"
+      type: "object"
+      properties:
+        id:
+          description: "可选。`ExecutableCode` part 的唯一标识符。服务端会返回带有匹配 `id` 的 `CodeExecutionResult`。"
+          type: "string"
+        language:
+          description: "必填。`code` 的编程语言。"
+          type: "string"
+          enum:
+            - "LANGUAGE_UNSPECIFIED"
+            - "PYTHON"
+          x-enumDescriptions:
+            - "未指定语言。不应使用此值。"
+            - "Python >= 3.10，可使用 numpy 和 simpy。Python 是默认语言。"
+        code:
+          description: "必填。要执行的代码。"
+          type: "string"
+    FileData:
+      description: "基于 URI 的数据。"
+      x-discovery-id: "FileData"
+      type: "object"
+      properties:
+        mimeType:
+          description: "可选。源数据的 IANA 标准 MIME 类型。"
+          type: "string"
+        fileUri:
+          description: "必填。URI。"
+          type: "string"
+    FileSearch:
+      description: "FileSearch 工具用于从 Semantic Retrieval 语料库中检索知识。文件通过 ImportFile API 导入 Semantic Retrieval 语料库。"
+      x-discovery-id: "FileSearch"
+      type: "object"
+      properties:
+        topK:
+          description: "可选。要检索的语义检索 chunk 数量。"
+          type: "integer"
+          format: "int32"
+        fileSearchStoreNames:
+          description: "必填。要检索的 file_search_stores 名称。示例：`fileSearchStores/my-file-search-store-123`。"
+          type: "array"
+          items:
+            type: "string"
+        metadataFilter:
+          description: "可选。应用于语义检索文档和 chunk 的元数据过滤器。"
+          type: "string"
+    FunctionCall:
+      description: "模型返回的预测 `FunctionCall`，其中包含表示 `FunctionDeclaration.name` 的字符串，以及参数和值。"
+      x-discovery-id: "FunctionCall"
+      type: "object"
+      properties:
+        id:
+          description: "可选。函数调用的唯一标识符。如已填充，客户端应执行 `function_call` 并返回带有匹配 `id` 的响应。"
+          type: "string"
+        args:
+          description: "可选。JSON 对象格式的函数参数和值。"
+          type: "object"
+          additionalProperties:
+            description: "对象的属性。"
+        name:
+          description: "必填。要调用的函数名称。必须由 a-z、A-Z、0-9 组成，或包含下划线和短横线，最大长度为 128。"
+          type: "string"
+    FunctionCallingConfig:
+      description: "用于指定函数调用行为的配置。"
+      x-discovery-id: "FunctionCallingConfig"
+      type: "object"
+      properties:
+        mode:
+          description: "可选。指定函数调用的执行模式。未指定时默认值为 AUTO。"
+          type: "string"
+          enum:
+            - "MODE_UNSPECIFIED"
+            - "AUTO"
+            - "ANY"
+            - "NONE"
+            - "VALIDATED"
+          x-enumDescriptions:
+            - "未指定函数调用模式。不应使用此值。"
+            - "默认模型行为，由模型决定预测函数调用还是自然语言响应。"
+            - "Model is constrained to always predicting a function call only. If \"allowed_function_names\" are set, the predicted function call will be limited to any one of \"allowed_function_names\", else the predicted function call will be any one of the provided \"function_declarations\"."
+            - "模型不会预测任何函数调用。模型行为与未传入任何函数声明时相同。"
+            - "Model decides to predict either a function call or a natural language response, but will validate function calls with constrained decoding. If \"allowed_function_names\" are set, the predicted function call will be limited to any one of \"allowed_function_names\", else the predicted function call will be any one of the provided \"function_declarations\"."
+        allowedFunctionNames:
+          description: "可选。函数名称集合；提供后会限制模型可调用的函数。仅应在 Mode 为 ANY 或 VALIDATED 时设置。函数名应匹配 [FunctionDeclaration.name]。设置后，模型只会从允许的函数名中预测函数调用。"
+          type: "array"
+          items:
+            type: "string"
+    FunctionDeclaration:
+      description: "按照 [OpenAPI 3.03 规范](https://spec.openapis.org/oas/v3.0.3) 定义的函数声明结构化表示。声明中包含函数名称和参数。此 FunctionDeclaration 表示一段可作为模型 `Tool` 使用、并由客户端执行的代码。"
+      x-discovery-id: "FunctionDeclaration"
+      type: "object"
+      properties:
+        description:
+          description: "必填。函数的简短说明。"
+          type: "string"
+        parameters:
+          "$ref": "#/components/schemas/Schema"
+        parametersJsonSchema:
+          description: "可选。以 JSON Schema 格式描述函数参数。该 schema 必须描述一个对象，其中 properties 是函数参数。例如：``` { \"type\": \"object\", \"properties\": { \"name\": { \"type\": \"string\" }, \"age\": { \"type\": \"integer\" } }, \"additionalProperties\": false, \"required\": [\"name\", \"age\"], \"propertyOrdering\": [\"name\", \"age\"] } ``` 此字段与 `parameters` 互斥。"
+        name:
+          description: "必填。函数名称。必须由 a-z、A-Z、0-9 组成，或包含下划线、冒号、点和短横线，最大长度为 128。"
+          type: "string"
+        behavior:
+          description: "可选。指定函数行为。目前仅 BidiGenerateContent 方法支持。"
+          type: "string"
+          enum:
+            - "UNSPECIFIED"
+            - "BLOCKING"
+            - "NON_BLOCKING"
+          x-enumDescriptions:
+            - "此值不使用。"
+            - "如果设置，系统会等待收到函数响应后再继续对话。"
+            - "如果设置，系统不会等待函数响应，而是在保持用户与模型对话的同时，尝试在函数响应可用时处理它们。"
+        response:
+          "$ref": "#/components/schemas/Schema"
+        responseJsonSchema:
+          description: "可选。以 JSON Schema 格式描述此函数的输出。schema 指定的值即函数响应值。此字段与 `response` 互斥。"
+    FunctionResponse:
+      description: "`FunctionCall` 的结果输出，包含表示 `FunctionDeclaration.name` 的字符串，以及包含函数输出的结构化 JSON 对象，并作为上下文提供给模型。它应包含基于模型预测发起的 `FunctionCall` 的结果。"
+      x-discovery-id: "FunctionResponse"
+      type: "object"
+      properties:
+        willContinue:
+          description: "可选。表示函数调用仍会继续，并会返回更多响应，从而把函数调用变成生成器。仅适用于 NON_BLOCKING 函数调用，其他情况会被忽略。设为 false 时，后续响应不会被考虑。允许返回空 `response` 并设置 `will_continue=False` 来表示函数调用已结束。这仍可能触发模型生成。若要避免触发生成并结束函数调用，还需将 `scheduling` 设为 `SILENT`。"
+          type: "boolean"
+        id:
+          description: "可选。此响应对应的函数调用标识符。由客户端填充，用于匹配相应函数调用的 `id`。"
+          type: "string"
+        response:
+          description: "必填。JSON 对象格式的函数响应。调用方可以使用符合函数语法的任意键返回函数输出，例如 \"output\"、\"result\" 等。特别是当函数调用执行失败时，响应可以包含 \"error\" 键以向模型返回错误详情。多媒体可以通过一个只包含 \"$ref\" 键的子对象引入，其值为承载该多媒体的 `FunctionResponsePart` 的 `inline_data.display_name`。参见 https://ai.google.dev/gemini-api/docs/function-calling#multimodal。"
+          type: "object"
+          additionalProperties:
+            description: "对象的属性。"
+        name:
+          description: "必填。要调用的函数名称。必须由 a-z、A-Z、0-9 组成，或包含下划线和短横线，最大长度为 128。"
+          type: "string"
+        parts:
+          description: "可选。组成函数响应的有序 `Parts`。不同 part 可以具有不同的 IANA MIME 类型。"
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/FunctionResponsePart"
+        scheduling:
+          description: "可选。指定响应应如何在对话中调度。仅适用于 NON_BLOCKING 函数调用，其他情况会被忽略。默认为 WHEN_IDLE。"
+          type: "string"
+          enum:
+            - "SCHEDULING_UNSPECIFIED"
+            - "SILENT"
+            - "WHEN_IDLE"
+            - "INTERRUPT"
+          x-enumDescriptions:
+            - "此值不使用。"
+            - "仅将结果加入对话上下文，不中断或触发生成。"
+            - "将结果加入对话上下文，并在不中断当前生成的情况下提示生成输出。"
+            - "将结果加入对话上下文，中断当前生成并提示生成输出。"
+    FunctionResponseBlob:
+      description: "函数响应的原始媒体字节。文本不应作为原始字节发送，请使用 `FunctionResponse.response` 字段。"
+      x-discovery-id: "FunctionResponseBlob"
+      type: "object"
+      properties:
+        mimeType:
+          description: "源数据的 IANA 标准 MIME 类型。示例：image/png、image/jpeg。若提供不支持的 MIME 类型，将返回错误。完整支持类型列表请参见 [Supported file formats](https://ai.google.dev/gemini-api/docs/prompting_with_media#supported_file_formats)。"
+          type: "string"
+        data:
+          description: "媒体格式的原始字节。"
+          type: "string"
+          format: "byte"
+    FunctionResponsePart:
+      description: "包含 `FunctionResponse` 消息中媒体内容的数据类型。`FunctionResponsePart` 由带有关联数据类型的数据组成。`FunctionResponsePart` 只能包含 `FunctionResponsePart.data` 接受类型中的一种。如果 `inline_data` 字段填充原始字节，`FunctionResponsePart` 必须具有固定的 IANA MIME 类型，用于标识媒体类型和子类型。"
+      x-discovery-id: "FunctionResponsePart"
+      type: "object"
+      properties:
+        inlineData:
+          "$ref": "#/components/schemas/FunctionResponseBlob"
+    GenerateContentRequest:
+      description: "请求模型生成补全内容。"
+      x-discovery-id: "GenerateContentRequest"
+      type: "object"
+      properties:
+        model:
+          description: "必填。用于生成补全内容的 `Model` 名称。格式：`models/{model}`。"
+          type: "string"
+        tools:
+          description: "可选。`Model` 在生成下一条响应时可使用的 `Tools` 列表。`Tool` 是一段代码，使系统能够与外部系统交互，在 `Model` 的知识和范围之外执行一个或一组动作。支持的 `Tool` 包括 `Function` 和 `code_execution`。更多信息请参见 [Function calling](https://ai.google.dev/gemini-api/docs/function-calling) 和 [Code execution](https://ai.google.dev/gemini-api/docs/code-execution) 指南。"
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/Tool"
+        toolConfig:
+          "$ref": "#/components/schemas/ToolConfig"
+        generationConfig:
+          "$ref": "#/components/schemas/GenerationConfig"
+        contents:
+          description: "必填。当前与模型对话的内容。对于单轮查询，这是单个实例；对于 [chat](https://ai.google.dev/gemini-api/docs/text-generation#chat) 等多轮查询，这是一个重复字段，包含对话历史和最新请求。"
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/Content"
+        cachedContent:
+          description: "可选。用作预测上下文的[缓存](https://ai.google.dev/gemini-api/docs/caching)内容名称。格式：`cachedContents/{cachedContent}`。"
+          type: "string"
+        safetySettings:
+          description: "可选。用于拦截不安全内容的唯一 `SafetySetting` 实例列表。该设置会作用于 `GenerateContentRequest.contents` 和 `GenerateContentResponse.candidates`。每种 `SafetyCategory` 类型不应超过一个设置。API 会拦截未达到这些设置阈值的任何内容和响应。此列表会覆盖 safety_settings 中每个 `SafetyCategory` 的默认设置。如果列表中没有为某个 `SafetyCategory` 提供 `SafetySetting`，API 将使用该类别的默认安全设置。支持的危害类别包括 HARM_CATEGORY_HATE_SPEECH、HARM_CATEGORY_SEXUALLY_EXPLICIT、HARM_CATEGORY_DANGEROUS_CONTENT、HARM_CATEGORY_HARASSMENT、HARM_CATEGORY_CIVIC_INTEGRITY。可参见[指南](https://ai.google.dev/gemini-api/docs/safety-settings)了解可用安全设置详情，也可参见 [Safety guidance](https://ai.google.dev/gemini-api/docs/safety-guidance) 了解如何在 AI 应用中纳入安全考量。"
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/SafetySetting"
+        serviceTier:
+          description: "可选。请求的服务层级。"
+          type: "string"
+          enum:
+            - "unspecified"
+            - "standard"
+            - "flex"
+            - "priority"
+          x-enumDescriptions:
+            - "默认服务层级，即 standard。"
+            - "Standard 服务层级。"
+            - "Flex 服务层级。"
+            - "Priority 服务层级。"
+        systemInstruction:
+          "$ref": "#/components/schemas/Content"
+        store:
+          description: "可选。配置指定请求的日志记录行为。设置后优先于项目级日志配置。"
+          type: "boolean"
+    GenerateContentResponse:
+      description: "模型返回的响应，支持多个候选响应。安全评分和内容过滤信息会同时体现在 `GenerateContentResponse.prompt_feedback` 中的提示词反馈，以及每个候选项的 `finish_reason` 和 `safety_ratings` 中。API 会：返回所有请求的候选项或一个都不返回；仅在提示词有问题时完全不返回候选项（检查 `prompt_feedback`）；在 `finish_reason` 和 `safety_ratings` 中报告每个候选项的反馈。"
+      x-discovery-id: "GenerateContentResponse"
+      type: "object"
+      properties:
+        promptFeedback:
+          "$ref": "#/components/schemas/PromptFeedback"
+        responseId:
+          description: "仅输出。response_id 用于标识每个响应。"
+          readOnly: true
+          type: "string"
+        modelStatus:
+          "$ref": "#/components/schemas/ModelStatus"
+        modelVersion:
+          description: "仅输出。用于生成响应的模型版本。"
+          readOnly: true
+          type: "string"
+        usageMetadata:
+          "$ref": "#/components/schemas/UsageMetadata"
+        candidates:
+          description: "模型返回的候选响应。"
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/Candidate"
+    GenerationConfig:
+      description: "模型生成和输出的配置选项。并非所有模型都支持配置所有参数。"
+      x-discovery-id: "GenerationConfig"
+      type: "object"
+      properties:
+        mediaResolution:
+          description: "可选。如已指定，将使用指定的媒体分辨率。"
+          type: "string"
+          enum:
+            - "MEDIA_RESOLUTION_UNSPECIFIED"
+            - "MEDIA_RESOLUTION_LOW"
+            - "MEDIA_RESOLUTION_MEDIUM"
+            - "MEDIA_RESOLUTION_HIGH"
+          x-enumDescriptions:
+            - "未设置媒体分辨率。"
+            - "媒体分辨率设为低（64 tokens）。"
+            - "媒体分辨率设为中（256 tokens）。"
+            - "媒体分辨率设为高（缩放重构，256 tokens）。"
+        stopSequences:
+          description: "可选。用于停止输出生成的字符序列集合，最多 5 个。指定后，API 会在首次出现 `stop_sequence` 时停止。停止序列不会包含在响应中。"
+          type: "array"
+          items:
+            type: "string"
+        _responseJsonSchema:
+          description: "可选。生成响应的输出 schema。这是 `response_schema` 的替代字段，接受 [JSON Schema](https://json-schema.org/)。如果设置此字段，必须省略 `response_schema`，但必须提供 `response_mime_type`。虽然可以发送完整 JSON Schema，但并非所有特性都受支持。具体只支持以下属性：`$id`、`$defs`、`$ref`、`$anchor`、`type`、`format`、`title`、`description`、`enum`（字符串和数字）、`items`、`prefixItems`、`minItems`、`maxItems`、`minimum`、`maximum`、`anyOf`、`oneOf`（按 `anyOf` 解释）、`properties`、`additionalProperties`、`required`。也可以设置非标准的 `propertyOrdering` 属性。循环引用只会在有限程度上展开，因此只能用于非必填属性（仅 nullable 属性不足以满足要求）。如果子 schema 设置了 `$ref`，则除以 `$` 开头的属性外，不得设置其他属性。"
+        speechConfig:
+          "$ref": "#/components/schemas/SpeechConfig"
+        topP:
+          description: "可选。采样时考虑 token 的最大累计概率。模型使用 Top-k 与 Top-p（nucleus）组合采样。token 会按分配概率排序，只考虑最可能的 token。Top-k 采样直接限制要考虑的最大 token 数，而 nucleus 采样按累计概率限制 token 数。注意：默认值因 `Model` 而异，由 `getModel` 函数返回的 `Model.top_p` 属性指定。空的 `top_k` 属性表示该模型不应用 top-k 采样，也不允许在请求中设置 `top_k`。"
+          type: "number"
+          format: "float"
+        imageConfig:
+          "$ref": "#/components/schemas/ImageConfig"
+        temperature:
+          description: "可选。控制输出的随机性。注意：默认值因模型而异，请参见 `getModel` 函数返回的 `Model` 的 `Model.temperature` 属性。取值范围为 [0.0, 2.0]。"
+          type: "number"
+          format: "float"
+        maxOutputTokens:
+          description: "可选。响应候选项中可包含的最大 token 数。注意：默认值因模型而异，请参见 `getModel` 函数返回的 `Model` 的 `Model.output_token_limit` 属性。"
+          type: "integer"
+          format: "int32"
+        enableEnhancedCivicAnswers:
+          description: "可选。启用增强版公民议题回答。并非所有模型都可用。"
+          type: "boolean"
+        topK:
+          description: "可选。采样时考虑的最大 token 数。Gemini 模型使用 Top-p（nucleus）采样，或 Top-k 与 nucleus 组合采样。Top-k 采样考虑概率最高的 `top_k` 个 token。使用 nucleus 采样的模型不允许设置 top_k。注意：默认值因 `Model` 而异，由 `getModel` 函数返回的 `Model.top_p` 属性指定。空的 `top_k` 属性表示该模型不应用 top-k 采样，也不允许在请求中设置 `top_k`。"
+          type: "integer"
+          format: "int32"
+        responseFormat:
+          "$ref": "#/components/schemas/ResponseFormatConfig"
+        translationConfig:
+          "$ref": "#/components/schemas/TranslationConfig"
+        presencePenalty:
+          description: "可选。如果下一个 token 已经在响应中出现过，则对其 logprobs 施加存在惩罚。此惩罚是二元开关，不依赖该 token（首次之后）被使用的次数。若希望惩罚随使用次数增加，请使用 frequency_penalty。正惩罚会抑制响应中已使用 token 的再次使用，从而增加词汇多样性；负惩罚会鼓励重复使用已使用 token，从而降低词汇多样性。"
+          type: "number"
+          format: "float"
+        responseLogprobs:
+          description: "可选。如果为 true，则在响应中导出 logprobs 结果。"
+          type: "boolean"
+        candidateCount:
+          description: "可选。要返回的生成响应数量。未设置时默认值为 1。请注意，此字段不适用于上一代模型（Gemini 1.0 系列）。"
+          type: "integer"
+          format: "int32"
+        logprobs:
+          description: "可选。仅当 response_logprobs=True 时有效。用于设置在 Candidate.logprobs_result 中每个解码步骤返回的 top logprobs 数量，包括选中的候选 token。该数值必须在 [0, 20] 范围内。"
+          type: "integer"
+          format: "int32"
+        thinkingConfig:
+          "$ref": "#/components/schemas/ThinkingConfig"
+        responseJsonSchema:
+          description: "可选。内部细节。请使用 `responseJsonSchema`，不要使用此字段。"
+        frequencyPenalty:
+          description: "可选。对下一个 token 的 logprobs 施加频率惩罚，并乘以目前该 token 在响应中出现的次数。正惩罚会按 token 使用次数成比例地抑制已使用 token：某个 token 使用越多，模型再次使用它就越困难，从而增加响应词汇多样性。注意：_负_惩罚会按使用次数鼓励模型重复使用 token。较小的负值会降低响应词汇多样性；较大的负值可能导致模型反复输出常见 token，直到达到 max_output_tokens 限制。"
+          type: "number"
+          format: "float"
+        seed:
+          description: "可选。解码使用的种子。未设置时，请求会使用随机生成的种子。"
+          type: "integer"
+          format: "int32"
+        responseModalities:
+          description: "可选。请求的响应模态。表示模型可以返回且调用方应在响应中预期的模态集合。它需要与响应模态精确匹配。一个模型可能支持多种模态组合。如果请求的模态不匹配任何受支持组合，将返回错误。空列表等同于只请求文本。"
+          type: "array"
+          items:
+            type: "string"
+            enum:
+              - "MODALITY_UNSPECIFIED"
+              - "TEXT"
+              - "IMAGE"
+              - "AUDIO"
+            x-enumDescriptions:
+              - "默认值。"
+              - "表示模型应返回文本。"
+              - "表示模型应返回图片。"
+              - "表示模型应返回音频。"
+        responseMimeType:
+          description: "可选。生成候选文本的 MIME 类型。支持的 MIME 类型包括：`text/plain`：（默认）文本输出；`application/json`：响应候选项中的 JSON 响应；`text/x.enum`：响应候选项中的字符串 ENUM。所有受支持文本 MIME 类型请参见[文档](https://ai.google.dev/gemini-api/docs/prompting_with_media#plain_text_formats)。"
+          type: "string"
+        responseSchema:
+          "$ref": "#/components/schemas/Schema"
+    GoogleAiGenerativelanguageV1betaGroundingSupport:
+      description: "grounding 支持信息。"
+      x-discovery-id: "GoogleAiGenerativelanguageV1betaGroundingSupport"
+      type: "object"
+      properties:
+        renderedParts:
+          description: "仅输出。候选内容 `parts` 字段中的索引。这些索引用于指定哪些渲染后的 part 与此支持来源相关。"
+          readOnly: true
+          type: "array"
+          items:
+            type: "integer"
+            format: "int32"
+        groundingChunkIndices:
+          description: "可选。索引列表（指向 `response.candidate.grounding_metadata` 中的 `grounding_chunk`），用于指定与该断言相关的引用。例如 [1,3,4] 表示 grounding_chunk[1]、grounding_chunk[3]、grounding_chunk[4] 是归因到该断言的检索内容。如果响应是流式的，grounding_chunk_indices 指跨所有响应的索引。客户端负责累积所有响应中的 grounding chunks，并保持相同顺序。"
+          type: "array"
+          items:
+            type: "integer"
+            format: "int32"
+        segment:
+          "$ref": "#/components/schemas/GoogleAiGenerativelanguageV1betaSegment"
+        confidenceScores:
+          description: "可选。支持引用的置信分数，范围为 0 到 1，1 表示最可信。此列表大小必须与 grounding_chunk_indices 相同。"
+          type: "array"
+          items:
+            type: "number"
+            format: "float"
+    GoogleAiGenerativelanguageV1betaSegment:
+      description: "内容片段。"
+      x-discovery-id: "GoogleAiGenerativelanguageV1betaSegment"
+      type: "object"
+      properties:
+        endIndex:
+          description: "给定 Part 中的结束索引，按字节计。相对于 Part 起始位置的偏移，不包含该位置，从 0 开始。"
+          type: "integer"
+          format: "int32"
+        startIndex:
+          description: "给定 Part 中的起始索引，按字节计。相对于 Part 起始位置的偏移，包含该位置，从 0 开始。"
+          type: "integer"
+          format: "int32"
+        text:
+          description: "响应中该片段对应的文本。"
+          type: "string"
+        partIndex:
+          description: "Part 对象在其父 Content 对象中的索引。"
+          type: "integer"
+          format: "int32"
+    GoogleMaps:
+      description: "GoogleMaps 工具，为用户查询提供地理空间上下文。"
+      x-discovery-id: "GoogleMaps"
+      type: "object"
+      properties:
+        enableWidget:
+          description: "可选。是否在响应的 GroundingMetadata 中返回 widget context token。开发者可以使用该 token 渲染 Google Maps widget，展示与模型响应中引用地点相关的地理空间上下文。"
+          type: "boolean"
+    GoogleSearch:
+      description: "GoogleSearch 工具类型。用于在模型中支持 Google 搜索，由 Google 提供能力。"
+      x-discovery-id: "GoogleSearch"
+      type: "object"
+      properties:
+        timeRangeFilter:
+          "$ref": "#/components/schemas/Interval"
+        searchTypes:
+          "$ref": "#/components/schemas/SearchTypes"
+    GoogleSearchRetrieval:
+      description: "用于检索公开网页数据以进行 grounding 的工具，由 Google 提供能力。"
+      x-discovery-id: "GoogleSearchRetrieval"
+      type: "object"
+      properties:
+        dynamicRetrievalConfig:
+          "$ref": "#/components/schemas/DynamicRetrievalConfig"
+    GroundingAttribution:
+      description: "对回答有贡献的来源归因。"
+      x-discovery-id: "GroundingAttribution"
+      type: "object"
+      properties:
+        sourceId:
+          "$ref": "#/components/schemas/AttributionSourceId"
+        content:
+          "$ref": "#/components/schemas/Content"
+    GroundingChunk:
+      description: "`GroundingChunk` 表示支撑模型响应的一段证据。它可以是网页 chunk、从文件检索到的上下文，或来自 Google Maps 的信息。"
+      x-discovery-id: "GroundingChunk"
+      type: "object"
+      properties:
+        image:
+          "$ref": "#/components/schemas/Image"
+        retrievedContext:
+          "$ref": "#/components/schemas/RetrievedContext"
+        maps:
+          "$ref": "#/components/schemas/Maps"
+        web:
+          "$ref": "#/components/schemas/Web"
+    GroundingChunkCustomMetadata:
+      description: "用户提供的 GroundingFact 元数据。"
+      x-discovery-id: "GroundingChunkCustomMetadata"
+      type: "object"
+      properties:
+        key:
+          description: "元数据键。"
+          type: "string"
+        stringValue:
+          description: "可选。元数据的字符串值。"
+          type: "string"
+        stringListValue:
+          "$ref": "#/components/schemas/GroundingChunkStringList"
+        numericValue:
+          description: "可选。元数据的数值。该值的预期范围取决于使用的具体 `key`。"
+          type: "number"
+          format: "float"
+    GroundingChunkStringList:
+      description: "字符串值列表。"
+      x-discovery-id: "GroundingChunkStringList"
+      type: "object"
+      properties:
+        values:
+          description: "列表中的字符串值。"
+          type: "array"
+          items:
+            type: "string"
+    GroundingMetadata:
+      description: "启用 grounding 时返回给客户端的元数据。"
+      x-discovery-id: "GroundingMetadata"
+      type: "object"
+      properties:
+        searchEntryPoint:
+          "$ref": "#/components/schemas/SearchEntryPoint"
+        webSearchQueries:
+          description: "用于后续网页搜索的查询。"
+          type: "array"
+          items:
+            type: "string"
+        googleMapsWidgetContextToken:
+          description: "可选。Google Maps widget context token 的资源名称，可与 PlacesContextElement widget 一起用于渲染上下文数据。仅在启用 Google Maps grounding 时填充。"
+          type: "string"
+        imageSearchQueries:
+          description: "用于 grounding 的图片搜索查询。"
+          type: "array"
+          items:
+            type: "string"
+        groundingChunks:
+          description: "从指定 grounding 来源检索到的支持引用列表。流式响应时，此字段仅包含之前响应的 grounding metadata 中尚未包含的 grounding chunks。"
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/GroundingChunk"
+        groundingSupports:
+          description: "grounding 支持列表。"
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/GoogleAiGenerativelanguageV1betaGroundingSupport"
+        retrievalMetadata:
+          "$ref": "#/components/schemas/RetrievalMetadata"
+    GroundingPassageId:
+      description: "`GroundingPassage` 中某个 part 的标识符。"
+      x-discovery-id: "GroundingPassageId"
+      type: "object"
+      properties:
+        passageId:
+          description: "仅输出。与 `GenerateAnswerRequest` 的 `GroundingPassage.id` 匹配的 passage ID。"
+          readOnly: true
+          type: "string"
+        partIndex:
+          description: "仅输出。该 part 在 `GenerateAnswerRequest` 的 `GroundingPassage.content` 中的索引。"
+          readOnly: true
+          type: "integer"
+          format: "int32"
+    Image:
+      description: "来自图片搜索的 chunk。"
+      x-discovery-id: "Image"
+      type: "object"
+      properties:
+        imageUri:
+          description: "图片资源 URL。"
+          type: "string"
+        sourceUri:
+          description: "用于归因的网页 URI。"
+          type: "string"
+        title:
+          description: "图片来源网页的标题。"
+          type: "string"
+        domain:
+          description: "图片来源网页的根域名，例如 \"example.com\"。"
+          type: "string"
+    ImageConfig:
+      description: "图片生成功能配置。"
+      x-discovery-id: "ImageConfig"
+      type: "object"
+      properties:
+        aspectRatio:
+          description: "可选。要生成图片的宽高比。支持：`1:1`、`1:4`、`4:1`、`1:8`、`8:1`、`2:3`、`3:2`、`3:4`、`4:3`、`4:5`、`5:4`、`9:16`、`16:9`、`21:9`。未指定时，模型会根据提供的参考图片选择默认宽高比。"
+          type: "string"
+        imageSize:
+          description: "可选。指定生成图片的尺寸。支持值为 `512`、`1K`、`2K`、`4K`。未指定时，模型使用默认值 `1K`。"
+          type: "string"
+    ImageResponseFormat:
+      description: "图片输出格式配置。"
+      x-discovery-id: "ImageResponseFormat"
+      type: "object"
+      properties:
+        imageSize:
+          description: "可选。图片输出尺寸。"
+          type: "string"
+          enum:
+            - "IMAGE_SIZE_UNSPECIFIED"
+            - "IMAGE_SIZE_FIVE_TWELVE"
+            - "IMAGE_SIZE_ONE_K"
+            - "IMAGE_SIZE_TWO_K"
+            - "IMAGE_SIZE_FOUR_K"
+          x-enumDescriptions:
+            - "默认值。此值不使用。"
+            - "512px 图片尺寸。"
+            - "1K 图片尺寸。"
+            - "2K 图片尺寸。"
+            - "4K 图片尺寸。"
+        mimeType:
+          description: "可选。图片输出的 MIME 类型。"
+          type: "string"
+          enum:
+            - "MIME_TYPE_UNSPECIFIED"
+            - "IMAGE_JPEG"
+          x-enumDescriptions:
+            - "默认值。此值不使用。"
+            - "JPEG 图片格式。"
+        aspectRatio:
+          description: "可选。图片输出的宽高比。"
+          type: "string"
+          enum:
+            - "ASPECT_RATIO_UNSPECIFIED"
+            - "ASPECT_RATIO_ONE_BY_ONE"
+            - "ASPECT_RATIO_TWO_BY_THREE"
+            - "ASPECT_RATIO_THREE_BY_TWO"
+            - "ASPECT_RATIO_THREE_BY_FOUR"
+            - "ASPECT_RATIO_FOUR_BY_THREE"
+            - "ASPECT_RATIO_FOUR_BY_FIVE"
+            - "ASPECT_RATIO_FIVE_BY_FOUR"
+            - "ASPECT_RATIO_NINE_BY_SIXTEEN"
+            - "ASPECT_RATIO_SIXTEEN_BY_NINE"
+            - "ASPECT_RATIO_TWENTY_ONE_BY_NINE"
+            - "ASPECT_RATIO_ONE_BY_EIGHT"
+            - "ASPECT_RATIO_EIGHT_BY_ONE"
+            - "ASPECT_RATIO_ONE_BY_FOUR"
+            - "ASPECT_RATIO_FOUR_BY_ONE"
+          x-enumDescriptions:
+            - "默认值。此值不使用。"
+            - "1:1 宽高比。"
+            - "2:3 宽高比。"
+            - "3:2 宽高比。"
+            - "3:4 宽高比。"
+            - "4:3 宽高比。"
+            - "4:5 宽高比。"
+            - "5:4 宽高比。"
+            - "9:16 宽高比。"
+            - "16:9 宽高比。"
+            - "21:9 宽高比。"
+            - "1:8 宽高比。"
+            - "8:1 宽高比。"
+            - "1:4 宽高比。"
+            - "4:1 宽高比。"
+        delivery:
+          description: "可选。图片输出的交付方式。"
+          type: "string"
+          enum:
+            - "DELIVERY_UNSPECIFIED"
+            - "INLINE"
+            - "URI"
+          x-enumDescriptions:
+            - "默认值。此值不使用。"
+            - "图片数据以内联方式随响应返回。"
+            - "图片数据以 URI 形式返回。"
+    ImageSearch:
+      description: "用于 grounding 的图片搜索及相关配置。"
+      x-discovery-id: "ImageSearch"
+      type: "object"
+      properties: {}
+    Interval:
+      description: "表示一个时间区间，编码为 Timestamp 起点（包含）和 Timestamp 终点（不包含）。起点必须小于或等于终点。当起点等于终点时，区间为空（不匹配任何时间）。当起点和终点都未指定时，区间匹配任意时间。"
+      x-discovery-id: "Interval"
+      type: "object"
+      properties:
+        endTime:
+          description: "可选。区间终点（不包含）。如已指定，匹配此区间的 Timestamp 必须早于该终点。"
+          type: "string"
+          format: "google-datetime"
+        startTime:
+          description: "可选。区间起点（包含）。如已指定，匹配此区间的 Timestamp 必须等于或晚于该起点。"
+          type: "string"
+          format: "google-datetime"
+    LatLng:
+      description: "表示经纬度对的对象。它用两个 double 值表示纬度和经度的度数。除非另有说明，此对象必须符合 WGS84 标准。取值必须在规范化范围内。"
+      x-discovery-id: "LatLng"
+      type: "object"
+      properties:
+        latitude:
+          description: "纬度，单位为度。必须位于 [-90.0, +90.0] 范围内。"
+          type: "number"
+          format: "double"
+        longitude:
+          description: "经度，单位为度。必须位于 [-180.0, +180.0] 范围内。"
+          type: "number"
+          format: "double"
+    LogprobsResult:
+      description: "Logprobs 结果。"
+      x-discovery-id: "LogprobsResult"
+      type: "object"
+      properties:
+        logProbabilitySum:
+          description: "所有 token 的对数概率之和。"
+          type: "number"
+          format: "float"
+        chosenCandidates:
+          description: "长度 = 解码步骤总数。选中的候选项可能在 top_candidates 中，也可能不在。"
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/LogprobsResultCandidate"
+        topCandidates:
+          description: "长度 = 解码步骤总数。"
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/TopCandidates"
+    LogprobsResultCandidate:
+      description: "logprobs token 及分数的候选项。"
+      x-discovery-id: "LogprobsResultCandidate"
+      type: "object"
+      properties:
+        token:
+          description: "候选项的 token 字符串值。"
+          type: "string"
+        logProbability:
+          description: "候选项的对数概率。"
+          type: "number"
+          format: "float"
+        tokenId:
+          description: "候选项的 token id 值。"
+          type: "integer"
+          format: "int32"
+    Maps:
+      description: "来自 Google Maps 的 grounding chunk。一个 Maps chunk 对应一个地点。"
+      x-discovery-id: "Maps"
+      type: "object"
+      properties:
+        placeId:
+          description: "地点 ID，格式为 `places/{place_id}`。用户可使用此 ID 查询该地点。"
+          type: "string"
+        uri:
+          description: "地点的 URI 引用。"
+          type: "string"
+        title:
+          description: "地点标题。"
+          type: "string"
+        text:
+          description: "地点回答的文本说明。"
+          type: "string"
+        placeAnswerSources:
+          "$ref": "#/components/schemas/PlaceAnswerSources"
+    McpServer:
+      description: "MCPServer 是模型可调用以执行操作的服务器，也是实现 MCP 协议的服务器。Next ID: 6。"
+      x-discovery-id: "McpServer"
+      type: "object"
+      properties:
+        streamableHttpTransport:
+          "$ref": "#/components/schemas/StreamableHttpTransport"
+        name:
+          description: "MCPServer 的名称。"
+          type: "string"
+    MediaResolution:
+      description: "用于 token 化的媒体分辨率。"
+      x-discovery-missing-schema: true
+      type: "object"
+      properties:
+        level:
+          description: "指定媒体使用的 token 化质量。"
+          type: "string"
+          enum:
+            - "MEDIA_RESOLUTION_UNSPECIFIED"
+            - "MEDIA_RESOLUTION_LOW"
+            - "MEDIA_RESOLUTION_MEDIUM"
+            - "MEDIA_RESOLUTION_HIGH"
+            - "MEDIA_RESOLUTION_ULTRA_HIGH"
+          x-enumDescriptions:
+            - "未设置媒体分辨率。"
+            - "媒体分辨率设为低。"
+            - "媒体分辨率设为中。"
+            - "媒体分辨率设为高。"
+            - "媒体分辨率设为超高。"
+    ModalityTokenCount:
+      description: "表示单一模态的 token 计数信息。"
+      x-discovery-id: "ModalityTokenCount"
+      type: "object"
+      properties:
+        modality:
+          description: "与此 token 计数关联的模态。"
+          type: "string"
+          enum:
+            - "MODALITY_UNSPECIFIED"
+            - "TEXT"
+            - "IMAGE"
+            - "VIDEO"
+            - "AUDIO"
+            - "DOCUMENT"
+          x-enumDescriptions:
+            - "未指定模态。"
+            - "纯文本。"
+            - "图片。"
+            - "视频。"
+            - "音频。"
+            - "文档，例如 PDF。"
+        tokenCount:
+          description: "token 数量。"
+          type: "integer"
+          format: "int32"
+    ModelStatus:
+      description: "底层模型的状态。用于表示底层模型所处阶段，以及适用时的退役时间。"
+      x-discovery-id: "ModelStatus"
+      type: "object"
+      properties:
+        modelStage:
+          description: "底层模型所处阶段。"
+          type: "string"
+          enum:
+            - "MODEL_STAGE_UNSPECIFIED"
+            - "UNSTABLE_EXPERIMENTAL"
+            - "EXPERIMENTAL"
+            - "PREVIEW"
+            - "STABLE"
+            - "LEGACY"
+            - "DEPRECATED"
+            - "RETIRED"
+          x-enumDescriptions:
+            - "未指定模型阶段。"
+            - "底层模型会经历大量调优。"
+            - "此阶段模型仅用于实验目的。"
+            - "此阶段模型比实验模型更成熟。"
+            - "此阶段模型被认为稳定，可用于生产环境。"
+            - "如果模型处于此阶段，表示该模型近期将进入弃用流程。只有现有客户可以使用此模型。"
+            - "此阶段模型已弃用，不能使用。"
+            - "此阶段模型已退役，不能使用。"
+          x-enumDeprecated:
+            - false
+            - true
+            - false
+            - false
+            - false
+            - false
+            - true
+            - false
+        retirementTime:
+          description: "模型将退役的时间。"
+          type: "string"
+          format: "google-datetime"
+        message:
+          description: "说明模型状态的消息。"
+          type: "string"
+    MultiSpeakerVoiceConfig:
+      description: "多说话人设置的配置。"
+      x-discovery-id: "MultiSpeakerVoiceConfig"
+      type: "object"
+      properties:
+        speakerVoiceConfigs:
+          description: "必填。所有已启用的说话人音色。"
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/SpeakerVoiceConfig"
+    Part:
+      description: "包含多 part `Content` 消息中媒体内容的数据类型。`Part` 由带有关联数据类型的数据组成。`Part` 只能包含 `Part.data` 接受类型中的一种。如果 `inline_data` 字段填充原始字节，`Part` 必须具有固定的 IANA MIME 类型，用于标识媒体类型和子类型。"
+      x-discovery-id: "Part"
+      type: "object"
+      properties:
+        inlineData:
+          "$ref": "#/components/schemas/Blob"
+        videoMetadata:
+          "$ref": "#/components/schemas/VideoMetadata"
+        fileData:
+          "$ref": "#/components/schemas/FileData"
+        codeExecutionResult:
+          "$ref": "#/components/schemas/CodeExecutionResult"
+        text:
+          description: "内联文本。"
+          type: "string"
+        partMetadata:
+          description: "与 Part 关联的自定义元数据。使用 genai.Part 作为内容表示的 Agent 可能需要跟踪这些额外信息。例如，它可以是 Part 来源文件/来源的名称，或用于复用多个 Part 流的方式。"
+          type: "object"
+          additionalProperties:
+            description: "对象的属性。"
+        functionCall:
+          "$ref": "#/components/schemas/FunctionCall"
+        toolResponse:
+          "$ref": "#/components/schemas/ToolResponse"
+        thoughtSignature:
+          description: "可选。思考内容的不透明签名，用于在后续请求中复用。"
+          type: "string"
+          format: "byte"
+        thought:
+          description: "可选。表示该 part 是否为模型的思考内容。"
+          type: "boolean"
+        functionResponse:
+          "$ref": "#/components/schemas/FunctionResponse"
+        executableCode:
+          "$ref": "#/components/schemas/ExecutableCode"
+        mediaResolution:
+          "$ref": "#/components/schemas/MediaResolution"
+        toolCall:
+          "$ref": "#/components/schemas/ToolCall"
+    PlaceAnswerSources:
+      description: "提供 Google Maps 中指定地点特征答案的来源集合。每个 PlaceAnswerSources 消息对应 Google Maps 中的一个具体地点。Google Maps 工具使用这些来源回答关于地点特征的问题，例如 \"does Bar Foo have Wifi\" 或 \"is Foo Bar wheelchair accessible?\"。目前仅支持评论片段作为来源。"
+      x-discovery-id: "PlaceAnswerSources"
+      type: "object"
+      properties:
+        reviewSnippets:
+          description: "用于生成 Google Maps 中指定地点特征答案的评论片段。"
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/ReviewSnippet"
+    PrebuiltVoiceConfig:
+      description: "要使用的预置说话人配置。"
+      x-discovery-id: "PrebuiltVoiceConfig"
+      type: "object"
+      properties:
+        voiceName:
+          description: "要使用的预设音色名称。"
+          type: "string"
+    PromptFeedback:
+      description: "`GenerateContentRequest.content` 中指定提示词的反馈元数据集合。"
+      x-discovery-id: "PromptFeedback"
+      type: "object"
+      properties:
+        blockReason:
+          description: "可选。如果已设置，表示提示词被拦截且不会返回候选项。请改写提示词。"
+          type: "string"
+          enum:
+            - "BLOCK_REASON_UNSPECIFIED"
+            - "SAFETY"
+            - "OTHER"
+            - "BLOCKLIST"
+            - "PROHIBITED_CONTENT"
+            - "IMAGE_SAFETY"
+          x-enumDescriptions:
+            - "默认值。此值不使用。"
+            - "提示词因安全原因被拦截。请检查 `safety_ratings` 了解哪个安全类别触发了拦截。"
+            - "提示词因未知原因被拦截。"
+            - "提示词因包含术语黑名单中的词条而被拦截。"
+            - "提示词因违禁内容被拦截。"
+            - "候选项因不安全的图片生成内容被拦截。"
+        safetyRatings:
+          description: "提示词的安全评分。每个类别最多一个评分。"
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/SafetyRating"
+    ResponseFormatConfig:
+      description: "响应输出格式配置。它是一个扁平对象，每个可选子字段配置一种特定输出模态。"
+      x-discovery-id: "ResponseFormatConfig"
+      type: "object"
+      properties:
+        text:
+          "$ref": "#/components/schemas/TextResponseFormat"
+        image:
+          "$ref": "#/components/schemas/ImageResponseFormat"
+        audio:
+          "$ref": "#/components/schemas/AudioResponseFormat"
+    RetrievalConfig:
+      description: "检索配置。"
+      x-discovery-id: "RetrievalConfig"
+      type: "object"
+      properties:
+        latLng:
+          "$ref": "#/components/schemas/LatLng"
+        languageCode:
+          description: "可选。用户的语言代码，即内容语言代码。使用 [BCP47](https://www.rfc-editor.org/rfc/bcp/bcp47.txt) 定义的语言标签。"
+          type: "string"
+    RetrievalMetadata:
+      description: "grounding 流程中与检索相关的元数据。"
+      x-discovery-id: "RetrievalMetadata"
+      type: "object"
+      properties:
+        googleSearchDynamicRetrievalScore:
+          description: "可选。表示 Google 搜索信息帮助回答提示词的可能性分数。取值范围为 [0, 1]，0 表示最不可能，1 表示最可能。仅在启用 Google 搜索 grounding 和动态检索时填充。它会与阈值比较，以决定是否触发 Google 搜索。"
+          type: "number"
+          format: "float"
+    RetrievedContext:
+      description: "文件搜索工具检索到的上下文 chunk。"
+      x-discovery-id: "RetrievedContext"
+      type: "object"
+      properties:
+        pageNumber:
+          description: "可选。检索上下文的页码，如适用。"
+          type: "integer"
+          format: "int32"
+        mediaId:
+          description: "可选。多模态文件搜索结果的媒体 blob 资源名称。格式：fileSearchStores/{file_search_store_id}/media/{blob_id}。"
+          type: "string"
+        fileSearchStore:
+          description: "可选。包含该文档的 `FileSearchStore` 名称。示例：`fileSearchStores/123`。"
+          type: "string"
+        customMetadata:
+          description: "可选。用户提供的检索上下文元数据。"
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/GroundingChunkCustomMetadata"
+        uri:
+          description: "可选。语义检索文档的 URI 引用。"
+          type: "string"
+        title:
+          description: "可选。文档标题。"
+          type: "string"
+        text:
+          description: "可选。chunk 文本。"
+          type: "string"
+    ReviewSnippet:
+      description: "封装一段用户评论片段，用于回答 Google Maps 中特定地点特征相关问题。"
+      x-discovery-id: "ReviewSnippet"
+      type: "object"
+      properties:
+        reviewId:
+          description: "评论片段 ID。"
+          type: "string"
+        googleMapsUri:
+          description: "对应 Google Maps 用户评论的链接。"
+          type: "string"
+        title:
+          description: "评论标题。"
+          type: "string"
+    SafetyRating:
+      description: "一段内容的安全评分。安全评分包含内容的危害类别，以及该类别下的危害概率等级。内容会按多个危害类别进行安全分类，此处包含危害分类的概率。"
+      x-discovery-id: "SafetyRating"
+      type: "object"
+      properties:
+        category:
+          description: "必填。此评分对应的类别。"
+          type: "string"
+          enum:
+            - "HARM_CATEGORY_UNSPECIFIED"
+            - "HARM_CATEGORY_DEROGATORY"
+            - "HARM_CATEGORY_TOXICITY"
+            - "HARM_CATEGORY_VIOLENCE"
+            - "HARM_CATEGORY_SEXUAL"
+            - "HARM_CATEGORY_MEDICAL"
+            - "HARM_CATEGORY_DANGEROUS"
+            - "HARM_CATEGORY_HARASSMENT"
+            - "HARM_CATEGORY_HATE_SPEECH"
+            - "HARM_CATEGORY_SEXUALLY_EXPLICIT"
+            - "HARM_CATEGORY_DANGEROUS_CONTENT"
+            - "HARM_CATEGORY_CIVIC_INTEGRITY"
+          x-enumDescriptions:
+            - "未指定类别。"
+            - "**PaLM** - 针对身份或受保护属性的负面或有害评论。"
+            - "**PaLM** - 粗鲁、不尊重或亵渎性内容。"
+            - "**PaLM** - 描述针对个人或群体的暴力场景，或对血腥内容的一般描述。"
+            - "**PaLM** - 包含性行为或其他淫秽内容。"
+            - "**PaLM** - 宣传未经核验的医疗建议。"
+            - "**PaLM** - 宣传、促成或鼓励有害行为的危险内容。"
+            - "**Gemini** - 骚扰内容。"
+            - "**Gemini** - 仇恨言论和内容。"
+            - "**Gemini** - 露骨色情内容。"
+            - "**Gemini** - 危险内容。"
+            - "**Gemini** - 可能用于损害公民诚信的内容。已弃用：请改用 enable_enhanced_civic_answers。"
+          x-enumDeprecated:
+            - false
+            - false
+            - false
+            - false
+            - false
+            - false
+            - false
+            - false
+            - false
+            - false
+            - false
+            - true
+        probability:
+          description: "必填。此内容的危害概率。"
+          type: "string"
+          enum:
+            - "HARM_PROBABILITY_UNSPECIFIED"
+            - "NEGLIGIBLE"
+            - "LOW"
+            - "MEDIUM"
+            - "HIGH"
+          x-enumDescriptions:
+            - "未指定概率。"
+            - "内容不安全的可能性可忽略。"
+            - "内容不安全的可能性较低。"
+            - "内容不安全的可能性中等。"
+            - "内容不安全的可能性较高。"
+        blocked:
+          description: "此内容是否因该评分被拦截？"
+          type: "boolean"
+    SafetySetting:
+      description: "安全设置，会影响安全拦截行为。为某个类别传入安全设置，会改变该类别下内容被拦截的允许概率阈值。"
+      x-discovery-id: "SafetySetting"
+      type: "object"
+      properties:
+        category:
+          description: "必填。此设置对应的类别。"
+          type: "string"
+          enum:
+            - "HARM_CATEGORY_UNSPECIFIED"
+            - "HARM_CATEGORY_DEROGATORY"
+            - "HARM_CATEGORY_TOXICITY"
+            - "HARM_CATEGORY_VIOLENCE"
+            - "HARM_CATEGORY_SEXUAL"
+            - "HARM_CATEGORY_MEDICAL"
+            - "HARM_CATEGORY_DANGEROUS"
+            - "HARM_CATEGORY_HARASSMENT"
+            - "HARM_CATEGORY_HATE_SPEECH"
+            - "HARM_CATEGORY_SEXUALLY_EXPLICIT"
+            - "HARM_CATEGORY_DANGEROUS_CONTENT"
+            - "HARM_CATEGORY_CIVIC_INTEGRITY"
+          x-enumDescriptions:
+            - "未指定类别。"
+            - "**PaLM** - 针对身份或受保护属性的负面或有害评论。"
+            - "**PaLM** - 粗鲁、不尊重或亵渎性内容。"
+            - "**PaLM** - 描述针对个人或群体的暴力场景，或对血腥内容的一般描述。"
+            - "**PaLM** - 包含性行为或其他淫秽内容。"
+            - "**PaLM** - 宣传未经核验的医疗建议。"
+            - "**PaLM** - 宣传、促成或鼓励有害行为的危险内容。"
+            - "**Gemini** - 骚扰内容。"
+            - "**Gemini** - 仇恨言论和内容。"
+            - "**Gemini** - 露骨色情内容。"
+            - "**Gemini** - 危险内容。"
+            - "**Gemini** - 可能用于损害公民诚信的内容。已弃用：请改用 enable_enhanced_civic_answers。"
+          x-enumDeprecated:
+            - false
+            - false
+            - false
+            - false
+            - false
+            - false
+            - false
+            - false
+            - false
+            - false
+            - false
+            - true
+        threshold:
+          description: "必填。控制危害被拦截的概率阈值。"
+          type: "string"
+          enum:
+            - "HARM_BLOCK_THRESHOLD_UNSPECIFIED"
+            - "BLOCK_LOW_AND_ABOVE"
+            - "BLOCK_MEDIUM_AND_ABOVE"
+            - "BLOCK_ONLY_HIGH"
+            - "BLOCK_NONE"
+            - "OFF"
+          x-enumDescriptions:
+            - "未指定阈值。"
+            - "允许 NEGLIGIBLE 级别的内容。"
+            - "允许 NEGLIGIBLE 和 LOW 级别的内容。"
+            - "允许 NEGLIGIBLE、LOW 和 MEDIUM 级别的内容。"
+            - "允许所有内容。"
+            - "关闭安全过滤器。"
+    Schema:
+      description: "`Schema` 对象用于定义输入和输出数据类型。这些类型可以是对象，也可以是基本类型和数组。它表示 [OpenAPI 3.0 schema 对象](https://spec.openapis.org/oas/v3.0.3#schema) 的一个精选子集。"
+      x-discovery-id: "Schema"
+      type: "object"
+      properties:
+        minItems:
+          description: "可选。Type.ARRAY 元素的最小数量。"
+          type: "string"
+          format: "int64"
+        maximum:
+          description: "可选。Type.INTEGER 和 Type.NUMBER 的最大值。"
+          type: "number"
+          format: "double"
+        nullable:
+          description: "可选。表示值是否可以为 null。"
+          type: "boolean"
+        default:
+          description: "可选。字段默认值。按照 JSON Schema，此字段用于文档生成器，不影响校验。因此这里会包含并忽略它，以免发送带 `default` 字段 schema 的开发者遇到未知字段错误。"
+        example:
+          description: "可选。对象示例。仅当对象为根对象时填充。"
+        maxLength:
+          description: "可选。Type.STRING 的最大长度。"
+          type: "string"
+          format: "int64"
+        anyOf:
+          description: "可选。该值应通过列表中任意一个或多个子 schema 的校验。"
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/Schema"
+        enum:
+          description: "可选。Type.STRING 且格式为 enum 的元素可取值。例如可以定义枚举 Direction：{type:STRING, format:enum, enum:[\"EAST\", NORTH\", \"SOUTH\", \"WEST\"]}。"
+          type: "array"
+          items:
+            type: "string"
+        maxItems:
+          description: "可选。Type.ARRAY 元素的最大数量。"
+          type: "string"
+          format: "int64"
+        description:
+          description: "可选。参数的简短说明。可包含使用示例。参数说明可以使用 Markdown 格式。"
+          type: "string"
+        minProperties:
+          description: "可选。Type.OBJECT 属性的最小数量。"
+          type: "string"
+          format: "int64"
+        title:
+          description: "可选。schema 标题。"
+          type: "string"
+        propertyOrdering:
+          description: "可选。属性顺序。不是 OpenAPI 规范中的标准字段，用于确定响应中属性的顺序。"
+          type: "array"
+          items:
+            type: "string"
+        required:
+          description: "可选。Type.OBJECT 的必填属性。"
+          type: "array"
+          items:
+            type: "string"
+        type:
+          description: "必填。数据类型。"
+          type: "string"
+          enum:
+            - "TYPE_UNSPECIFIED"
+            - "STRING"
+            - "NUMBER"
+            - "INTEGER"
+            - "BOOLEAN"
+            - "ARRAY"
+            - "OBJECT"
+            - "NULL"
+          x-enumDescriptions:
+            - "未指定，不应使用。"
+            - "字符串类型。"
+            - "数字类型。"
+            - "整数类型。"
+            - "布尔类型。"
+            - "数组类型。"
+            - "对象类型。"
+            - "Null 类型。"
+        properties:
+          description: "可选。Type.OBJECT 的属性。"
+          type: "object"
+          additionalProperties:
+            "$ref": "#/components/schemas/Schema"
+        minLength:
+          description: "可选。TYPE STRING 的 SCHEMA 字段：Type.STRING 的最小长度。"
+          type: "string"
+          format: "int64"
+        items:
+          "$ref": "#/components/schemas/Schema"
+        pattern:
+          description: "可选。Type.STRING 的 pattern，用正则表达式限制字符串。"
+          type: "string"
+        format:
+          description: "可选。数据格式。允许任意值，但大多数值不会触发特殊功能。"
+          type: "string"
+        minimum:
+          description: "可选。TYPE INTEGER 和 NUMBER 的 SCHEMA 字段：Type.INTEGER 和 Type.NUMBER 的最小值。"
+          type: "number"
+          format: "double"
+        maxProperties:
+          description: "可选。Type.OBJECT 属性的最大数量。"
+          type: "string"
+          format: "int64"
+    SearchEntryPoint:
+      description: "Google 搜索入口点。"
+      x-discovery-id: "SearchEntryPoint"
+      type: "object"
+      properties:
+        renderedContent:
+          description: "可选。可嵌入网页或应用 webview 的网页内容片段。"
+          type: "string"
+        sdkBlob:
+          description: "可选。表示元组数组的 Base64 编码 JSON。"
+          type: "string"
+          format: "byte"
+    SearchTypes:
+      description: "可在 GoogleSearch 工具上启用的不同搜索类型。"
+      x-discovery-id: "SearchTypes"
+      type: "object"
+      properties:
+        webSearch:
+          "$ref": "#/components/schemas/WebSearch"
+        imageSearch:
+          "$ref": "#/components/schemas/ImageSearch"
+    SemanticRetrieverChunk:
+      description: "使用 `SemanticRetrieverConfig` 在 `GenerateAnswerRequest` 中指定、并通过 Semantic Retriever 检索到的 `Chunk` 标识符。"
+      x-discovery-id: "SemanticRetrieverChunk"
+      type: "object"
+      properties:
+        source:
+          description: "仅输出。与请求的 `SemanticRetrieverConfig.source` 匹配的来源名称。示例：`corpora/123` 或 `corpora/123/documents/abc`。"
+          readOnly: true
+          type: "string"
+        chunk:
+          description: "仅输出。包含归因文本的 `Chunk` 名称。示例：`corpora/123/documents/abc/chunks/xyz`。"
+          readOnly: true
+          type: "string"
+    SpeakerVoiceConfig:
+      description: "多说话人设置中单个说话人的配置。"
+      x-discovery-id: "SpeakerVoiceConfig"
+      type: "object"
+      properties:
+        voiceConfig:
+          "$ref": "#/components/schemas/VoiceConfig"
+        speaker:
+          description: "必填。要使用的说话人名称，应与提示词中的名称相同。"
+          type: "string"
+    SpeechConfig:
+      description: "语音生成和转写配置。"
+      x-discovery-id: "SpeechConfig"
+      type: "object"
+      properties:
+        multiSpeakerVoiceConfig:
+          "$ref": "#/components/schemas/MultiSpeakerVoiceConfig"
+        voiceConfig:
+          "$ref": "#/components/schemas/VoiceConfig"
+        languageCode:
+          description: "可选。用户在应用中配置使用的 IETF [BCP-47](https://www.rfc-editor.org/rfc/bcp/bcp47.txt) 语言代码。用于语音识别和合成。有效值包括：`de-DE`、`en-AU`、`en-GB`、`en-IN`、`en-US`、`es-US`、`fr-FR`、`hi-IN`、`pt-BR`、`ar-XA`、`es-ES`、`fr-CA`、`id-ID`、`it-IT`、`ja-JP`、`tr-TR`、`vi-VN`、`bn-IN`、`gu-IN`、`kn-IN`、`ml-IN`、`mr-IN`、`ta-IN`、`te-IN`、`nl-NL`、`ko-KR`、`cmn-CN`、`pl-PL`、`ru-RU` 和 `th-TH`。"
+          type: "string"
+    Status:
+      description: "`Status` 类型定义了一种逻辑错误模型，适用于包括 REST API 和 RPC API 在内的不同编程环境。它由 [gRPC](https://github.com/grpc) 使用。每个 `Status` 消息包含三类数据：错误代码、错误消息和错误详情。有关此错误模型及其使用方式的更多信息，请参见 [API Design Guide](https://cloud.google.com/apis/design/errors)。"
+      x-discovery-id: "Status"
+      type: "object"
+      properties:
+        code:
+          description: "状态码，应为 google.rpc.Code 的枚举值。"
+          type: "integer"
+          format: "int32"
+        message:
+          description: "面向开发者的错误消息，应使用英文。任何面向用户的错误消息都应本地化后通过 google.rpc.Status.details 字段发送，或由客户端进行本地化。"
+          type: "string"
+        details:
+          description: "携带错误详情的消息列表。API 可使用一组通用消息类型。"
+          type: "array"
+          items:
+            type: "object"
+            additionalProperties:
+              description: "对象的属性。 Contains field @type with type URL."
+    StreamableHttpTransport:
+      description: "可流式传输 HTTP 请求和响应的传输方式。Next ID: 6。"
+      x-discovery-id: "StreamableHttpTransport"
+      type: "object"
+      properties:
+        terminateOnClose:
+          description: "传输关闭时是否关闭客户端会话。"
+          type: "boolean"
+        headers:
+          description: "可选：如有需要，可填写认证请求头、超时等字段。"
+          type: "object"
+          additionalProperties:
+            type: "string"
+        url:
+          description: "MCPServer 端点的完整 URL。示例：\"https://api.example.com/mcp\"。"
+          type: "string"
+        timeout:
+          description: "常规操作的 HTTP 超时时间。"
+          type: "string"
+          format: "google-duration"
+        sseReadTimeout:
+          description: "SSE 读取操作的超时时间。"
+          type: "string"
+          format: "google-duration"
+    TextResponseFormat:
+      description: "文本输出格式配置。"
+      x-discovery-id: "TextResponseFormat"
+      type: "object"
+      properties:
+        mimeType:
+          description: "可选。文本输出的 MIME 类型。"
+          type: "string"
+          enum:
+            - "MIME_TYPE_UNSPECIFIED"
+            - "APPLICATION_JSON"
+            - "TEXT_PLAIN"
+          x-enumDescriptions:
+            - "默认值。此值不使用。"
+            - "JSON 输出格式。"
+            - "纯文本输出格式。"
+        schema:
+          description: "可选。输出应遵循的 JSON schema。仅当 mime_type 为 APPLICATION_JSON 时适用。"
+    ThinkingConfig:
+      description: "思考功能配置。"
+      x-discovery-id: "ThinkingConfig"
+      type: "object"
+      properties:
+        includeThoughts:
+          description: "表示响应中是否包含思考内容。如果为 true，则仅在思考内容可用时返回。"
+          type: "boolean"
+        thinkingLevel:
+          description: "可选。控制模型在生成响应前内部推理过程的最大深度。默认值取决于模型。更多详情请参见 [Thinking levels guide](https://ai.google.dev/gemini-api/docs/thinking#thinking-levels)。建议用于 Gemini 3 或更高版本模型。用于更早模型会导致错误。"
+          type: "string"
+          enum:
+            - "THINKING_LEVEL_UNSPECIFIED"
+            - "MINIMAL"
+            - "LOW"
+            - "MEDIUM"
+            - "HIGH"
+          x-enumDescriptions:
+            - "默认值。"
+            - "很少或不进行思考。"
+            - "低思考级别。"
+            - "中等思考级别。"
+            - "高思考级别。"
+        thinkingBudget:
+          description: "模型应生成的思考 token 数量。"
+          type: "integer"
+          format: "int32"
+    Tool:
+      description: "模型生成响应时可使用的工具详情。`Tool` 是一段代码，使系统能够与外部系统交互，在模型知识和范围之外执行一个或一组动作。Next ID: 16。"
+      x-discovery-id: "Tool"
+      type: "object"
+      properties:
+        urlContext:
+          "$ref": "#/components/schemas/UrlContext"
+        googleSearch:
+          "$ref": "#/components/schemas/GoogleSearch"
+        googleMaps:
+          "$ref": "#/components/schemas/GoogleMaps"
+        fileSearch:
+          "$ref": "#/components/schemas/FileSearch"
+        mcpServers:
+          description: "可选。要连接的 MCP Servers。"
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/McpServer"
+        codeExecution:
+          "$ref": "#/components/schemas/CodeExecution"
+        functionDeclarations:
+          description: "可选。模型可用于函数调用的 `FunctionDeclarations` 列表。模型或系统不会执行这些函数，而是可能将已定义函数作为带参数的 FunctionCall 返回给客户端执行。模型可通过在响应中填充 FunctionCall 来决定调用其中一部分函数。下一轮对话可包含带有 Content.role \"function\" 的 FunctionResponse，作为下一轮模型生成的上下文。"
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/FunctionDeclaration"
+        googleSearchRetrieval:
+          "$ref": "#/components/schemas/GoogleSearchRetrieval"
+        computerUse:
+          "$ref": "#/components/schemas/ComputerUse"
+    ToolCall:
+      description: "模型返回的预测服务端 `ToolCall`。此消息包含模型想要调用的工具信息。客户端不应执行此 `ToolCall`，而应在后续轮次中将此 `ToolCall` 与对应的 `ToolResponse` 一起放入 `Content` 消息并传回 API。"
+      x-discovery-id: "ToolCall"
+      type: "object"
+      properties:
+        id:
+          description: "可选。工具调用的唯一标识符。服务端会返回带有匹配 `id` 的工具响应。"
+          type: "string"
+        toolType:
+          description: "必填。被调用的工具类型。"
+          type: "string"
+          enum:
+            - "TOOL_TYPE_UNSPECIFIED"
+            - "GOOGLE_SEARCH_WEB"
+            - "GOOGLE_SEARCH_IMAGE"
+            - "URL_CONTEXT"
+            - "GOOGLE_MAPS"
+            - "FILE_SEARCH"
+          x-enumDescriptions:
+            - "未指定工具类型。"
+            - "Google 搜索工具，映射到 Tool.google_search.search_types.web_search。"
+            - "图片搜索工具，映射到 Tool.google_search.search_types.image_search。"
+            - "URL 上下文工具，映射到 Tool.url_context。"
+            - "Google Maps 工具，映射到 Tool.google_maps。"
+            - "文件搜索工具，映射到 Tool.file_search。"
+        args:
+          description: "可选。工具调用参数。示例：{\"arg1\" : \"value1\", \"arg2\" : \"value2\" , ...}。"
+          type: "object"
+          additionalProperties:
+            description: "对象的属性。"
+    ToolConfig:
+      description: "Tool 配置，包含用于指定请求中 `Tool` 使用方式的参数。"
+      x-discovery-id: "ToolConfig"
+      type: "object"
+      properties:
+        functionCallingConfig:
+          "$ref": "#/components/schemas/FunctionCallingConfig"
+        retrievalConfig:
+          "$ref": "#/components/schemas/RetrievalConfig"
+        includeServerSideToolInvocations:
+          description: "可选。如果为 true，API 响应会在 `Content` 消息中包含服务端工具调用和响应，使客户端能够观察服务端的工具交互。"
+          type: "boolean"
+    ToolResponse:
+      description: "服务端 `ToolCall` 执行后的输出。此消息包含由模型发起的 `ToolCall` 所触发工具调用的结果。客户端应在后续轮次中将此 `ToolResponse` 与对应的 `ToolCall` 一起放入 `Content` 消息并传回 API。"
+      x-discovery-id: "ToolResponse"
+      type: "object"
+      properties:
+        id:
+          description: "可选。此响应对应的工具调用标识符。"
+          type: "string"
+        toolType:
+          description: "必填。被调用的工具类型，应与对应 `ToolCall` 中的 `tool_type` 匹配。"
+          type: "string"
+          enum:
+            - "TOOL_TYPE_UNSPECIFIED"
+            - "GOOGLE_SEARCH_WEB"
+            - "GOOGLE_SEARCH_IMAGE"
+            - "URL_CONTEXT"
+            - "GOOGLE_MAPS"
+            - "FILE_SEARCH"
+          x-enumDescriptions:
+            - "未指定工具类型。"
+            - "Google 搜索工具，映射到 Tool.google_search.search_types.web_search。"
+            - "图片搜索工具，映射到 Tool.google_search.search_types.image_search。"
+            - "URL 上下文工具，映射到 Tool.url_context。"
+            - "Google Maps 工具，映射到 Tool.google_maps。"
+            - "文件搜索工具，映射到 Tool.file_search。"
+        response:
+          description: "可选。工具响应。"
+          type: "object"
+          additionalProperties:
+            description: "对象的属性。"
+    TopCandidates:
+      description: "每个解码步骤中对数概率最高的候选项。"
+      x-discovery-id: "TopCandidates"
+      type: "object"
+      properties:
+        candidates:
+          description: "按对数概率降序排序。"
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/LogprobsResultCandidate"
+    TranslationConfig:
+      description: "翻译功能配置。"
+      x-discovery-id: "TranslationConfig"
+      type: "object"
+      properties:
+        targetLanguageCode:
+          description: "必填。翻译目标语言。支持值为 BCP-47 语言代码，例如 \"en\"、\"es\"、\"fr\"。"
+          type: "string"
+        echoTargetLanguage:
+          description: "可选。如果为 true，当目标语言被说出时模型会生成音频，本质上会复述输入。如果为 false，则不会为目标语言生成音频。"
+          type: "boolean"
+    UrlContext:
+      description: "支持 URL 上下文检索的工具。"
+      x-discovery-id: "UrlContext"
+      type: "object"
+      properties: {}
+    UrlContextMetadata:
+      description: "与 URL 上下文检索工具相关的元数据。"
+      x-discovery-id: "UrlContextMetadata"
+      type: "object"
+      properties:
+        urlMetadata:
+          description: "URL 上下文列表。"
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/UrlMetadata"
+    UrlMetadata:
+      description: "单个 URL 检索的上下文。"
+      x-discovery-id: "UrlMetadata"
+      type: "object"
+      properties:
+        retrievedUrl:
+          description: "工具检索到的 URL。"
+          type: "string"
+        urlRetrievalStatus:
+          description: "URL 检索状态。"
+          type: "string"
+          enum:
+            - "URL_RETRIEVAL_STATUS_UNSPECIFIED"
+            - "URL_RETRIEVAL_STATUS_SUCCESS"
+            - "URL_RETRIEVAL_STATUS_ERROR"
+            - "URL_RETRIEVAL_STATUS_PAYWALL"
+            - "URL_RETRIEVAL_STATUS_UNSAFE"
+          x-enumDescriptions:
+            - "默认值。此值不使用。"
+            - "URL 检索成功。"
+            - "URL 检索因错误失败。"
+            - "URL 检索失败，因为内容位于付费墙之后。"
+            - "URL 检索失败，因为内容不安全。"
+    UsageMetadata:
+      description: "生成请求的 token 使用量元数据。"
+      x-discovery-id: "UsageMetadata"
+      type: "object"
+      properties:
+        promptTokenCount:
+          description: "提示词中的 token 数。当设置了 `cached_content` 时，这仍表示总的有效提示词大小，即包含缓存内容中的 token 数。"
+          type: "integer"
+          format: "int32"
+        toolUsePromptTokenCount:
+          description: "仅输出。工具使用提示词中的 token 数。"
+          readOnly: true
+          type: "integer"
+          format: "int32"
+        totalTokenCount:
+          description: "生成请求的 token 总数（提示词 + 思考内容 + 响应候选项）。"
+          type: "integer"
+          format: "int32"
+        thoughtsTokenCount:
+          description: "仅输出。思考模型的思考 token 数。"
+          readOnly: true
+          type: "integer"
+          format: "int32"
+        cacheTokensDetails:
+          description: "仅输出。请求输入中缓存内容的模态列表。"
+          readOnly: true
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/ModalityTokenCount"
+        candidatesTokensDetails:
+          description: "仅输出。响应中返回的模态列表。"
+          readOnly: true
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/ModalityTokenCount"
+        cachedContentTokenCount:
+          description: "提示词缓存部分（缓存内容）中的 token 数。"
+          type: "integer"
+          format: "int32"
+        toolUsePromptTokensDetails:
+          description: "仅输出。工具使用请求输入中已处理的模态列表。"
+          readOnly: true
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/ModalityTokenCount"
+        candidatesTokenCount:
+          description: "所有生成响应候选项的 token 总数。"
+          type: "integer"
+          format: "int32"
+        serviceTier:
+          description: "仅输出。请求的服务层级。"
+          readOnly: true
+          type: "string"
+          enum:
+            - "unspecified"
+            - "standard"
+            - "flex"
+            - "priority"
+          x-enumDescriptions:
+            - "默认服务层级，即 standard。"
+            - "Standard 服务层级。"
+            - "Flex 服务层级。"
+            - "Priority 服务层级。"
+        promptTokensDetails:
+          description: "仅输出。请求输入中已处理的模态列表。"
+          readOnly: true
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/ModalityTokenCount"
+    VideoMetadata:
+      description: "已弃用：请改用 `GenerateContentRequest.processing_options`。此元数据描述输入视频内容。"
+      x-discovery-id: "VideoMetadata"
+      deprecated: true
+      type: "object"
+      properties:
+        endOffset:
+          description: "可选。视频的结束偏移量。"
+          type: "string"
+          format: "google-duration"
+        fps:
+          description: "可选。发送给模型的视频帧率。未指定时默认值为 1.0。fps 范围为 (0.0, 24.0]。"
+          type: "number"
+          format: "double"
+        startOffset:
+          description: "可选。视频的起始偏移量。"
+          type: "string"
+          format: "google-duration"
+    VoiceConfig:
+      description: "要使用的语音配置。"
+      x-discovery-id: "VoiceConfig"
+      type: "object"
+      properties:
+        prebuiltVoiceConfig:
+          "$ref": "#/components/schemas/PrebuiltVoiceConfig"
+    Web:
+      description: "来自网页的 chunk。"
+      x-discovery-id: "Web"
+      type: "object"
+      properties:
+        uri:
+          description: "仅输出。chunk 的 URI 引用。"
+          readOnly: true
+          type: "string"
+        title:
+          description: "仅输出。chunk 标题。"
+          readOnly: true
+          type: "string"
+    WebSearch:
+      description: "用于 grounding 的标准网页搜索及相关配置。"
+      x-discovery-id: "WebSearch"
+      type: "object"
+      properties: {}
+x-discovery:
+  id: "generativelanguage:v1beta"
+  name: "generativelanguage"
+  version: "v1beta"
+  revision: "20260620"
+  documentationLink: "https://developers.generativeai.google/api"
+  source: "gemini.json"
+  includedResources:
+    - "models"
+  includedMethods:
+    - "generateContent"
+    - "streamGenerateContent"
+  operationCount: 2
+  sourceSchemaCount: 196
+  includedSchemaCount: 83

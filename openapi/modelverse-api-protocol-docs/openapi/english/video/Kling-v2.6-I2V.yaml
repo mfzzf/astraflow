@@ -1,0 +1,392 @@
+openapi: 3.1.0
+x-language: en-US
+info:
+  title: ModelVerse Kling/v2.6-I2V Video Task API
+  version: "1.0.0"
+  description: |
+    Self-contained OpenAPI 3.1 schema for the ModelVerse Kling/v2.6-I2V
+    image-to-video asynchronous task API.
+
+servers:
+  - url: https://api.modelverse.cn
+    description: ModelVerse API endpoint documented for this model.
+
+tags:
+  - name: Kling/v2.6-I2V
+    description: Image-to-video asynchronous task operations for Kling/v2.6-I2V.
+
+paths:
+  /v1/tasks/submit:
+    post:
+      tags:
+        - Kling/v2.6-I2V
+      operationId: submitKlingV26I2VTask
+      summary: Submit a Kling/v2.6-I2V image-to-video task
+      description: |
+        Submit an asynchronous image-to-video generation task for the
+        `kling-v2-6` model. Kling v2.6 does not support audio-video generation
+        parameters such as `voice_list` or `sound`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KlingV26I2VSubmitRequest"
+            examples:
+              documented:
+                summary: Source image-to-video request
+                value:
+                  model: kling-v2-6
+                  input:
+                    prompt: The image comes to life with gentle movement
+                  parameters:
+                    mode: pro
+                    aspect_ratio: "16:9"
+                    duration: 5
+                    image: https://example.com/first_frame.jpg
+              withTailFrame:
+                summary: Request with first and tail frames
+                value:
+                  model: kling-v2-6
+                  input:
+                    prompt: A cinematic reveal from the first frame to the ending frame
+                    negative_prompt: blurry, distorted, low quality
+                  parameters:
+                    mode: pro
+                    aspect_ratio: "9:16"
+                    duration: 10
+                    image: iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==
+                    image_tail: https://example.com/tail_frame.png
+      responses:
+        "200":
+          description: Task submitted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KlingV26I2VSubmitResponse"
+              examples:
+                submitted:
+                  summary: Submitted task
+                  value:
+                    output:
+                      task_id: task_id
+                    request_id: request_id
+        "400":
+          description: Invalid request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KlingV26I2VErrorResponse"
+              examples:
+                paramError:
+                  $ref: "#/components/examples/KlingV26I2VParamError"
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KlingV26I2VErrorResponse"
+              examples:
+                error:
+                  $ref: "#/components/examples/KlingV26I2VParamError"
+
+  /v1/tasks/status:
+    get:
+      tags:
+        - Kling/v2.6-I2V
+      operationId: getKlingV26I2VTaskStatus
+      summary: Query a Kling/v2.6-I2V task status
+      description: Query the status and result URLs for an asynchronous image-to-video task.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: task_id
+          in: query
+          required: true
+          description: Asynchronous task identifier returned by `/v1/tasks/submit`.
+          schema:
+            type: string
+          examples:
+            documented:
+              summary: Source documentation placeholder
+              value: task_id
+      responses:
+        "200":
+          description: Task status response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KlingV26I2VStatusResponse"
+              examples:
+                success:
+                  summary: Successful task
+                  value:
+                    output:
+                      task_id: task_id
+                      task_status: Success
+                      urls:
+                        - https://xxxxx/xxxx.mp4
+                      submit_time: 1756959000
+                      finish_time: 1756959050
+                    usage:
+                      duration: 5
+                    request_id: ""
+                failure:
+                  summary: Failed task
+                  value:
+                    output:
+                      task_id: task_id
+                      task_status: Failure
+                      submit_time: 1756959000
+                      finish_time: 1756959019
+                      error_message: error_message
+                    usage:
+                      duration: 5
+                    request_id: ""
+        "400":
+          description: Invalid task identifier or request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KlingV26I2VErrorResponse"
+              examples:
+                paramError:
+                  $ref: "#/components/examples/KlingV26I2VParamError"
+        default:
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KlingV26I2VErrorResponse"
+              examples:
+                error:
+                  $ref: "#/components/examples/KlingV26I2VParamError"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: "ModelVerse API key sent as `Authorization: Bearer <YOUR_API_KEY>`."
+
+  schemas:
+    KlingV26I2VSubmitRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - model
+        - input
+        - parameters
+      properties:
+        model:
+          type: string
+          const: kling-v2-6
+          description: Model name. This schema is pinned to `kling-v2-6`.
+        input:
+          $ref: "#/components/schemas/KlingV26I2VInput"
+        parameters:
+          $ref: "#/components/schemas/KlingV26I2VParameters"
+
+    KlingV26I2VInput:
+      type: object
+      additionalProperties: false
+      required:
+        - prompt
+      properties:
+        prompt:
+          type: string
+          minLength: 1
+          description: Prompt used to guide video generation.
+          examples:
+            - The image comes to life with gentle movement
+        negative_prompt:
+          type: string
+          description: Negative prompt used to limit undesired content.
+          examples:
+            - blurry, distorted, low quality
+
+    KlingV26I2VParameters:
+      type: object
+      additionalProperties: false
+      properties:
+        mode:
+          type: string
+          enum:
+            - pro
+          default: pro
+          description: |
+            Generation mode. The source parameter table mentions `std` and
+            `pro`, but notes that Kling v2.6 currently supports only `pro`.
+        aspect_ratio:
+          type: string
+          description: Generated video aspect ratio.
+          enum:
+            - "16:9"
+            - "9:16"
+            - "1:1"
+        duration:
+          type: integer
+          description: Generated video duration in seconds.
+          enum:
+            - 5
+            - 10
+          default: 5
+        image:
+          type: string
+          minLength: 1
+          description: |
+            First-frame reference image. Supports a public image URL or a raw
+            Base64-encoded image string. When using Base64, do not include a
+            `data:image/...;base64,` prefix. Supported image formats are JPG,
+            JPEG, and PNG. The image file size must be no larger than 10 MB,
+            width and height must each be at least 300 px, and the image aspect
+            ratio must be between 1:2.5 and 2.5:1.
+          examples:
+            - https://example.com/first_frame.jpg
+            - iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==
+        image_tail:
+          type: string
+          minLength: 1
+          description: |
+            Tail-frame reference image. Supports a public image URL or raw
+            Base64-encoded image string, with the same format, size, dimension,
+            and aspect-ratio requirements as `image`.
+          examples:
+            - https://example.com/tail_frame.png
+      anyOf:
+        - required:
+            - image
+        - required:
+            - image_tail
+
+    KlingV26I2VSubmitResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - output
+        - request_id
+      properties:
+        output:
+          type: object
+          additionalProperties: false
+          required:
+            - task_id
+          properties:
+            task_id:
+              type: string
+              description: Unique identifier of the asynchronous task.
+        request_id:
+          type: string
+          description: Unique request identifier.
+
+    KlingV26I2VStatusResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - output
+        - request_id
+      properties:
+        output:
+          $ref: "#/components/schemas/KlingV26I2VStatusOutput"
+        usage:
+          $ref: "#/components/schemas/KlingV26I2VUsage"
+        request_id:
+          type: string
+          description: Unique request identifier.
+
+    KlingV26I2VStatusOutput:
+      type: object
+      additionalProperties: false
+      required:
+        - task_id
+        - task_status
+      properties:
+        task_id:
+          type: string
+          description: Unique identifier of the asynchronous task.
+        task_status:
+          $ref: "#/components/schemas/KlingV26I2VTaskStatus"
+        urls:
+          type: array
+          description: Video result URL list.
+          items:
+            type: string
+            format: uri
+        submit_time:
+          type: integer
+          format: int64
+          description: Task submission timestamp.
+        finish_time:
+          type: integer
+          format: int64
+          description: Task completion timestamp.
+        error_message:
+          type: string
+          description: Error message returned when the task fails.
+
+    KlingV26I2VTaskStatus:
+      type: string
+      description: Asynchronous task status.
+      enum:
+        - Pending
+        - Running
+        - Success
+        - Failure
+
+    KlingV26I2VUsage:
+      type: object
+      additionalProperties: false
+      properties:
+        duration:
+          type: integer
+          description: Generated video duration in seconds.
+
+    KlingV26I2VErrorResponse:
+      type: object
+      additionalProperties: true
+      required:
+        - error
+      properties:
+        error:
+          $ref: "#/components/schemas/KlingV26I2VErrorObject"
+
+    KlingV26I2VErrorObject:
+      type: object
+      additionalProperties: true
+      required:
+        - message
+        - type
+      properties:
+        message:
+          type: string
+          description: Error message.
+        type:
+          type: string
+          description: Error type.
+          examples:
+            - invalid_request_error
+        code:
+          type:
+            - string
+            - "null"
+          description: Error code.
+          examples:
+            - param_error
+        param:
+          type:
+            - string
+            - "null"
+          description: Related request parameter, if any.
+
+  examples:
+    KlingV26I2VParamError:
+      summary: Invalid parameter error
+      value:
+        error:
+          message: Invalid param
+          type: invalid_request_error
+          code: param_error
+          param: parameters.image

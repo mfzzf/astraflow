@@ -1,0 +1,175 @@
+openapi: 3.1.0
+x-language: zh-CN
+info:
+  title: task-common接口文档
+  version: "1.0.0"
+  description: |
+    这是 ModelVerse OpenAPI 的异步任务通用文档，定义任务提交、状态查询和任务结果的通用结构。
+    接口路径包括 `GET /v1/tasks/status`。
+    具体模型接口文档可以复用这些通用组件。
+paths:
+  /v1/tasks/status:
+    get:
+      tags:
+        - Tasks
+      operationId: getTaskStatus
+      summary: 查询异步任务状态
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: task_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 任务状态响应。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskStatusResponse"
+              examples:
+                success:
+                  value:
+                    output:
+                      task_id: task_1234567890
+                      task_status: Success
+                      urls:
+                        - https://example.com/result.mp4
+                      submit_time: 1781600000
+                      finish_time: 1781600048
+                    usage:
+                      duration: 5
+                    request_id: req_abcdef
+        default:
+          description: 错误响应。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+  schemas:
+    TaskSubmitRequest:
+      type: object
+      additionalProperties: true
+      required:
+        - model
+      properties:
+        model:
+          type: string
+        input:
+          type: object
+          additionalProperties: true
+        parameters:
+          type: object
+          additionalProperties: true
+      examples:
+        videoTask:
+          value:
+            model: kling-v3
+            input:
+              prompt: A beautiful sunset over the ocean.
+            parameters:
+              duration: 5
+              aspect_ratio: "16:9"
+    TaskSubmitResponse:
+      type: object
+      additionalProperties: true
+      properties:
+        output:
+          type: object
+          additionalProperties: true
+          properties:
+            task_id:
+              type: string
+        request_id:
+          type: string
+      examples:
+        submitted:
+          value:
+            output:
+              task_id: task_1234567890
+            request_id: req_abcdef
+    TaskStatus:
+      type: string
+      enum:
+        - Pending
+        - Running
+        - Success
+        - Failure
+        - queued
+        - in_progress
+        - completed
+        - failed
+    TaskStatusResponse:
+      type: object
+      additionalProperties: true
+      properties:
+        output:
+          type: object
+          additionalProperties: true
+          properties:
+            task_id:
+              type: string
+            task_status:
+              $ref: "#/components/schemas/TaskStatus"
+            urls:
+              type: array
+              items:
+                type: string
+                format: uri
+            submit_time:
+              type: integer
+              format: int64
+            finish_time:
+              type: integer
+              format: int64
+            error_message:
+              type: string
+        usage:
+          type: object
+          additionalProperties: true
+        request_id:
+          type: string
+      examples:
+        success:
+          value:
+            output:
+              task_id: task_1234567890
+              task_status: Success
+              urls:
+                - https://example.com/result.mp4
+              submit_time: 1781600000
+              finish_time: 1781600048
+            usage:
+              duration: 5
+            request_id: req_abcdef
+    ErrorObject:
+      type: object
+      additionalProperties: true
+      properties:
+        message:
+          type: string
+        type:
+          type: string
+        code:
+          type:
+            - string
+            - "null"
+        param:
+          type:
+            - string
+            - "null"
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          $ref: "#/components/schemas/ErrorObject"

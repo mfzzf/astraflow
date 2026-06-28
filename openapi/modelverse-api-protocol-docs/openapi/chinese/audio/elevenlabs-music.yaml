@@ -1,0 +1,776 @@
+openapi: 3.1.0
+x-language: zh-CN
+info:
+  title: elevenlabs-music接口文档
+  version: "1.0.0"
+  description: |
+    这是 ModelVerse 上 `elevenlabs-music` 的音频生成接口文档，说明如何提交音乐或音效生成请求、读取结果以及处理错误。
+    接口路径包括 `POST /v1/audio/music/generate`、`POST /v1/audio/music/stream`、`POST /v1/audio/music/detailed`、`POST /v1/audio/music/plan`。
+servers:
+  - url: https://api.modelverse.cn
+    description: ModelVerse API endpoint shown in the source document.
+
+tags:
+  - name: ElevenLabs Music
+    description: ElevenLabs `music-v1` 音乐生成和编曲计划接口。
+
+security:
+  - bearerAuth: []
+
+paths:
+  /v1/audio/music/generate:
+    post:
+      tags:
+        - ElevenLabs Music
+      operationId: createElevenLabsMusicGeneration
+      summary: 同步生成音乐
+      description: |
+        生成音乐。请求中提供音乐描述或编曲计划，响应返回音频内容或元数据。
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ElevenLabsMusicGenerationRequest"
+            examples:
+              promptMusic:
+                $ref: "#/components/examples/ElevenLabsMusicGeneratePromptRequest"
+              compositionPlanMusic:
+                $ref: "#/components/examples/ElevenLabsMusicGeneratePlanRequest"
+      responses:
+        "200":
+          description: 生成的音频二进制流。
+          headers:
+            song-id:
+              description: 生成歌曲的唯一标识。
+              schema:
+                type: string
+          content:
+            audio/mpeg:
+              schema:
+                $ref: "#/components/schemas/ElevenLabsMusicAudioBinary"
+              examples:
+                generatedMp3:
+                  summary: 生成的 MP3 字节流
+                  value: "<binary MP3 audio bytes>"
+            application/octet-stream:
+              schema:
+                $ref: "#/components/schemas/ElevenLabsMusicAudioBinary"
+              examples:
+                generatedAudio:
+                  summary: 生成的音频字节流
+                  value: "<binary audio bytes>"
+        "400":
+          $ref: "#/components/responses/ElevenLabsMusicInvalidRequest"
+        default:
+          $ref: "#/components/responses/ElevenLabsMusicError"
+
+  /v1/audio/music/stream:
+    post:
+      tags:
+        - ElevenLabs Music
+      operationId: streamElevenLabsMusicGeneration
+      summary: 流式生成generated music
+      description: |
+        流式生成音乐。接口直接返回音频字节流，适合边生成边播放。
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ElevenLabsMusicGenerationRequest"
+            examples:
+              promptMusic:
+                $ref: "#/components/examples/ElevenLabsMusicStreamRequest"
+              compositionPlanMusic:
+                $ref: "#/components/examples/ElevenLabsMusicGeneratePlanRequest"
+      responses:
+        "200":
+          description: 流式音频二进制数据。
+          content:
+            audio/mpeg:
+              schema:
+                $ref: "#/components/schemas/ElevenLabsMusicAudioBinary"
+              examples:
+                streamedMp3:
+                  summary: 流式 MP3 字节流
+                  value: "<streamed binary MP3 audio bytes>"
+            application/octet-stream:
+              schema:
+                $ref: "#/components/schemas/ElevenLabsMusicAudioBinary"
+              examples:
+                streamedAudio:
+                  summary: 流式音频字节流
+                  value: "<streamed binary audio bytes>"
+        "400":
+          $ref: "#/components/responses/ElevenLabsMusicInvalidRequest"
+        default:
+          $ref: "#/components/responses/ElevenLabsMusicError"
+
+  /v1/audio/music/detailed:
+    post:
+      tags:
+        - ElevenLabs Music
+      operationId: createElevenLabsMusicDetailedGeneration
+      summary: 生成music带元数据
+      description: |
+        生成音乐。请求中提供音乐描述或编曲计划，响应返回音频内容或元数据。
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ElevenLabsMusicDetailedRequest"
+            examples:
+              promptMusic:
+                $ref: "#/components/examples/ElevenLabsMusicDetailedRequest"
+              compositionPlanMusic:
+                $ref: "#/components/examples/ElevenLabsMusicDetailedPlanRequest"
+      responses:
+        "200":
+          description: Multipart response containing metadata JSON and audio bytes.
+          content:
+            multipart/mixed:
+              schema:
+                $ref: "#/components/schemas/ElevenLabsMusicDetailedMultipartResponse"
+              examples:
+                detailedMultipart:
+                  $ref: "#/components/examples/ElevenLabsMusicDetailedMultipartResponse"
+        "400":
+          $ref: "#/components/responses/ElevenLabsMusicInvalidRequest"
+        default:
+          $ref: "#/components/responses/ElevenLabsMusicError"
+
+  /v1/audio/music/plan:
+    post:
+      tags:
+        - ElevenLabs Music
+      operationId: createElevenLabsMusicCompositionPlan
+      summary: 创建编曲计划
+      description: |
+        创建编曲计划。请求中描述歌曲结构和风格，响应返回可复用的 composition plan。
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ElevenLabsMusicPlanRequest"
+            examples:
+              lullabyPlan:
+                $ref: "#/components/examples/ElevenLabsMusicPlanRequest"
+              basedOnExistingPlan:
+                $ref: "#/components/examples/ElevenLabsMusicPlanFromSourceRequest"
+      responses:
+        "200":
+          description: 生成的编曲计划。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ElevenLabsMusicCompositionPlan"
+              examples:
+                lullabyPlan:
+                  $ref: "#/components/examples/ElevenLabsMusicPlanResponse"
+        "400":
+          $ref: "#/components/responses/ElevenLabsMusicInvalidRequest"
+        default:
+          $ref: "#/components/responses/ElevenLabsMusicError"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: |
+        创建编曲计划。请求中描述歌曲结构和风格，响应返回可复用的 composition plan。
+  responses:
+    ElevenLabsMusicInvalidRequest:
+      description: |
+        创建编曲计划。请求中描述歌曲结构和风格，响应返回可复用的 composition plan。
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ElevenLabsMusicErrorResponse"
+          examples:
+            invalidMusicLength:
+              $ref: "#/components/examples/ElevenLabsMusicInvalidRequestError"
+
+    ElevenLabsMusicError:
+      description: |
+        创建编曲计划。请求中描述歌曲结构和风格，响应返回可复用的 composition plan。
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ElevenLabsMusicErrorResponse"
+          examples:
+            error:
+              $ref: "#/components/examples/ElevenLabsMusicInvalidRequestError"
+
+  schemas:
+    ElevenLabsMusicModel:
+      type: string
+      const: music-v1
+      description: |
+        创建编曲计划。请求中描述歌曲结构和风格，响应返回可复用的 composition plan。
+    ElevenLabsMusicInput:
+      type: string
+      maxLength: 4100
+      description: |
+        创建编曲计划。请求中描述歌曲结构和风格，响应返回可复用的 composition plan。
+      examples:
+        - A happy piano melody with soft jazz undertones
+
+    ElevenLabsMusicPrompt:
+      type: string
+      maxLength: 4100
+      description: |
+        创建编曲计划。请求中描述歌曲结构和风格，响应返回可复用的 composition plan。
+      examples:
+        - A soft lullaby with gentle piano and female vocals
+
+    ElevenLabsMusicLengthMs:
+      type: integer
+      minimum: 1
+      maximum: 600000
+      description: |
+        创建编曲计划。请求中描述歌曲结构和风格，响应返回可复用的 composition plan。
+      examples:
+        - 30000
+
+    ElevenLabsMusicPlanLengthMs:
+      type: integer
+      minimum: 3000
+      maximum: 600000
+      description: |
+        创建编曲计划。请求中描述歌曲结构和风格，响应返回可复用的 composition plan。
+      examples:
+        - 30000
+
+    ElevenLabsMusicSeed:
+      type: integer
+      minimum: 0
+      maximum: 2147483647
+      description: |
+        创建编曲计划。请求中描述歌曲结构和风格，响应返回可复用的 composition plan。
+      examples:
+        - 12345
+
+    ElevenLabsMusicOutputFormat:
+      type: string
+      description: |
+        创建编曲计划。请求中描述歌曲结构和风格，响应返回可复用的 composition plan。
+      examples:
+        - mp3_22050_32
+
+    ElevenLabsMusicGenerationRequest:
+      description: |
+        创建编曲计划。请求中描述歌曲结构和风格，响应返回可复用的 composition plan。
+      oneOf:
+        - $ref: "#/components/schemas/ElevenLabsMusicPromptGenerationRequest"
+        - $ref: "#/components/schemas/ElevenLabsMusicPlanGenerationRequest"
+
+    ElevenLabsMusicPromptGenerationRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - model
+        - input
+        - music_length_ms
+      properties:
+        model:
+          $ref: "#/components/schemas/ElevenLabsMusicModel"
+        input:
+          $ref: "#/components/schemas/ElevenLabsMusicInput"
+        music_length_ms:
+          $ref: "#/components/schemas/ElevenLabsMusicLengthMs"
+        force_instrumental:
+          type: boolean
+          default: false
+          description: Whether to force instrumental output. Used with `input`.
+        output_format:
+          $ref: "#/components/schemas/ElevenLabsMusicOutputFormat"
+
+    ElevenLabsMusicPlanGenerationRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - model
+        - composition_plan
+        - music_length_ms
+      properties:
+        model:
+          $ref: "#/components/schemas/ElevenLabsMusicModel"
+        composition_plan:
+          $ref: "#/components/schemas/ElevenLabsMusicCompositionPlan"
+        music_length_ms:
+          $ref: "#/components/schemas/ElevenLabsMusicLengthMs"
+        seed:
+          $ref: "#/components/schemas/ElevenLabsMusicSeed"
+        output_format:
+          $ref: "#/components/schemas/ElevenLabsMusicOutputFormat"
+
+    ElevenLabsMusicDetailedRequest:
+      description: |
+        创建编曲计划。请求中描述歌曲结构和风格，响应返回可复用的 composition plan。
+      oneOf:
+        - $ref: "#/components/schemas/ElevenLabsMusicPromptDetailedRequest"
+        - $ref: "#/components/schemas/ElevenLabsMusicPlanDetailedRequest"
+
+    ElevenLabsMusicPromptDetailedRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - model
+        - input
+        - music_length_ms
+      properties:
+        model:
+          $ref: "#/components/schemas/ElevenLabsMusicModel"
+        input:
+          $ref: "#/components/schemas/ElevenLabsMusicInput"
+        music_length_ms:
+          $ref: "#/components/schemas/ElevenLabsMusicLengthMs"
+        force_instrumental:
+          type: boolean
+          default: false
+          description: Whether to force instrumental output. Used with `input`.
+        with_timestamps:
+          type: boolean
+          default: false
+          description: Whether to return lyric timestamps.
+        output_format:
+          $ref: "#/components/schemas/ElevenLabsMusicOutputFormat"
+
+    ElevenLabsMusicPlanDetailedRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - model
+        - composition_plan
+      properties:
+        model:
+          $ref: "#/components/schemas/ElevenLabsMusicModel"
+        composition_plan:
+          $ref: "#/components/schemas/ElevenLabsMusicCompositionPlan"
+        seed:
+          $ref: "#/components/schemas/ElevenLabsMusicSeed"
+        respect_sections_durations:
+          type: boolean
+          default: true
+          description: Whether to strictly follow section durations. Used with `composition_plan`.
+        with_timestamps:
+          type: boolean
+          default: false
+          description: Whether to return lyric timestamps.
+        output_format:
+          $ref: "#/components/schemas/ElevenLabsMusicOutputFormat"
+
+    ElevenLabsMusicPlanRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - model
+        - prompt
+      properties:
+        model:
+          $ref: "#/components/schemas/ElevenLabsMusicModel"
+        prompt:
+          $ref: "#/components/schemas/ElevenLabsMusicPrompt"
+        music_length_ms:
+          $ref: "#/components/schemas/ElevenLabsMusicPlanLengthMs"
+        source_composition_plan:
+          $ref: "#/components/schemas/ElevenLabsMusicCompositionPlan"
+
+    ElevenLabsMusicCompositionPlan:
+      type: object
+      additionalProperties: false
+      properties:
+        positive_global_styles:
+          type: array
+          description: Global positive style tags.
+          items:
+            type: string
+          examples:
+            - - jazz
+              - upbeat
+        negative_global_styles:
+          type: array
+          description: Global negative style tags to avoid.
+          items:
+            type: string
+          examples:
+            - - heavy metal
+              - aggressive
+        sections:
+          type: array
+          description: 编曲段落。
+          items:
+            $ref: "#/components/schemas/ElevenLabsMusicCompositionSection"
+
+    ElevenLabsMusicCompositionSection:
+      type: object
+      additionalProperties: false
+      properties:
+        section_name:
+          type: string
+          description: 段落名称。
+          examples:
+            - Intro
+        positive_local_styles:
+          type: array
+          description: Section-level positive style tags.
+          items:
+            type: string
+          examples:
+            - - piano
+              - light percussion
+        negative_local_styles:
+          type: array
+          description: Section-level negative style tags.
+          items:
+            type: string
+          examples:
+            - - vocals
+              - distortion
+        duration_ms:
+          type: integer
+          description: 段落时长，单位为毫秒。
+          examples:
+            - 3000
+        lines:
+          type: array
+          description: 该段落的歌词行。
+          items:
+            type: string
+          examples:
+            - []
+
+    ElevenLabsMusicDetailedMetadata:
+      type: object
+      additionalProperties: false
+      required:
+        - composition_plan
+        - song_metadata
+      properties:
+        composition_plan:
+          $ref: "#/components/schemas/ElevenLabsMusicCompositionPlan"
+        song_metadata:
+          $ref: "#/components/schemas/ElevenLabsMusicSongMetadata"
+
+    ElevenLabsMusicSongMetadata:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          description: 歌曲标题。
+          examples:
+            - Jazz Evening
+        description:
+          type: string
+          description: 歌曲描述。
+          examples:
+            - An upbeat jazz composition
+        genres:
+          type: array
+          description: 音乐流派。
+          items:
+            type: string
+          examples:
+            - - jazz
+        languages:
+          type: array
+          description: 歌词使用的语言。
+          items:
+            type: string
+          examples:
+            - - en
+        is_explicit:
+          type: boolean
+          description: 歌曲是否包含成人内容。
+
+    ElevenLabsMusicAudioBinary:
+      type: string
+      format: binary
+      description: |
+        创建编曲计划。请求中描述歌曲结构和风格，响应返回可复用的 composition plan。
+    ElevenLabsMusicDetailedMultipartResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - metadata
+        - audio
+      properties:
+        metadata:
+          $ref: "#/components/schemas/ElevenLabsMusicDetailedMetadata"
+        audio:
+          $ref: "#/components/schemas/ElevenLabsMusicAudioBinary"
+      description: |
+        创建编曲计划。请求中描述歌曲结构和风格，响应返回可复用的 composition plan。
+    ElevenLabsMusicErrorResponse:
+      type: object
+      additionalProperties: true
+      required:
+        - error
+      properties:
+        error:
+          $ref: "#/components/schemas/ElevenLabsMusicErrorObject"
+
+    ElevenLabsMusicErrorObject:
+      type: object
+      additionalProperties: true
+      required:
+        - message
+        - type
+      properties:
+        message:
+          type: string
+          description: 错误说明。
+          examples:
+            - Invalid param
+        type:
+          type: string
+          description: 错误类型。
+          examples:
+            - invalid_request_error
+        code:
+          type:
+            - string
+            - "null"
+          description: 机器可读的错误码。
+          examples:
+            - param_error
+        param:
+          type:
+            - string
+            - "null"
+          description: 与错误相关的请求参数。
+          examples:
+            - music_length_ms
+
+  examples:
+    ElevenLabsMusicGeneratePromptRequest:
+      summary: 生成music根据a 文本提示词
+      value:
+        model: music-v1
+        input: A happy piano melody with soft jazz undertones
+        music_length_ms: 30000
+        output_format: mp3_22050_32
+
+    ElevenLabsMusicGeneratePlanRequest:
+      summary: 生成music根据a 编曲计划
+      value:
+        model: music-v1
+        composition_plan:
+          positive_global_styles:
+            - jazz
+            - upbeat
+          negative_global_styles:
+            - heavy metal
+            - aggressive
+          sections:
+            - section_name: Intro
+              positive_local_styles:
+                - piano
+                - light percussion
+              negative_local_styles:
+                - vocals
+                - distortion
+              duration_ms: 3000
+              lines: []
+            - section_name: Verse
+              positive_local_styles:
+                - saxophone
+                - swing rhythm
+              negative_local_styles:
+                - harsh drums
+              duration_ms: 7000
+              lines:
+                - Swinging through the night...
+        music_length_ms: 10000
+        seed: 12345
+        output_format: mp3_22050_32
+
+    ElevenLabsMusicStreamRequest:
+      summary: 流式生成music根据a 文本提示词
+      value:
+        model: music-v1
+        input: A calm guitar piece with nature sounds
+        music_length_ms: 30000
+        output_format: mp3_22050_32
+
+    ElevenLabsMusicDetailedRequest:
+      summary: 生成music带详细元数据
+      value:
+        model: music-v1
+        input: An upbeat jazz tune
+        music_length_ms: 10000
+
+    ElevenLabsMusicDetailedPlanRequest:
+      summary: 生成详细music根据a 编曲计划
+      value:
+        model: music-v1
+        composition_plan:
+          positive_global_styles:
+            - jazz
+            - upbeat
+          negative_global_styles:
+            - heavy metal
+            - aggressive
+          sections:
+            - section_name: Intro
+              positive_local_styles:
+                - piano
+                - light percussion
+              negative_local_styles:
+                - vocals
+                - distortion
+              duration_ms: 3000
+              lines: []
+            - section_name: Verse
+              positive_local_styles:
+                - saxophone
+                - swing rhythm
+              negative_local_styles:
+                - harsh drums
+              duration_ms: 7000
+              lines:
+                - Swinging through the night...
+        respect_sections_durations: true
+        with_timestamps: false
+
+    ElevenLabsMusicDetailedMultipartResponse:
+      summary: multipart 元数据和音频响应
+      value:
+        metadata:
+          composition_plan:
+            positive_global_styles:
+              - jazz
+              - upbeat
+            negative_global_styles:
+              - heavy metal
+              - aggressive
+            sections:
+              - section_name: Intro
+                positive_local_styles:
+                  - piano
+                  - light percussion
+                negative_local_styles:
+                  - vocals
+                  - distortion
+                duration_ms: 3000
+                lines: []
+              - section_name: Verse
+                positive_local_styles:
+                  - saxophone
+                  - swing rhythm
+                negative_local_styles:
+                  - harsh drums
+                duration_ms: 7000
+                lines:
+                  - Swinging through the night...
+          song_metadata:
+            title: Jazz Evening
+            description: An upbeat jazz composition
+            genres:
+              - jazz
+            languages:
+              - en
+            is_explicit: false
+        audio: "<binary MP3 audio bytes>"
+
+    ElevenLabsMusicPlanRequest:
+      summary: 创建编曲计划
+      value:
+        model: music-v1
+        prompt: A soft lullaby with gentle piano and female vocals
+        music_length_ms: 30000
+
+    ElevenLabsMusicPlanFromSourceRequest:
+      summary: 创建 a 编曲计划根据an existing plan
+      value:
+        model: music-v1
+        prompt: A longer version with gentle piano and soft female vocals
+        music_length_ms: 60000
+        source_composition_plan:
+          positive_global_styles:
+            - lullaby
+            - soft
+            - gentle
+            - calming
+            - acoustic
+          negative_global_styles:
+            - loud
+            - heavy drums
+            - fast tempo
+            - aggressive
+          sections:
+            - section_name: Verse 1
+              positive_local_styles:
+                - soft female vocal
+                - gentle acoustic guitar
+                - slow tempo
+              negative_local_styles:
+                - percussion
+                - bass guitar
+              duration_ms: 15000
+              lines:
+                - Close your eyes and drift away,
+                - Safe and sound until the day.
+
+    ElevenLabsMusicPlanResponse:
+      summary: 生成的编曲计划
+      value:
+        positive_global_styles:
+          - lullaby
+          - soft
+          - gentle
+          - calming
+          - acoustic
+        negative_global_styles:
+          - loud
+          - heavy drums
+          - fast tempo
+          - aggressive
+        sections:
+          - section_name: Verse 1
+            positive_local_styles:
+              - soft female vocal
+              - gentle acoustic guitar
+              - slow tempo
+            negative_local_styles:
+              - percussion
+              - bass guitar
+            duration_ms: 15000
+            lines:
+              - Close your eyes and drift away,
+              - Safe and sound until the day.
+          - section_name: Verse 2
+            positive_local_styles:
+              - soft female vocal
+              - hushed delivery
+              - dreamy atmosphere
+            negative_local_styles:
+              - strong vocals
+              - drums
+            duration_ms: 15000
+            lines:
+              - Stars above are shining bright,
+              - Sleep now, darling, sleep so deep.
+
+    ElevenLabsMusicInvalidRequestError:
+      summary: 源文档中的无效参数示例
+      value:
+        error:
+          message: music_length_ms must be between 1 and 600000.
+          type: invalid_request_error
+          code: param_error
+          param: music_length_ms

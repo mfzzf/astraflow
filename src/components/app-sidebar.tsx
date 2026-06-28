@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useCallback, useEffect, useState } from "react"
 import {
   BoxIcon,
+  BookOpenTextIcon,
   LayersIcon,
   ChartAreaIcon,
   ChevronDownIcon,
@@ -87,6 +88,7 @@ export type DashboardView =
   | "audio-generation"
   | "image-generation"
   | "video-generation"
+  | "docs"
   | "skill-lab"
   | "chat"
   | "request-logs"
@@ -355,6 +357,16 @@ export function AppSidebar({
                       >
                         <VideoIcon />
                         <span>{t.videoGeneration}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        isActive={activeView === "docs"}
+                        tooltip={t.docs}
+                        render={<Link href="/docs" />}
+                      >
+                        <BookOpenTextIcon />
+                        <span>{t.docs}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
