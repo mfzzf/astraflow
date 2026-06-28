@@ -8,12 +8,15 @@ import {
   LayersIcon,
   ChartAreaIcon,
   ChevronDownIcon,
+  ImageIcon,
   KeyRoundIcon,
   LogOutIcon,
   MessageSquareIcon,
+  MusicIcon,
   ReceiptTextIcon,
   ScrollTextIcon,
   SparklesIcon,
+  VideoIcon,
   WaypointsIcon,
 } from "lucide-react"
 
@@ -81,6 +84,9 @@ export type DashboardView =
   | "usage"
   | "api-keys"
   | "model-square"
+  | "audio-generation"
+  | "image-generation"
+  | "video-generation"
   | "skill-lab"
   | "chat"
   | "request-logs"
@@ -319,6 +325,36 @@ export function AppSidebar({
                       >
                         <WaypointsIcon />
                         <span>{t.modelSquare}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        isActive={activeView === "audio-generation"}
+                        tooltip={t.audioGeneration}
+                        render={<Link href="/audio-generation" />}
+                      >
+                        <MusicIcon />
+                        <span>{t.audioGeneration}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        isActive={activeView === "image-generation"}
+                        tooltip={t.imageGeneration}
+                        render={<Link href="/image-generation" />}
+                      >
+                        <ImageIcon />
+                        <span>{t.imageGeneration}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        isActive={activeView === "video-generation"}
+                        tooltip={t.videoGeneration}
+                        render={<Link href="/video-generation" />}
+                      >
+                        <VideoIcon />
+                        <span>{t.videoGeneration}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>

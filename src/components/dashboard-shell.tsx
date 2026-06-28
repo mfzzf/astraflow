@@ -11,6 +11,7 @@ import { CostDashboard } from "@/components/cost-dashboard"
 import { GsapViewTransition } from "@/components/gsap-view-transition"
 import { useI18n } from "@/components/i18n-provider"
 import { ModelSquarePage } from "@/components/model-square-page"
+import { ModelverseGenerationPage } from "@/components/modelverse-generation-page"
 import { RequestLogsPage } from "@/components/request-logs-page"
 import { SandboxResourcesPage } from "@/components/sandbox-resources-page"
 import { SiteHeader } from "@/components/site-header"
@@ -55,6 +56,18 @@ function titleForView(view: DashboardView, t: ReturnType<typeof useI18n>["t"]) {
     return t.modelSquare
   }
 
+  if (view === "audio-generation") {
+    return t.audioGeneration
+  }
+
+  if (view === "image-generation") {
+    return t.imageGeneration
+  }
+
+  if (view === "video-generation") {
+    return t.videoGeneration
+  }
+
   if (view === "skill-lab") {
     return t.skillLab
   }
@@ -91,6 +104,18 @@ function viewForPathname(pathname: string): DashboardView {
     return "model-square"
   }
 
+  if (pathname === "/audio-generation") {
+    return "audio-generation"
+  }
+
+  if (pathname === "/image-generation") {
+    return "image-generation"
+  }
+
+  if (pathname === "/video-generation") {
+    return "video-generation"
+  }
+
   if (pathname === "/skill-lab") {
     return "skill-lab"
   }
@@ -125,6 +150,9 @@ export function DashboardShell({
   const viewOwnsScroll =
     activeView === "chat" ||
     activeView === "model-square" ||
+    activeView === "audio-generation" ||
+    activeView === "image-generation" ||
+    activeView === "video-generation" ||
     activeView === "skill-lab"
   const [selectedProjectId, setSelectedProjectId] = useState(initialProjectId)
   const [projects, setProjects] = useState<Project[]>([])
@@ -226,6 +254,21 @@ export function DashboardShell({
               <APIKeysDashboard projectId={selectedProjectId} />
             ) : activeView === "model-square" ? (
               <ModelSquarePage projectId={selectedProjectId} />
+            ) : activeView === "audio-generation" ? (
+              <ModelverseGenerationPage
+                projectId={selectedProjectId}
+                kind="audio"
+              />
+            ) : activeView === "image-generation" ? (
+              <ModelverseGenerationPage
+                projectId={selectedProjectId}
+                kind="image"
+              />
+            ) : activeView === "video-generation" ? (
+              <ModelverseGenerationPage
+                projectId={selectedProjectId}
+                kind="video"
+              />
             ) : activeView === "skill-lab" ? (
               <SkillLabPage projectId={selectedProjectId} />
             ) : activeView === "request-logs" ? (
