@@ -1960,7 +1960,11 @@ export function ModelverseGenerationPage({
                   <Select
                     items={apiKeyItems}
                     value={selectedApiKeyId}
-                    onValueChange={setSelectedApiKeyId}
+                    onValueChange={(value) => {
+                      if (value !== null) {
+                        setSelectedApiKeyId(value)
+                      }
+                    }}
                   >
                     <SelectTrigger
                       aria-label={t.selectApiKey}
@@ -1988,7 +1992,11 @@ export function ModelverseGenerationPage({
                   <Select
                     items={specItems}
                     value={selectedSpec.id}
-                    onValueChange={selectSpec}
+                    onValueChange={(value) => {
+                      if (value !== null) {
+                        selectSpec(value)
+                      }
+                    }}
                   >
                     <SelectTrigger
                       aria-label={t.matchedOpenApi}
@@ -2016,7 +2024,11 @@ export function ModelverseGenerationPage({
                   <Select
                     items={operationItems}
                     value={selectedOperation.id}
-                    onValueChange={selectOperation}
+                    onValueChange={(value) => {
+                      if (value !== null) {
+                        selectOperation(value)
+                      }
+                    }}
                   >
                     <SelectTrigger
                       aria-label={t.operation}
@@ -2045,7 +2057,11 @@ export function ModelverseGenerationPage({
                     <Select
                       items={exampleItems}
                       value={selectedExample.id}
-                      onValueChange={selectExample}
+                      onValueChange={(value) => {
+                        if (value !== null) {
+                          selectExample(value)
+                        }
+                      }}
                     >
                       <SelectTrigger
                         aria-label={t.example}
