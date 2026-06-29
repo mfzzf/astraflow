@@ -824,7 +824,10 @@ function createRecordId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
-function findStringByKeys(value: JsonValue | undefined, keys: Set<string>) {
+function findStringByKeys(
+  value: JsonValue | undefined,
+  keys: Set<string>
+): string | undefined {
   if (value === undefined || value === null) {
     return undefined
   }
